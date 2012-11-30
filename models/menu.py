@@ -5,7 +5,7 @@
 ## Customize your APP title, subtitle and menus here
 #########################################################################
 
-response.title = T('CrowdLab Submission Ranking System')
+response.title = T('CrowdLab Ranking System')
 response.subtitle = T('')
 
 ## read more at http://dev.w3.org/html5/markup/meta.name.html
