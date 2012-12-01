@@ -1,4 +1,7 @@
 {{left_sidebar_enabled,right_sidebar_enabled=False,False}}
 {{extend 'layout.html'}}
 
-<p>{{=A('Manage user lists', _href=URL('manage_lists'))}}</p>
+<p>{{=A('Contests', _href=URL('contest_index'))}}</p>
+{{if user_is_admin:}}
+<p>{{=A('User lists', _href=URL('user_list_index'))}}</p>
+{{pass}}

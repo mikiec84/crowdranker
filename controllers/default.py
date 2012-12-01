@@ -19,8 +19,14 @@ def index():
     return auth.wiki()
     """
     response.flash = None
-    return dict(message=T('Hello World'))
+    user_is_admin = is_user_admin(auth)
+    return dict(user_is_admin=user_is_admin)
+    
+def contest_index():
+    return dict()
 
+def user_list_index():
+    return dict()
 
 def user():
     """
