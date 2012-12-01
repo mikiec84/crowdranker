@@ -1,3 +1,5 @@
+.hg*
+.ht/*
 progress.log
 cache/*
 databases/*
