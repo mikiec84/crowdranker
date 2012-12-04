@@ -1,32 +1,161 @@
 # -*- coding: utf-8 -*-
-# this file is released under public domain and you can use without limitations
 
-#########################################################################
-## This is a samples controller
-## - index is the default action of any application
-## - user is required for authentication and authorization
-## - download is for downloading files uploaded in the db (does streaming)
-## - call exposes all registered services (none by default)
-#########################################################################
+import controller_util
+import util
 
 
 def index():
     """
-    example action using the internationalization operator T and flash
-    rendered by views/default/index.html or views/generic.html
-
-    if you need a simple wiki simple replace the two lines below with:
-    return auth.wiki()
+    Main index.
     """
     response.flash = None
     user_is_admin = is_user_admin(auth)
     return dict(user_is_admin=user_is_admin)
     
+@auth.requires_login()
 def contest_index():
-    return dict()
-
+    """
+    We can want several type of contests.
+    We may want: 
+    * 'subopen': open for submission.
+    * 'revopen': open for review.
+    * 'submitted': to whom the author has submitted.
+    * 'managed' for which the author is a manager.
+    """
+    # Builds the correct query type.
+    props = db(db.user_properties.user == auth.user_id).select().first()
+    q_type = request.args(0) or redirect(index)
+    if q_type == 'subopen':
+        msg = T('Contests open for submission')
+        q_all = ((db.contest.open_date < datetime.utcnow()) &
+                 (db.contest.close_date > datetime.utcnow()) &
+                 (db.contest.submit_constraint == None))
+        q_user = ((db.contest.open_date < datetime.utcnow()) &
+                  (db.contest.close_date > datetime.utcnow()) &
+                  (db.contest.id.belongs(props.contests_can_submit)))
+        c_all = db(q_all).select().as_list()
+        c_user = db(q_user).select().as_list()
+        c = util.union_id_list(c_all, c_user)
+        q = (db.contest.id.belongs(c))
+    elif q_type == 'revopen':
+        msg = T('Contests open for review')
+        q_all = ((db.contest.rate_open_date < datetime.utcnow()) &
+                 (db.contest.rate_close_date > datetime.utcnow()) &
+                 (db.contest.rate_constraint == None))
+        q_user = ((db.contest.rate_open_date < datetime.utcnow()) &
+                  (db.contest.rate_close_date > datetime.utcnow()) &
+                  (db.contest.id.belongs(props.contests_can_rate)))
+        c_all = db(q_all).select().as_list()
+        c_user = db(q_user).select().as_list()
+        c = util.union_id_list(c_all, c_user)
+        q = (db.contest.id.belongs(c))
+    elif q_type == 'submitted':
+        msg = T('Contests to which you submitted')
+        q = (db.contest.id.belongs(props.contests_has_submitted))
+    elif q_type == 'managed':
+        msg = T('Contests you manage')
+        q = (db.contest.id.belongs(props.contest_can_manage))
+    else:
+        # Invalid query type.
+        redirect(index)
+    # At this point, we have a query.
+    grid = SQLFORM.grid(q,
+        field_id=db.contest.id,
+        fields=[],
+        csv=False,
+        details=False,
+        create=False,
+        links=[dict(header='Name', body = lambda r: A(r.name, _href=URL('view_contest', args=[r.id]))),],
+        )
+    return dict(grid=grid, msg=msg)
+    
+    
+@auth.requires_login()
 def user_list_index():
-    return dict()
+    """Index of user list one can manage or use."""
+    # Reads the list of ids of lists managed by the user.
+    list_ids_l = db(db.user_properties.user == auth.user_id).select(db.user_properties.user_lists).first()
+    if list_ids_l == None:
+        list_ids = []
+    else:
+        list_ids = list_ids_l['user_lists']
+    # Gets the lists.
+    q = (db.user_list.id.belongs(list_ids))
+    grid = SQLFORM.grid(q, 
+        field_id = db.user_list.id,
+        csv=False, details=True, create=False, edit=True)
+    return dict(grid=grid)
+    
+
+@auth.requires_login()
+def create_user_list():
+    form = SQLFORM.factory(
+        Field('name'), 
+        Field('user_emails', 'text'),
+        Field('manager_emails', 'text'),)
+    # Adds a cancel button
+    form.add_button(T('Cancel'), URL('user_list_index'))
+    if form.process(onvalidation=controller_util.separate_emails).accepted:
+        # Writes the emails in the database.
+        id = db.user_list.insert(
+            name = form.vars.name, 
+            email_list = form.vars.email_list,
+            managers = util.append_unique(form.vars.manager_list, auth.user.email))
+        # Adds the list to those managed by the user.
+        u = db(db.user_properties.user == auth.user).select().first()
+        if u == None:
+            db.user_properties.insert(user = auth.user_id)
+            ul = []
+        else:
+            ul = u.user_lists
+        ul = util.append_unique(id)
+        db(db.user_properties.user == auth.user).update(user_lists=ul)
+        db.commit()
+        redirect(URL('view_user_list', args=[id]))
+    return dict(form=form)
+    
+    
+@auth.requires_login()
+def view_user_list():
+    ul = db.user_list(request.args(0)) or redirect(user_list_index)
+    # Checks permission.
+    if auth.user.email not in ul.managers:
+        redirect(user_list_index)
+    user_emails = ' '.join(ul.email_list)
+    manager_emails = ' '.join(ul.managers)
+    return dict(user_list=ul, user_emails=user_emails, manager_emails=manager_emails)
+    
+    
+@auth.requires_login()
+def edit_user_list():
+    ul = db.user_list(request.args(0)) or redirect(user_list_index)
+    # Checks permission.
+    if auth.user.email not in ul.managers:
+        redirect(user_list_index)
+    user_email_string = '\n'.join(ul.email_list)
+    manager_email_string = '\n'.join(ul.managers)
+    form = SQLFORM.factory(
+        Field('name'), 
+        Field('user_emails', 'text'),
+        Field('manager_emails', 'text'),)
+    # Pre-populate the form.  Note that this does not overwrite submitted values.
+    form.vars.name = ul.name
+    form.vars.user_emails = user_email_string
+    form.vars.manager_emails = manager_email_string
+    # Adds a cancel button
+    form.add_button(T('Cancel'), URL('view_user_list', args=[ul.id]))
+    if form.process(onvalidation=controller_util.separate_emails).accepted:
+        # updates the actual form.
+        db(db.user_list.id == ul.id).update(
+            name=form.vars.name, 
+            email_list=form.vars.email_list,
+            managers = util.append_unique(form.vars.manager_list, auth.user.email))
+        db.commit()
+        redirect(URL('view_user_list', args=[ul.id]))
+    return dict(form=form)
+    
+    
+
 
 def user():
     """

@@ -1,7 +1,10 @@
 {{left_sidebar_enabled,right_sidebar_enabled=False,False}}
 {{extend 'layout.html'}}
 
-<p>{{=A('Contests', _href=URL('contest_index'))}}</p>
-{{if user_is_admin:}}
+<h1>Contests</h1>
+<p>{{=A('Contests open for submission', _href=URL('contest_index', args=['subopen']))}}</p>
+<p>{{=A('Contests open for rating', _href=URL('contest_index', args=['revopen']))}}</p>
+<p>{{=A('Contests to which you submitted', _href=URL('contest_index', args=['submitted']))}}</p>
+<p>{{=A('Contests you manage', _href=URL('contest_index', args=['managed']))}}</p>
+<h1>User Lists</h1>
 <p>{{=A('User lists', _href=URL('user_list_index'))}}</p>
-{{pass}}
