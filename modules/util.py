@@ -20,14 +20,18 @@ def union_id_list(l1, l2):
     
 def append_unique(l, el):
     """Appends an element to a list, if not present."""
+    if l == None:
+        return [el]
     if el in l:
         return l
     else:
-        return l.append(el)
+        return l + [el]
 
 def split_emails(s):
     """Splits the emails that occur in a string s, returning the list of emails."""
     l = email_split_pattern.split(s)
+    if l == None:
+        l = []
     r = []
     for el in l:
         if email_re.match(el):

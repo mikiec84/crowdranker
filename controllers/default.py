@@ -3,6 +3,7 @@
 import controller_util
 import util
 
+from gluon.custom_import import track_changes; track_changes(True)
 
 def index():
     """
@@ -83,7 +84,7 @@ def user_list_index():
     q = (db.user_list.id.belongs(list_ids))
     grid = SQLFORM.grid(q, 
         field_id = db.user_list.id,
-        csv=False, details=True, create=False, edit=True)
+        csv=False, details=True, create=False)
     return dict(grid=grid)
     
 
@@ -95,21 +96,25 @@ def create_user_list():
         Field('manager_emails', 'text'),)
     # Adds a cancel button
     form.add_button(T('Cancel'), URL('user_list_index'))
-    if form.process(onvalidation=controller_util.separate_emails).accepted:
+    logger.debug("The form has been generated")
+    if form.process(onvalidation=controller_util.split_emails).accepted:
+        logger.debug("The form was accepted")
         # Writes the emails in the database.
         id = db.user_list.insert(
             name = form.vars.name, 
             email_list = form.vars.email_list,
             managers = util.append_unique(form.vars.manager_list, auth.user.email))
         # Adds the list to those managed by the user.
-        u = db(db.user_properties.user == auth.user).select().first()
+        u = db(db.user_properties.user == auth.user_id).select().first()
         if u == None:
             db.user_properties.insert(user = auth.user_id)
             ul = []
         else:
             ul = u.user_lists
-        ul = util.append_unique(id)
-        db(db.user_properties.user == auth.user).update(user_lists=ul)
+        logger.debug("The list before is: " + str(ul))
+        ul = util.append_unique(ul, id)
+        logger.debug("The list after is: " + str(ul))
+        db(db.user_properties.user == auth.user_id).update(user_lists=ul)
         db.commit()
         redirect(URL('view_user_list', args=[id]))
     return dict(form=form)
@@ -144,7 +149,7 @@ def edit_user_list():
     form.vars.manager_emails = manager_email_string
     # Adds a cancel button
     form.add_button(T('Cancel'), URL('view_user_list', args=[ul.id]))
-    if form.process(onvalidation=controller_util.separate_emails).accepted:
+    if form.process(onvalidation=controller_util.split_emails).accepted:
         # updates the actual form.
         db(db.user_list.id == ul.id).update(
             name=form.vars.name, 
@@ -152,7 +157,7 @@ def edit_user_list():
             managers = util.append_unique(form.vars.manager_list, auth.user.email))
         db.commit()
         redirect(URL('view_user_list', args=[ul.id]))
-    return dict(form=form)
+    return dict(user_list=ul, form=form)
     
     
 

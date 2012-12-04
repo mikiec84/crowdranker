@@ -1,5 +1,6 @@
 .hg*
 .ht/*
+private/*
 progress.log
 cache/*
 databases/*
