@@ -84,83 +84,42 @@ def user_list_index():
     q = (db.user_list.id.belongs(list_ids))
     grid = SQLFORM.grid(q, 
         field_id = db.user_list.id,
-        csv=False, details=True, create=False)
+        csv=False, details=True,
+        oncreate=create_user_list,
+        onvalidation=validate_user_list,
+        ondelete=delete_user_list)
     return dict(grid=grid)
     
 
-@auth.requires_login()
-def create_user_list():
-    form = SQLFORM.factory(
-        Field('name'), 
-        Field('user_emails', 'text'),
-        Field('manager_emails', 'text'),)
-    # Adds a cancel button
-    form.add_button(T('Cancel'), URL('user_list_index'))
-    logger.debug("The form has been generated")
-    if form.process(onvalidation=controller_util.split_emails).accepted:
-        logger.debug("The form was accepted")
-        # Writes the emails in the database.
-        id = db.user_list.insert(
-            name = form.vars.name, 
-            email_list = form.vars.email_list,
-            managers = util.append_unique(form.vars.manager_list, auth.user.email))
-        # Adds the list to those managed by the user.
-        u = db(db.user_properties.user == auth.user_id).select().first()
-        if u == None:
-            db.user_properties.insert(user = auth.user_id)
-            ul = []
-        else:
-            ul = u.user_lists
-        logger.debug("The list before is: " + str(ul))
-        ul = util.append_unique(ul, id)
-        logger.debug("The list after is: " + str(ul))
-        db(db.user_properties.user == auth.user_id).update(user_lists=ul)
-        db.commit()
-        redirect(URL('view_user_list', args=[id]))
-    return dict(form=form)
-    
-    
-@auth.requires_login()
-def view_user_list():
-    ul = db.user_list(request.args(0)) or redirect(user_list_index)
-    # Checks permission.
-    if auth.user.email not in ul.managers:
-        redirect(user_list_index)
-    user_emails = ' '.join(ul.email_list)
-    manager_emails = ' '.join(ul.managers)
-    return dict(user_list=ul, user_emails=user_emails, manager_emails=manager_emails)
-    
-    
-@auth.requires_login()
-def edit_user_list():
-    ul = db.user_list(request.args(0)) or redirect(user_list_index)
-    # Checks permission.
-    if auth.user.email not in ul.managers:
-        redirect(user_list_index)
-    user_email_string = '\n'.join(ul.email_list)
-    manager_email_string = '\n'.join(ul.managers)
-    form = SQLFORM.factory(
-        Field('name'), 
-        Field('user_emails', 'text'),
-        Field('manager_emails', 'text'),)
-    # Pre-populate the form.  Note that this does not overwrite submitted values.
-    form.vars.name = ul.name
-    form.vars.user_emails = user_email_string
-    form.vars.manager_emails = manager_email_string
-    # Adds a cancel button
-    form.add_button(T('Cancel'), URL('view_user_list', args=[ul.id]))
-    if form.process(onvalidation=controller_util.split_emails).accepted:
-        # updates the actual form.
-        db(db.user_list.id == ul.id).update(
-            name=form.vars.name, 
-            email_list=form.vars.email_list,
-            managers = util.append_unique(form.vars.manager_list, auth.user.email))
-        db.commit()
-        redirect(URL('view_user_list', args=[ul.id]))
-    return dict(user_list=ul, form=form)
-    
-    
+def validate_user_list(form):
+    if isinstance(form.vars.email_list, basestring):
+        form.vars.email_list = [form.vars.email_list]
+    if isinstance(form.vars.managers, basestring):
+        form.vars.managers = [form.vars.managers]
+    logger.debug("email_list:" + str(form.vars.email_list) + " managers:" + str(form.vars.managers))
+    if auth.user.email not in form.vars.managers:
+        form.vars.managers = [auth.user.email] + form.vars.managers
 
+def create_user_list(form):
+    u = db(db.user_properties.user == auth.user_id).select().first()
+    if u == None:
+        db.user_properties.insert(user = auth.user_id)
+        ul = []
+    else:
+        ul = u.user_lists
+    ul = util.append_unique(ul, form.vars.id)
+    db(db.user_properties.user == auth.user_id).update(user_lists=ul)
+    db.commit()
+    
+def delete_user_list(table, id):
+    u = db(db.user_properties.user == auth.user_id).select().first()
+    if u == None:
+        db.user_properties.insert(user = auth.user_id)
+    else:
+        ul = util.list_remove(u.user_lists, id)
+        db(db.user_properties.user == auth.user_id).update(user_lists=ul)
+    db.commit()
+    
 
 def user():
     """

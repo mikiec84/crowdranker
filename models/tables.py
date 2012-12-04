@@ -9,7 +9,8 @@ db.define_table('user_list',
     Field('managers', 'list:string'),
     )
 
-db.user_list.id.readable = db.user_list.id.writable = False    
+db.user_list.id.readable = db.user_list.id.writable = False
+db.user_list.creation_date.writable = False    
 db.user_list.email_list.requires = [IS_LIST_OF(IS_EMAIL())]
 db.user_list.managers.requires = [IS_LIST_OF(IS_EMAIL())]
 

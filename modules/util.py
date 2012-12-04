@@ -26,6 +26,14 @@ def append_unique(l, el):
         return l
     else:
         return l + [el]
+        
+def list_remove(l, el):
+    """Removes element el from list l, if found."""
+    if el not in l:
+        return l
+    else:
+        l.remove(el)
+        return l
 
 def split_emails(s):
     """Splits the emails that occur in a string s, returning the list of emails."""
