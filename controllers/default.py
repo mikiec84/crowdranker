@@ -80,6 +80,12 @@ def user_list_index():
         list_ids = []
     else:
         list_ids = list_ids_l['user_lists']
+    # Keeps track of old managers, if this is an update.
+    if len(request.args) > 2 and request.args[-3] == 'edit':
+        id = request.args[-1]
+        old_managers = db.user_list[id].managers
+    else:
+        old_managers = []
     # Gets the lists.
     q = (db.user_list.id.belongs(list_ids))
     grid = SQLFORM.grid(q, 
@@ -87,36 +93,37 @@ def user_list_index():
         csv=False, details=True,
         oncreate=create_user_list,
         onvalidation=validate_user_list,
-        onupdate=update_user_list,
-        ondelete=delete_user_list)
+        onupdate=update_user_list(old_managers),
+        ondelete=delete_user_list,
+        )
     return dict(grid=grid)
     
 
 def validate_user_list(form):
     """Splits emails on the same line, and adds the user creating the list to its managers."""
+    logger.debug("form.vars: " + str(form.vars))
     form.vars.email_list = util.normalize_email_list(form.vars.email_list)
     form.vars.managers = util.normalize_email_list(form.vars.managers)
     if auth.user.email not in form.vars.managers:
         form.vars.managers = [auth.user.email] + form.vars.managers
-
-def get_old_managers(id):
-    old_user_list = db(db.user_list.id == form.vars.id).select(db.user_list.managers).first()
-    if old_user_list == None:
-        return []
-    else:
-        return old_user_list.managers
-
-def update_user_list(form):
-    # Produces the list of people who are no longer managers.
-    old_managers = get_old_managers(form.vars.id)
-    add_user_list_managers(form.vars.id, util.list_diff(form.vars.managers, old_managers))
-    delete_user_list_managers(form.vars.id, util.list_diff(old_managers, form.vars.managers))
+    logger.debug("At the end of validation: email_list: " + str(form.vars.email_list) + "; managers: " + str(form.vars.managers))
+    
+def update_user_list(old_managers):
+    """We return a callback that takes a form argument."""
+    def f(form):
+        logger.debug("Old managers: " + str(old_managers))
+        logger.debug("New managers: " + str(form.vars.managers))
+        add_user_list_managers(form.vars.id, util.list_diff(form.vars.managers, old_managers))
+        delete_user_list_managers(form.vars.id, util.list_diff(old_managers, form.vars.managers))
+    return f
 
 def create_user_list(form):
     add_user_list_managers(form.vars.id, form.vars.managers)
 
 def delete_user_list(table, id):
-    delete_user_list_managers(id, get_old_managers(id))
+    old_managers = db.user_list[id].managers
+    logger.debug("On delete, the old managers were: " + str(old_managers))
+    delete_user_list_managers(id, old_managers)
 
 def add_user_list_managers(id, managers):
     for m in managers:

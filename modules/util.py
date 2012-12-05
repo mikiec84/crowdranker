@@ -64,4 +64,4 @@ def normalize_email_list(l):
     for el in l:
         ll = split_emails(el)
         r += ll
-    return ll
+    return r
