@@ -10,7 +10,8 @@ db.define_table('user_list',
     )
 
 db.user_list.id.readable = db.user_list.id.writable = False
-db.user_list.creation_date.writable = False    
+db.user_list.creation_date.writable = False 
+db.user_list.name.required = True   
 db.user_list.email_list.requires = [IS_LIST_OF(IS_EMAIL())]
 db.user_list.managers.requires = [IS_LIST_OF(IS_EMAIL())]
 
@@ -24,7 +25,7 @@ db.define_table('user_properties',
     Field('contests_can_manage', 'list:reference contest'),
     )
 
-
+db.user_properties.email.required = True
 
 db.define_table('contest',
     Field('name'),
