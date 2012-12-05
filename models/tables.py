@@ -18,11 +18,11 @@ db.user_list.managers.requires = [IS_LIST_OF(IS_EMAIL())]
 db.define_table('user_properties',
     Field('email'), # Primary key
     Field('user_lists', 'list:reference user_list'), # Managed by user
+    Field('contests_can_manage', 'list:reference contest'),
     Field('contests_can_submit', 'list:reference contest'),
     Field('contests_can_rate', 'list:reference contest'),
-    Field('contests_has_rated', 'list:reference contest'),
     Field('contests_has_submitted', 'list:reference contest'),
-    Field('contests_can_manage', 'list:reference contest'),
+    Field('contests_has_rated', 'list:reference contest'),
     )
 
 db.user_properties.email.required = True
@@ -38,7 +38,11 @@ db.define_table('contest',
     Field('rate_open_date', 'datetime'),
     Field('rate_close_date', 'datetime'),
     )
-    
+
+db.contest.name.required = True
+db.contest.name.creation_date.writable = False
+db.contest.id.readable = db.contest.id.writable = False
+            
 db.define_table('submission',
     Field('author', db.auth_user,  default=auth.user_id),
     Field('date', 'datetime', default=datetime.utcnow()),

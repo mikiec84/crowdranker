@@ -14,63 +14,143 @@ def index():
     return dict(user_is_admin=user_is_admin)
     
 @auth.requires_login()
-def contest_index():
-    """
-    We can want several type of contests.
-    We may want: 
-    * 'subopen': open for submission.
-    * 'revopen': open for review.
-    * 'submitted': to whom the author has submitted.
-    * 'managed' for which the author is a manager.
-    """
-    # Builds the correct query type.
+def contest_subopen_index():
     props = db(db.user_properties.email == auth.user.email).select().first()
-    q_type = request.args(0) or redirect(index)
-    if q_type == 'subopen':
-        msg = T('Contests open for submission')
-        q_all = ((db.contest.open_date < datetime.utcnow()) &
-                 (db.contest.close_date > datetime.utcnow()) &
-                 (db.contest.submit_constraint == None))
-        q_user = ((db.contest.open_date < datetime.utcnow()) &
-                  (db.contest.close_date > datetime.utcnow()) &
-                  (db.contest.id.belongs(props.contests_can_submit)))
-        c_all = db(q_all).select().as_list()
-        c_user = db(q_user).select().as_list()
-        c = util.union_id_list(c_all, c_user)
-        q = (db.contest.id.belongs(c))
-    elif q_type == 'revopen':
-        msg = T('Contests open for review')
-        q_all = ((db.contest.rate_open_date < datetime.utcnow()) &
-                 (db.contest.rate_close_date > datetime.utcnow()) &
-                 (db.contest.rate_constraint == None))
-        q_user = ((db.contest.rate_open_date < datetime.utcnow()) &
-                  (db.contest.rate_close_date > datetime.utcnow()) &
-                  (db.contest.id.belongs(props.contests_can_rate)))
-        c_all = db(q_all).select().as_list()
-        c_user = db(q_user).select().as_list()
-        c = util.union_id_list(c_all, c_user)
-        q = (db.contest.id.belongs(c))
-    elif q_type == 'submitted':
-        msg = T('Contests to which you submitted')
-        q = (db.contest.id.belongs(props.contests_has_submitted))
-    elif q_type == 'managed':
-        msg = T('Contests you manage')
-        q = (db.contest.id.belongs(props.contest_can_manage))
+    q_all = ((db.contest.open_date < datetime.utcnow()) &
+             (db.contest.close_date > datetime.utcnow()) &
+             (db.contest.submit_constraint == None))
+    q_user = ((db.contest.open_date < datetime.utcnow()) &
+              (db.contest.close_date > datetime.utcnow()) &
+              (db.contest.id.belongs(props.contests_can_submit)))
+    c_all = db(q_all).select().as_list()
+    c_user = db(q_user).select().as_list()
+    c = util.union_id_list(c_all, c_user)
+    q = (db.contest.id.belongs(c))
+
+@auth.requires_login()
+def contest_revopen_index():
+    props = db(db.user_properties.email == auth.user.email).select().first()
+    q_all = ((db.contest.rate_open_date < datetime.utcnow()) &
+             (db.contest.rate_close_date > datetime.utcnow()) &
+             (db.contest.rate_constraint == None))
+    q_user = ((db.contest.rate_open_date < datetime.utcnow()) &
+              (db.contest.rate_close_date > datetime.utcnow()) &
+              (db.contest.id.belongs(props.contests_can_rate)))
+    c_all = db(q_all).select().as_list()
+    c_user = db(q_user).select().as_list()
+    c = util.union_id_list(c_all, c_user)
+    q = (db.contest.id.belongs(c))
+        
+@auth.requires_login()
+def contest_submitted_index():
+    props = db(db.user_properties.email == auth.user.email).select().first()
+    q = (db.contest.id.belongs(props.contests_has_submitted))
+    
+@auth.requires_login()
+def contest_managed_index():
+    props = db(db.user_properties.email == auth.user.email).select().first()
+    q = (db.contest.id.belongs(props.contest_can_manage))    
+    # Keeps track of old managers, if this is an update.
+    if len(request.args) > 2 and request.args[-3] == 'edit':
+        id = request.args[-1]
+        old_managers = db.contests[id].managers
     else:
-        # Invalid query type.
-        redirect(index)
-    # At this point, we have a query.
+        old_managers = []
     grid = SQLFORM.grid(q,
         field_id=db.contest.id,
-        fields=[],
         csv=False,
-        details=False,
-        create=False,
-        links=[dict(header='Name', body = lambda r: A(r.name, _href=URL('view_contest', args=[r.id]))),],
+        details=True,
+        create=True,
+        onvalidate=validate_contest,
+        oncreate=create_contest,
         )
-    return dict(grid=grid, msg=msg)
+    return dict(grid=grid)
     
-    
+def validate_contest(form):
+    """Validates the form contest, splitting managers listed on the same line."""
+    form.vars.managers = util.normalize_email_list(form.vars.managers)
+    if auth.user.email not in form.vars.managers:
+        form.vars.managers = [auth.user.email] + form.vars.managers
+
+def create_contest(form):
+    """Processes the creation of a context, propagating the effects."""
+    # First, we need to add the context for the new managers.
+    add_contest_to_user_managers(form.vars.id, form.vars.managers)
+    # If there is a submit constraint, we need to allow all the users
+    # in the list to submit.
+    if form.vars.submit_constraint != None:
+        user_list = db.user_list[form.vars.submit_constraint].email_list
+        # We need to add everybody in that list to submit.
+        add_contest_to_user_submit(form.vars.id, user_list)
+    # If there is a rating constraint, we need to allow all the users
+    # in the list to rate.
+    if form.vars.rate_constraint != None:
+        user_list = db.user_list[form.vars.rate_constraint].email_list
+        add_contest_to_user_rate(form.vars.id, user_list)
+                
+def add_contest_to_user_managers(id, user_list):
+    for m in user_list:
+        u = db(db.user_properties.email == m).select(db.user_properties.contests_can_manage).first()
+        if u == None:
+            # We never heard of this user, but we still create the permission.
+            logger.debug("Creating user properties for email:" + str(m) + "<")
+            db.user_properties.insert(email=m)
+            db.commit()
+            l = []
+        else:
+            l = u.contests_can_manage
+        l = util.list_append_unique(l, id)
+        db(db.user_properties.email == m).update(contests_can_manage = l)
+    db.commit()
+        
+def add_contest_to_user_submit(id, user_list):
+    for m in user_list:
+        u = db(db.user_properties.email == m).select(db.user_properties.contests_can_submit).first()
+        if u == None:
+            # We never heard of this user, but we still create the permission.
+            logger.debug("Creating user properties for email:" + str(m) + "<")
+            db.user_properties.insert(email=m)
+            db.commit()
+            l = []
+        else:
+            l = u.contests_can_submit
+        l = util.list_append_unique(l, id)
+        db(db.user_properties.email == m).update(contests_can_submit = l)
+    db.commit()
+        
+def add_contest_to_user_list(id, user_list):
+    for m in user_list:
+        u = db(db.user_properties.email == m).select(db.user_properties.contests_can_rate).first()
+        if u == None:
+            # We never heard of this user, but we still create the permission.
+            logger.debug("Creating user properties for email:" + str(m) + "<")
+            db.user_properties.insert(email=m)
+            db.commit()
+            l = []
+        else:
+            l = u.contests_can_rate
+        l = util.list_append_unique(l, id)
+        db(db.user_properties.email == m).update(contests_can_rate = l)
+    db.commit()
+        
+
+        
+def add_contest_to_managers(id, managers):
+    for m in managers:
+        u = db(db.user_properties.email == m).select(db.user_properties.user_lists).first()
+        if u == None:
+            # We never heard of this user, but we still create the permission.
+            logger.debug("Creating user properties for email:" + str(m) + "<")
+            db.user_properties.insert(email=m, contests_can_manage=[])
+            db.commit()
+            contests_can_manage = []
+        else:
+            contests_can_manage = u.contests_can_manage
+        contests_can_manage = util.list_append_unique(contests_can_manage, id)
+        db(db.user_properties.email == m).update(contests_can_manage = contests_can_manage)
+    db.commit()
+        
+        
 @auth.requires_login()
 def user_list_index():
     """Index of user list one can manage or use."""
@@ -109,6 +189,9 @@ def validate_user_list(form):
     logger.debug("At the end of validation: email_list: " + str(form.vars.email_list) + "; managers: " + str(form.vars.managers))
     
 def update_user_list(old_managers):
+    ### TODO(Luca): This takes care of updating the managers. 
+    # But, we also need to propagate the changes to the email list for all contests that use
+    # this list for access or rating control.
     """We return a callback that takes a form argument."""
     def f(form):
         logger.debug("Old managers: " + str(old_managers))
@@ -121,6 +204,7 @@ def create_user_list(form):
     add_user_list_managers(form.vars.id, form.vars.managers)
 
 def delete_user_list(table, id):
+    # TODO(luca): What do we have to do for the contests that were using this list for access control?
     old_managers = db.user_list[id].managers
     logger.debug("On delete, the old managers were: " + str(old_managers))
     delete_user_list_managers(id, old_managers)
