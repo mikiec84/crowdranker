@@ -58,6 +58,8 @@ def contest_managed_index():
         old_rate_constraint = c.rate_constraint
     else:
         old_managers = []
+        old_submit_constraint = None
+        old_rate_constraint = None
     grid = SQLFORM.grid(q,
         field_id=db.contest.id,
         csv=False,
@@ -197,7 +199,6 @@ def delete_contest(table, id):
     if c.rate_constraint != None:
         user_list = db.user_list[c.rate_constraint]
         delete_contest_from_raters(id, user_list)
-                
                                                 
         
 @auth.requires_login()
@@ -211,18 +212,21 @@ def user_list_index():
         list_ids = list_ids_l['user_lists']
     # Keeps track of old managers, if this is an update.
     if len(request.args) > 2 and request.args[-3] == 'edit':
-        id = request.args[-1]
-        old_managers = db.user_list[id].managers
+        ul = db.user_list[request.args[-1]]
+        old_managers = ul.managers
+        old_members = ul.email_list
     else:
         old_managers = []
+        old_members = []
     # Gets the lists.
     q = (db.user_list.id.belongs(list_ids))
     grid = SQLFORM.grid(q, 
         field_id = db.user_list.id,
         csv=False, details=True,
+        deletable=False,
         oncreate=create_user_list,
         onvalidation=validate_user_list,
-        onupdate=update_user_list(old_managers),
+        onupdate=update_user_list(old_managers, old_members),
         ondelete=delete_user_list,
         )
     return dict(grid=grid)
@@ -237,16 +241,30 @@ def validate_user_list(form):
         form.vars.managers = [auth.user.email] + form.vars.managers
     logger.debug("At the end of validation: email_list: " + str(form.vars.email_list) + "; managers: " + str(form.vars.managers))
     
-def update_user_list(old_managers):
-    ### TODO(Luca): This takes care of updating the managers. 
-    # But, we also need to propagate the changes to the email list for all contests that use
-    # this list for access or rating control.
+def update_user_list(old_managers, old_members):
     """We return a callback that takes a form argument."""
     def f(form):
         logger.debug("Old managers: " + str(old_managers))
         logger.debug("New managers: " + str(form.vars.managers))
         add_user_list_managers(form.vars.id, util.list_diff(form.vars.managers, old_managers))
         delete_user_list_managers(form.vars.id, util.list_diff(old_managers, form.vars.managers))
+        # If the list membership has been modified, we may need to update all the users
+        # for which the list was used as contest constraint.
+        added_users = util.list_diff(form.vars.email_list, old_members)
+        removed_users = util.list_diff(old_members, email_list)
+        if len(added_users) + len(removed_users) > 0:
+            # Otherwise, no point wasting time.
+            # Submit constraint.
+            contests = db(db.contest.submit_constraint == form.vars.id).select()
+            # These contests were using the list as submit constraint.
+            for c in contests:
+                add_contest_to_user_submit(c.id, added_users)
+                delete_contest_from_submitters(c.id, removed_users)
+            # Rate constraint.
+            contests= db(db.contest.rate_constraint == form.vars.id).select()
+            for c in contests:
+                add_contest_to_user_rate(c.id, added_users)
+                delete_contest_from_raters(c.id, removed_users)
     return f
 
 def create_user_list(form):
