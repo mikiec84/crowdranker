@@ -96,7 +96,6 @@ def validate_user_list(form):
     """Splits emails on the same line, and adds the user creating the list to its managers."""
     form.vars.email_list = util.normalize_email_list(form.vars.email_list)
     form.vars.managers = util.normalize_email_list(form.vars.managers)
-    logger.debug("email_list:" + str(form.vars.email_list) + " managers:" + str(form.vars.managers))
     if auth.user.email not in form.vars.managers:
         form.vars.managers = [auth.user.email] + form.vars.managers
 

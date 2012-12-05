@@ -4,7 +4,7 @@ from gluon import *
 import re
 
 email_split_pattern = re.compile('[,\s]+')
-whitespace = re.compile('\s*')
+whitespace = re.compile('\s+')
 
 def union_id_list(l1, l2):
     """Computes the union of the 'id' elements of two lists of dictionaries."""
@@ -53,7 +53,7 @@ def split_emails(s):
     else:
         r = []
         for el in l:
-            if not whitespace.match(el):
+            if len(el) > 0 and not whitespace.match(el):
                 r += [el]
         return r
 
