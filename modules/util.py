@@ -3,11 +3,7 @@
 from gluon import *
 import re
 
-email_split_pattern = re.compile('(,\s)+')
-email_re = re.compile(
-    r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*"  # dot-atom
-    r'|^"([\001-\010\013\014\016-\037!#-\[\]-\177]|\\[\001-011\013\014\016-\177])*"' # quoted-string
-    r')@(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?$', re.IGNORECASE)  # domain
+email_split_pattern = re.compile('[,\s]+')
 
 def union_id_list(l1, l2):
     """Computes the union of the 'id' elements of two lists of dictionaries."""
@@ -39,9 +35,15 @@ def split_emails(s):
     """Splits the emails that occur in a string s, returning the list of emails."""
     l = email_split_pattern.split(s)
     if l == None:
-        l = []
+        return []
+    else:
+        return l
+
+def normalize_email_list(l):
+    if isinstance(l, basestring):
+        l = [l]
     r = []
     for el in l:
-        if email_re.match(el):
-            r.append(el)
-    return r
+        ll = split_emails(el)
+        r += ll
+    return ll
