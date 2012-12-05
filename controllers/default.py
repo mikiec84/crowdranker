@@ -63,6 +63,7 @@ def contest_managed_index():
         csv=False,
         details=True,
         create=True,
+        deletable=False, # Disabled; cannot delete contests with submissions.
         onvalidate=validate_contest,
         oncreate=create_contest,
         onupdate=update_contest(old_managers, old_submit_constrant, old_rate_constraint),
@@ -187,23 +188,17 @@ def update_contest(old_managers, old_submit_constraint, old_rate_constraint):
                 add_contest_to_user_rate(form.vars.id, user_list)
     return f
                 
-
+def delete_contest(table, id):
+    c = db.contest[id]
+    delete_contest_from_managers(id, c.managers)
+    if c.submit_constraint != None:
+        user_list = db.user_list[c.submit_constraint]
+        delete_contest_from_submitters(id, user_list)
+    if c.rate_constraint != None:
+        user_list = db.user_list[c.rate_constraint]
+        delete_contest_from_raters(id, user_list)
                 
-def add_contest_to_managers(id, managers):
-    for m in managers:
-        u = db(db.user_properties.email == m).select(db.user_properties.user_lists).first()
-        if u == None:
-            # We never heard of this user, but we still create the permission.
-            logger.debug("Creating user properties for email:" + str(m) + "<")
-            db.user_properties.insert(email=m, contests_can_manage=[])
-            db.commit()
-            contests_can_manage = []
-        else:
-            contests_can_manage = u.contests_can_manage
-        contests_can_manage = util.list_append_unique(contests_can_manage, id)
-        db(db.user_properties.email == m).update(contests_can_manage = contests_can_manage)
-    db.commit()
-        
+                                                
         
 @auth.requires_login()
 def user_list_index():
