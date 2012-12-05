@@ -24,7 +24,7 @@ def contest_index():
     * 'managed' for which the author is a manager.
     """
     # Builds the correct query type.
-    props = db(db.user_properties.user == auth.user_id).select().first()
+    props = db(db.user_properties.email == auth.user.email).select().first()
     q_type = request.args(0) or redirect(index)
     if q_type == 'subopen':
         msg = T('Contests open for submission')
@@ -75,7 +75,7 @@ def contest_index():
 def user_list_index():
     """Index of user list one can manage or use."""
     # Reads the list of ids of lists managed by the user.
-    list_ids_l = db(db.user_properties.user == auth.user_id).select(db.user_properties.user_lists).first()
+    list_ids_l = db(db.user_properties.email == auth.user.email).select(db.user_properties.user_lists).first()
     if list_ids_l == None:
         list_ids = []
     else:
@@ -87,37 +87,61 @@ def user_list_index():
         csv=False, details=True,
         oncreate=create_user_list,
         onvalidation=validate_user_list,
+        onupdate=update_user_list,
         ondelete=delete_user_list)
     return dict(grid=grid)
     
 
 def validate_user_list(form):
+    """Splits emails on the same line, and adds the user creating the list to its managers."""
     form.vars.email_list = util.normalize_email_list(form.vars.email_list)
     form.vars.managers = util.normalize_email_list(form.vars.managers)
     logger.debug("email_list:" + str(form.vars.email_list) + " managers:" + str(form.vars.managers))
     if auth.user.email not in form.vars.managers:
         form.vars.managers = [auth.user.email] + form.vars.managers
 
+def get_old_managers(id):
+    old_user_list = db(db.user_list.id == form.vars.id).select(db.user_list.managers).first()
+    if old_user_list == None:
+        return []
+    else:
+        return old_user_list.managers
+
+def update_user_list(form):
+    # Produces the list of people who are no longer managers.
+    old_managers = get_old_managers(form.vars.id)
+    add_user_list_managers(form.vars.id, util.list_diff(form.vars.managers, old_managers))
+    delete_user_list_managers(form.vars.id, util.list_diff(old_managers, form.vars.managers))
+
 def create_user_list(form):
-    u = db(db.user_properties.user == auth.user_id).select().first()
-    if u == None:
-        db.user_properties.insert(user = auth.user_id)
-        ul = []
-    else:
-        ul = u.user_lists
-    ul = util.append_unique(ul, form.vars.id)
-    db(db.user_properties.user == auth.user_id).update(user_lists=ul)
-    db.commit()
-    
+    add_user_list_managers(form.vars.id, form.vars.managers)
+
 def delete_user_list(table, id):
-    u = db(db.user_properties.user == auth.user_id).select().first()
-    if u == None:
-        db.user_properties.insert(user = auth.user_id)
-    else:
-        ul = util.list_remove(u.user_lists, id)
-        db(db.user_properties.user == auth.user_id).update(user_lists=ul)
+    delete_user_list_managers(id, get_old_managers(id))
+
+def add_user_list_managers(id, managers):
+    for m in managers:
+        u = db(db.user_properties.email == m).select(db.user_properties.user_lists).first()
+        if u == None:
+            # We never heard of this user, but we still create the permission.
+            logger.debug("Creating user properties for email:" + str(m) + "<")
+            db.user_properties.insert(email=m, user_lists=[])
+            db.commit()
+            managed_lists = []
+        else:
+            managed_lists = u.user_lists
+        managed_lists = util.list_append_unique(managed_lists, id)
+        db(db.user_properties.email == m).update(user_lists = managed_lists)
     db.commit()
-    
+            
+def delete_user_list_managers(id, managers):
+    for m in managers:
+        u = db(db.user_properties.email == m).select(db.user_properties.user_lists).first()
+        if u != None:
+            managed_lists = util.list_remove(u.user_lists, id)
+            db(db.user_properties.email == m).update(user_lists = managed_lists)
+    db.commit()
+                        
 
 def user():
     """

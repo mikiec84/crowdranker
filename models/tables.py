@@ -15,7 +15,7 @@ db.user_list.email_list.requires = [IS_LIST_OF(IS_EMAIL())]
 db.user_list.managers.requires = [IS_LIST_OF(IS_EMAIL())]
 
 db.define_table('user_properties',
-    Field('user', db.auth_user),
+    Field('email'), # Primary key
     Field('user_lists', 'list:reference user_list'), # Managed by user
     Field('contests_can_submit', 'list:reference contest'),
     Field('contests_can_rate', 'list:reference contest'),
@@ -23,6 +23,8 @@ db.define_table('user_properties',
     Field('contests_has_submitted', 'list:reference contest'),
     Field('contests_can_manage', 'list:reference contest'),
     )
+
+
 
 db.define_table('contest',
     Field('name'),
