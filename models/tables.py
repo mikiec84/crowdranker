@@ -33,6 +33,7 @@ db.define_table('contest',
     Field('managers', 'list:string'),
     Field('submit_constraint', db.user_list),
     Field('rate_constraint', db.user_list),
+    Field('is_active', 'boolean', default=True),
     Field('open_date', 'datetime', default=datetime.utcnow()),
     Field('close_date', 'datetime'),
     Field('rate_open_date', 'datetime'),
@@ -40,7 +41,7 @@ db.define_table('contest',
     )
 
 db.contest.name.required = True
-db.contest.name.creation_date.writable = False
+db.contest.creation_date.writable = False
 db.contest.id.readable = db.contest.id.writable = False
             
 db.define_table('submission',

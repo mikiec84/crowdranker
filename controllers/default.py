@@ -18,9 +18,11 @@ def contest_subopen_index():
     props = db(db.user_properties.email == auth.user.email).select().first()
     q_all = ((db.contest.open_date < datetime.utcnow()) &
              (db.contest.close_date > datetime.utcnow()) &
+             (db.contest.is_active) &
              (db.contest.submit_constraint == None))
     q_user = ((db.contest.open_date < datetime.utcnow()) &
               (db.contest.close_date > datetime.utcnow()) &
+              (db.contest.is_active) &
               (db.contest.id.belongs(props.contests_can_submit)))
     c_all = db(q_all).select().as_list()
     c_user = db(q_user).select().as_list()
@@ -28,13 +30,15 @@ def contest_subopen_index():
     q = (db.contest.id.belongs(c))
 
 @auth.requires_login()
-def contest_revopen_index():
+def contest_rateopen_index():
     props = db(db.user_properties.email == auth.user.email).select().first()
     q_all = ((db.contest.rate_open_date < datetime.utcnow()) &
              (db.contest.rate_close_date > datetime.utcnow()) &
+             (db.contest.is_active) &
              (db.contest.rate_constraint == None))
     q_user = ((db.contest.rate_open_date < datetime.utcnow()) &
               (db.contest.rate_close_date > datetime.utcnow()) &
+              (db.contest.is_active) &
               (db.contest.id.belongs(props.contests_can_rate)))
     c_all = db(q_all).select().as_list()
     c_user = db(q_user).select().as_list()
@@ -49,7 +53,10 @@ def contest_submitted_index():
 @auth.requires_login()
 def contest_managed_index():
     props = db(db.user_properties.email == auth.user.email).select().first()
-    q = (db.contest.id.belongs(props.contest_can_manage))    
+    managed_contest_list = props.contests_can_manage
+    if managed_contest_list == None:
+        managed_contest_list = []
+    q = (db.contest.id.belongs(managed_contest_list))    
     # Keeps track of old managers, if this is an update.
     if len(request.args) > 2 and request.args[-3] == 'edit':
         c = db.contest[request.args[-1]]
@@ -66,9 +73,9 @@ def contest_managed_index():
         details=True,
         create=True,
         deletable=False, # Disabled; cannot delete contests with submissions.
-        onvalidate=validate_contest,
+        onvalidation=validate_contest,
         oncreate=create_contest,
-        onupdate=update_contest(old_managers, old_submit_constrant, old_rate_constraint),
+        onupdate=update_contest(old_managers, old_submit_constraint, old_rate_constraint),
         )
     return dict(grid=grid)
     

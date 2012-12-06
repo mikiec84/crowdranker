@@ -65,3 +65,10 @@ def normalize_email_list(l):
         ll = split_emails(el)
         r += ll
     return r
+
+def get_list(f):
+    """Unfortunately, empty list fields are often returned as None rather than the empty list."""
+    if f == None:
+        return []
+    else:
+        return f
