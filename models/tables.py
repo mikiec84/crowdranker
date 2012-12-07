@@ -16,8 +16,6 @@ db.user_list.email_list.requires = [IS_LIST_OF(IS_EMAIL())]
 db.user_list.managers.requires = [IS_LIST_OF(IS_EMAIL())]
 db.user_list.name.comment = 'Name of user list.'
 db.user_list.email_list.label = 'Members'
-db.user_list.email_list.comment = 'Email addresses of list members.'
-db.user_list.managers.comment = 'Email addresses of list managers.'
 
 db.define_table('user_properties',
     Field('email'), # Primary key

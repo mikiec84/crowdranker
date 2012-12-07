@@ -49,20 +49,15 @@ def update_user_list(old_managers, old_members):
         # If the list membership has been modified, we may need to update all the users
         # for which the list was used as contest constraint.
         added_users = util.list_diff(form.vars.email_list, old_members)
-        removed_users = util.list_diff(old_members, email_list)
+        removed_users = util.list_diff(old_members, form.vars.email_list)
         if len(added_users) + len(removed_users) > 0:
             # Otherwise, no point wasting time.
             # Submit constraint.
-            contests = db(db.contest.submit_constraint == form.vars.id).select()
-            # These contests were using the list as submit constraint.
-            for c in contests:
-                add_contest_to_user_submit(c.id, added_users)
-                delete_contest_from_submitters(c.id, removed_users)
+            add_user_list_to_user_submit(form.vars.id, added_users)
+            delete_user_list_from_user_submit(form.vars.id, removed_users)
             # Rate constraint.
-            contests= db(db.contest.rate_constraint == form.vars.id).select()
-            for c in contests:
-                add_contest_to_user_rate(c.id, added_users)
-                delete_contest_from_raters(c.id, removed_users)
+            add_user_list_to_user_rate(form.vars.id, added_users)
+            delete_user_list_from_user_rate(form.vars.id, removed_users)
     return f
 
 def create_user_list(form):
@@ -82,17 +77,78 @@ def add_user_list_managers(id, managers):
             logger.debug("Creating user properties for email:" + str(m) + "<")
             db.user_properties.insert(email=m, managed_user_lists=[])
             db.commit()
-            managed_lists = []
+            l = []
         else:
-            managed_lists = u.managed_user_lists
-        managed_lists = util.list_append_unique(managed_lists, id)
-        db(db.user_properties.email == m).update(managed_user_lists = managed_lists)
+            l = util.get_list(u.managed_user_lists)
+        l = util.list_append_unique(l, id)
+        db(db.user_properties.email == m).update(managed_user_lists = l)
     db.commit()
             
 def delete_user_list_managers(id, managers):
+    """Removes the user list from those that each user can manage"""
     for m in managers:
         u = db(db.user_properties.email == m).select(db.user_properties.managed_user_lists).first()
         if u != None:
-            managed_lists = util.list_remove(u.managed_user_lists, id)
-            db(db.user_properties.email == m).update(managed_user_lists = managed_lists)
+            l = util.list_remove(u.managed_user_lists, id)
+            db(db.user_properties.email == m).update(managed_user_lists = l)
     db.commit()
+    
+def add_user_list_to_user_submit(id, users):
+    """Add the user list to those related to contests to which the user can submit"""
+    for m in users:
+        u = db(db.user_properties.email == m).select(db.user_properties.contests_can_submit).first()
+        if u == None:
+            # We never heard of this user, but we still create the permission.
+            logger.debug("Creating user properties for email:" + str(m) + "<")
+            db.user_properties.insert(email=m)
+            db.commit()
+            l = []
+        else:
+            l = util.get_list(u.contests_can_submit)
+        l = util.list_append_unique(l, id)
+        db(db.user_properties.email == m).update(contests_can_submit = l)
+    db.commit()
+        
+def add_user_list_to_user_rate(id, users):
+    """Add the user list to those related to contests the user can rate"""
+    for m in users:
+        u = db(db.user_properties.email == m).select(db.user_properties.contests_can_rate).first()
+        if u == None:
+            # We never heard of this user, but we still create the permission.
+            logger.debug("Creating user properties for email:" + str(m) + "<")
+            db.user_properties.insert(email=m)
+            db.commit()
+            l = []
+        else:
+            l = util.get_list(u.contests_can_rate)
+        l = util.list_append_unique(l, id)
+        db(db.user_properties.email == m).update(contests_can_rate = l)
+    db.commit()
+        
+def delete_user_list_from_user_submit(id, users):
+    """Delete the user list from those related to contests to which the user can submit"""
+    for m in users:
+        u = db(db.user_properties.email == m).select(db.user_properties.contests_can_submit).first()
+        if u == None:
+            # We never heard of this user, but we still create the permission.
+            logger.debug("Creating user properties for email:" + str(m) + "<")
+            db.user_properties.insert(email=m)
+        else:
+            l = util.get_list(u.contests_can_submit)
+            l = util.list_remove(l, id)
+            db(db.user_properties.email == m).update(contests_can_submit = l)
+        db.commit()
+
+def delete_user_list_from_user_rate(id, users):
+    """Delete the user list from those related to contests which the user can rate"""
+    for m in users:
+        u = db(db.user_properties.email == m).select(db.user_properties.contests_can_rate).first()
+        if u == None:
+            # We never heard of this user, but we still create the permission.
+            logger.debug("Creating user properties for email:" + str(m) + "<")
+            db.user_properties.insert(email=m)
+        else:
+            l = util.get_list(u.contests_can_rate)
+            l = util.list_remove(l, id)
+            db(db.user_properties.email == m).update(contests_can_rate = l)
+        db.commit()
