@@ -5,6 +5,7 @@ import re
 
 email_split_pattern = re.compile('[,\s]+')
 whitespace = re.compile('\s+')
+any_whitespace = re.compile('\s*')
 
 def union_id_list(l1, l2):
     """Computes the union of the 'id' elements of two lists of dictionaries."""
@@ -72,3 +73,10 @@ def get_list(f):
         return []
     else:
         return f
+
+def is_none(s):
+    """Checks whether a string is empty or None"""
+    if s == None:
+        return True
+    else:
+        return any_whitespace.match(s)

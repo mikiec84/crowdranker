@@ -51,11 +51,7 @@ db.contest.managers.comment = 'Email addresses of contest managers.'
 db.contest.is_active.label = 'Active'
 db.contest.is_active.comment = 'Uncheck to prevent all access to this contest.'
 db.contest.submit_constraint.label = 'Who can submit'
-db.contest.submit_constraint.comment = ('User list of people who can submit. '
-    'Leave blank to allow anybody to submit.')
 db.contest.rate_constraint.label = 'Who can rate'
-db.contest.rate_constraint.comment = ('User list of people who can rate submissions. '
-    'Leave blank to allow anybody to rate.')
 db.contest.open_date.label = 'Submission opening date'
 db.contest.close_date.label = 'Submission closing date'
 db.contest.close_date.comment = 'Leave blank if there is no submission deadline.'

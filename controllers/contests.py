@@ -1,10 +1,15 @@
 # coding: utf8
 
+import myvalidators
 import util
 
 @auth.requires_login()
 def subopen_index():
     props = db(db.user_properties.email == auth.user.email).select().first()
+    if props == None: 
+        l = []
+    else:
+        l = util.get_list(props.contests_can_submit)
     q_all = ((db.contest.open_date < datetime.utcnow()) &
              (db.contest.close_date > datetime.utcnow()) &
              (db.contest.is_active) &
@@ -12,7 +17,7 @@ def subopen_index():
     q_user = ((db.contest.open_date < datetime.utcnow()) &
               (db.contest.close_date > datetime.utcnow()) &
               (db.contest.is_active) &
-              (db.contest.id.belongs(props.contests_can_submit)))
+              (db.contest.id.belongs(l)))
     c_all = db(q_all).select().as_list()
     c_user = db(q_user).select().as_list()
     c = util.union_id_list(c_all, c_user)
@@ -21,6 +26,10 @@ def subopen_index():
 @auth.requires_login()
 def rateopen_index():
     props = db(db.user_properties.email == auth.user.email).select().first()
+    if props == None:
+        l = []
+    else:
+        l = util.get_list(props.contests_can_rate)
     q_all = ((db.contest.rate_open_date < datetime.utcnow()) &
              (db.contest.rate_close_date > datetime.utcnow()) &
              (db.contest.is_active) &
@@ -28,7 +37,7 @@ def rateopen_index():
     q_user = ((db.contest.rate_open_date < datetime.utcnow()) &
               (db.contest.rate_close_date > datetime.utcnow()) &
               (db.contest.is_active) &
-              (db.contest.id.belongs(props.contests_can_rate)))
+              (db.contest.id.belongs(l)))
     c_all = db(q_all).select().as_list()
     c_user = db(q_user).select().as_list()
     c = util.union_id_list(c_all, c_user)
@@ -37,15 +46,28 @@ def rateopen_index():
 @auth.requires_login()
 def submitted_index():
     props = db(db.user_properties.email == auth.user.email).select().first()
-    q = (db.contest.id.belongs(props.contests_has_submitted))
+    if props == None: 
+        l = []
+    else:
+        l = util.get_list(props.contests_has_submitted)
+    q = (db.contest.id.belongs(l))
     
 @auth.requires_login()
 def managed_index():
     props = db(db.user_properties.email == auth.user.email).select().first()
-    managed_contest_list = props.contests_can_manage
-    if managed_contest_list == None:
+    if props == None:
         managed_contest_list = []
+        managed_user_lists = None
+    else:
+        managed_contest_list = util.get_list(props.contests_can_manage)
+        managed_user_lists = util.get_list(props.managed_user_lists)
     q = (db.contest.id.belongs(managed_contest_list))    
+    # Constrains the user lists to those managed by the user.
+    list_q = (db.user_list.id.belongs(managed_user_lists))
+    db.contest.submit_constraint.requires = myvalidators.MAYBE_IN_DB(
+        db(list_q), 'user_list.id', '%(name)s', zero=T('-- Everybody --'), optional=True)
+    db.contest.rate_constraint.requires = myvalidators.MAYBE_IN_DB(
+        db(list_q), 'user_list.id', '%(name)s', zero=T('-- Everybody --'), optional=True)
     # Keeps track of old managers, if this is an update.
     if len(request.args) > 2 and request.args[-3] == 'edit':
         c = db.contest[request.args[-1]]
@@ -58,6 +80,7 @@ def managed_index():
         old_rate_constraint = None
     grid = SQLFORM.grid(q,
         field_id=db.contest.id,
+        fields=[db.contest.name, db.contest.managers, db.contest.is_active],
         csv=False,
         details=True,
         create=True,
@@ -149,13 +172,14 @@ def create_contest(form):
     add_contest_to_user_managers(form.vars.id, form.vars.managers)
     # If there is a submit constraint, we need to allow all the users
     # in the list to submit.
-    if form.vars.submit_constraint != None:
+    if not util.is_none(form.vars.submit_constraint):
+        logger.debug("form.vars.submit_contraints is:" + str(form.vars.submit_constraint) + "<")
         user_list = db.user_list[form.vars.submit_constraint].email_list
         # We need to add everybody in that list to submit.
         add_contest_to_user_submit(form.vars.id, user_list)
     # If there is a rating constraint, we need to allow all the users
     # in the list to rate.
-    if form.vars.rate_constraint != None:
+    if not util.is_none(form.vars.rate_constraint):
         user_list = db.user_list[form.vars.rate_constraint].email_list
         add_contest_to_user_rate(form.vars.id, user_list)
                 
@@ -169,19 +193,19 @@ def update_contest(old_managers, old_submit_constraint, old_rate_constraint):
         # Submitters.
         if old_submit_constraint != form.vars.submit_constraint:
             # We need to update.
-            if old_submit_constraint != None:
+            if not util.is_none(old_submit_constraint):
                 user_list = db.user_list[old_submit_constraint]
                 delete_contest_from_submitters(form.vars.id, user_list)
-            if form.vars.submit_constraint != None:
+            if not util.is_none(form.vars.submit_constraint):
                 user_list = db.user_list[form.vars.submit_constraint]
                 add_contest_to_user_submit(form.vars.id, user_list)
         # Raters.
         if old_rate_constraint != form.vars.rate_constraint:
             # We need to update.
-            if old_rate_constraint != None:
+            if not util.is_none(old_rate_constraint):
                 user_list = db.user_list[old_rate_constraint]
                 delete_contest_from_raters(form.vars.id, user_list)
-            if form.vars.rate_constraint != None:
+            if not util.is_none(form.vars.rate_constraint):
                 user_list = db.user_list[form.vars.rate_constraint]
                 add_contest_to_user_rate(form.vars.id, user_list)
     return f
@@ -189,9 +213,9 @@ def update_contest(old_managers, old_submit_constraint, old_rate_constraint):
 def delete_contest(table, id):
     c = db.contest[id]
     delete_contest_from_managers(id, c.managers)
-    if c.submit_constraint != None:
+    if not util.is_none(c.submit_constraint):
         user_list = db.user_list[c.submit_constraint]
         delete_contest_from_submitters(id, user_list)
-    if c.rate_constraint != None:
+    if not util.is_none(c.rate_constraint):
         user_list = db.user_list[c.rate_constraint]
         delete_contest_from_raters(id, user_list)

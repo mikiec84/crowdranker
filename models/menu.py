@@ -22,7 +22,11 @@ response.google_analytics_id = None
 #########################################################################
 
 response.menu = [
-    (T('Home'), False, URL('default', 'index'), [])
+    (T('Home'), False, URL('default', 'index'), []),
+    (T('Contests'), False, None, [
+        (T('Managed'), False, URL('contests', 'managed_index'), []),
+        ]),
+    (T('User lists'), False, URL('user_lists', 'index'), []),
 ]
 
 #########################################################################
