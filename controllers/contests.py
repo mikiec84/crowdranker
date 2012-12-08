@@ -4,7 +4,7 @@ import util
 
 @auth.requires_login()
 def subopen_index():
-    props = db(db.user_properties.email == auth.user.email).select().first()
+    props = db(db.user_properties.email == auth.user.email).select(db.user_properties.contests_can_submit).first()
     if props == None: 
         l = []
     else:
@@ -42,7 +42,7 @@ def subopen_index():
 
 @auth.requires_login()
 def rateopen_index():
-    props = db(db.user_properties.email == auth.user.email).select().first()
+    props = db(db.user_properties.email == auth.user.email).select(db.user_properties.contests_can_rate).first()
     if props == None:
         l = []
     else:
@@ -80,16 +80,29 @@ def rateopen_index():
                 
 @auth.requires_login()
 def submitted_index():
-    props = db(db.user_properties.email == auth.user.email).select().first()
+    props = db(db.user_properties.email == auth.user.email).select(db.user_properties.contests_has_submitted).first()
     if props == None: 
         l = []
     else:
-        l = util.get_list(props.contests_has_submitted)
+        l = util.id_list(util.get_list(props.contests_has_submitted))
     q = (db.contest.id.belongs(l))
-    
+    grid = SQLFORM.grid(q,
+        field_id=db.contest.id,
+        fields=[db.contest.name],
+        csv=False,
+        details=True,
+        create=False,
+        editable=False,
+        deletable=False,
+        links=[dict(header='Feedback', 
+            body = lambda r: A(T('view ratings and feedback'), _href=URL('feedback', 'view', args=[r.id])))],
+        )
+    return dict(grid=grid)
+
+        
 @auth.requires_login()
 def managed_index():
-    props = db(db.user_properties.email == auth.user.email).select().first()
+    props = db(db.user_properties.email == auth.user.email).select(db.user_properties.contests_can_manage).first()
     if props == None:
         managed_contest_list = []
         managed_user_lists = None
