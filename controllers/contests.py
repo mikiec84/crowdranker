@@ -13,14 +13,30 @@ def subopen_index():
              (db.contest.close_date > datetime.utcnow()) &
              (db.contest.is_active) &
              (db.contest.submit_constraint == None))
-    q_user = ((db.contest.open_date < datetime.utcnow()) &
-              (db.contest.close_date > datetime.utcnow()) &
-              (db.contest.is_active) &
-              (db.contest.id.belongs(l)))
     c_all = db(q_all).select().as_list()
-    c_user = db(q_user).select().as_list()
-    c = util.union_id_list(c_all, c_user)
+    if len(l) > 0:
+        q_user = ((db.contest.open_date < datetime.utcnow()) &
+                  (db.contest.close_date > datetime.utcnow()) &
+                  (db.contest.is_active) &
+                  (db.contest.id.belongs(l)))
+        c_user = db(q_user).select().as_list()
+        c = util.union_id_list(c_all, c_user)
+    else:
+        c = c_all
     q = (db.contest.id.belongs(c))
+    grid = SQLFORM.grid(q,
+        field_id=db.contest.id,
+        fields=[db.contest.name, db.contest.close_date],
+        csv=False,
+        details=True,
+        create=False,
+        editable=False,
+        deletable=False,
+        links=[dict(header='Submit', 
+            body = lambda r: A(T('submit'), _href=URL('submission', 'submit', args=[r.id])))],
+        )
+    return dict(grid=grid)
+
 
 @auth.requires_login()
 def rateopen_index():
@@ -73,10 +89,19 @@ def managed_index():
         old_managers = c.managers
         old_submit_constraint = c.submit_constraint
         old_rate_constraint = c.rate_constraint
+
     else:
         old_managers = []
         old_submit_constraint = None
         old_rate_constraint = None
+    if len(request.args) > 0 and (request.args[0] == 'edit' or request.args[0] == 'new'):
+        # Let's add a bit of help for editing
+        db.contest.is_active.comment = 'Uncheck to prevent all access to this contest.'
+        db.contest.managers.comment = 'Email addresses of contest managers.'
+        db.contest.name.comment = 'Name of the contest'
+        db.contest.featured_submissions.comment = (
+            'Enable raters to flag submissions as featured. '
+            'Submitters can request to see featured submissions.')
     grid = SQLFORM.grid(q,
         field_id=db.contest.id,
         fields=[db.contest.name, db.contest.managers, db.contest.is_active],

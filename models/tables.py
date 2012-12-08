@@ -31,46 +31,45 @@ db.define_table('user_properties',
 
 db.user_properties.email.required = True
 
-def name_user_list(id, row):
-    if id == None or id == '':
-        return T('Anyone')
-    else:
-        return db.user_list(id).name
 
 db.define_table('contest',
     Field('name'),
     Field('creation_date', 'datetime', default=datetime.utcnow()),
     Field('managers', 'list:string'),
-    Field('submit_constraint', db.user_list, represent=name_user_list),
-    Field('rate_constraint', db.user_list, represent=name_user_list),
-    Field('open_date', 'datetime', default=datetime.utcnow()),
-    Field('close_date', 'datetime'),
-    Field('rate_open_date', 'datetime'),
-    Field('rate_close_date', 'datetime'),
-    Field('featured_submissions', 'boolean', default=False),
-    Field('is_active', 'boolean', default=True),
+    Field('submit_constraint', db.user_list),
+    Field('rate_constraint', db.user_list),
+    Field('open_date', 'datetime', required=True),
+    Field('close_date', 'datetime', required=True),
+    Field('rate_open_date', 'datetime', required=True),
+    Field('rate_close_date', 'datetime', required=True),
+    Field('featured_submissions', 'boolean', required=True, default=False),
+    Field('is_active', 'boolean', required=True, default=True),
     )
 
 db.contest.name.required = True
 db.contest.creation_date.writable = db.contest.creation_date.readable = False
 db.contest.id.readable = db.contest.id.writable = False
-db.contest.name.comment = 'Name of the contest'
-db.contest.managers.comment = 'Email addresses of contest managers.'
 db.contest.is_active.label = 'Active'
-db.contest.is_active.comment = 'Uncheck to prevent all access to this contest.'
 db.contest.submit_constraint.label = 'Who can submit'
 db.contest.rate_constraint.label = 'Who can rate'
 db.contest.open_date.label = 'Submission opening date'
-db.contest.close_date.label = 'Submission closing date'
-db.contest.close_date.comment = 'Leave blank if there is no submission deadline.'
+db.contest.open_date.default = datetime.utcnow()
+db.contest.close_date.label = 'Submission deadline'
+db.contest.close_date.default = datetime.utcnow()
 db.contest.rate_open_date.label = 'Rating opening date'
-db.contest.rate_close_date.label = 'Rating closing date'
-db.contest.rate_close_date.comment = 'Leave blank if there is no deadline for ratings.'
-db.contest.featured_submissions.comment = (
-    'Enable raters to flag submissions as featured. '
-    'Submitters can request to see featured submissions.')
+db.contest.rate_open_date.default = datetime.utcnow()
+db.contest.rate_close_date.label = 'Rating deadline'
+db.contest.rate_close_date.default = datetime.utcnow()
+
+def name_user_list(id, row):
+    if id == None or id == '':
+        return T('Anyone')
+    else:
+        return db.user_list(id).name
         
-                        
+db.contest.submit_constraint.represent = name_user_list
+db.contest.rate_constraint.represent = name_user_list
+                                                
 db.define_table('submission',
     Field('author', db.auth_user,  default=auth.user_id),
     Field('date', 'datetime', default=datetime.utcnow()),
