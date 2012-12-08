@@ -2,6 +2,8 @@
 
 from datetime import datetime
 
+db.auth_user._format='%(email)s'
+
 db.define_table('user_list',
     Field('name'),
     Field('creation_date', 'datetime', default=datetime.utcnow()),
@@ -75,11 +77,14 @@ db.define_table('submission',
     Field('date', 'datetime', default=datetime.utcnow()),
     Field('contest_id', db.contest),
     Field('content', 'upload'),
+    Field('notes', 'text'),
     Field('comments', 'list:reference comment'),
     Field('is_featured', 'boolean', default=False),
     )
     
 db.submission.id.readable = db.submission.id.writable = False
+db.submission.author.writable = False
+db.submission.date.writable = False
 db.submission.is_featured.readable = db.submission.is_featured.writable = False
 db.submission.comments.readable = db.submission.comments.writable = False
 db.submission.is_featured.readable = db.submission.is_featured.writable = False

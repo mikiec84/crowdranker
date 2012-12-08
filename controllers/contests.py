@@ -95,7 +95,7 @@ def submitted_index():
         editable=False,
         deletable=False,
         links=[dict(header='Feedback', 
-            body = lambda r: A(T('view ratings and feedback'), _href=URL('feedback', 'view', args=[r.id])))],
+            body = lambda r: A(T('view feedback'), _href=URL('feedback', 'view', args=[r.id])))],
         )
     return dict(grid=grid)
 
