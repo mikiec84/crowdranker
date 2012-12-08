@@ -21,7 +21,7 @@ def subopen_index():
                   & (db.contest.is_active == True)
                   & (db.contest.id.belongs(l))
                   )
-        c_user = db(q_user).select(db.contest_id).as_list()
+        c_user = db(q_user).select(db.contest.id).as_list()
         c = util.union_id_list(c_all, c_user)
     else:
         c = util.id_list(c_all)
@@ -47,19 +47,37 @@ def rateopen_index():
         l = []
     else:
         l = util.get_list(props.contests_can_rate)
-    q_all = ((db.contest.rate_open_date < datetime.utcnow()) &
-             (db.contest.rate_close_date > datetime.utcnow()) &
-             (db.contest.is_active) &
-             (db.contest.rate_constraint == None))
-    q_user = ((db.contest.rate_open_date < datetime.utcnow()) &
-              (db.contest.rate_close_date > datetime.utcnow()) &
-              (db.contest.is_active) &
-              (db.contest.id.belongs(l)))
-    c_all = db(q_all).select().as_list()
-    c_user = db(q_user).select().as_list()
-    c = util.union_id_list(c_all, c_user)
+    q_all = ((db.contest.rate_open_date < datetime.utcnow())
+             & (db.contest.rate_close_date > datetime.utcnow()) 
+             & (db.contest.is_active == True) 
+             & (db.contest.rate_constraint == None)
+             )
+    c_all = db(q_all).select(db.contest.id).as_list()
+    if len(l) > 0:
+        q_user = ((db.contest.rate_open_date < datetime.utcnow())
+                  & (db.contest.rate_close_date > datetime.utcnow())
+                  & (db.contest.is_active == True)
+                  & (db.contest.id.belongs(l))
+                  )
+        c_user = db(q_user).select(db.contest.id).as_list()
+        c = util.union_id_list(c_all, c_user)
+    else:
+        c = util.id_list(c_all)
     q = (db.contest.id.belongs(c))
-        
+    grid = SQLFORM.grid(q,
+        field_id=db.contest.id,
+        fields=[db.contest.name, db.contest.close_date],
+        csv=False,
+        details=True,
+        create=False,
+        editable=False,
+        deletable=False,
+        links=[dict(header='Rate', 
+            body = lambda r: A(T('rate'), _href=URL('rating', 'rate', args=[r.id])))],
+        )
+    return dict(grid=grid)
+
+                
 @auth.requires_login()
 def submitted_index():
     props = db(db.user_properties.email == auth.user.email).select().first()
