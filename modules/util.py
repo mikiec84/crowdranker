@@ -75,8 +75,8 @@ def get_list(f):
         return f
 
 def is_none(s):
-    """Checks whether a string is empty or None"""
+    """Checks whether something is empty or None"""
     if s == None:
         return True
     else:
-        return any_whitespace.match(s)
+        return any_whitespace.match(str(s))
