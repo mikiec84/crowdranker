@@ -73,7 +73,7 @@ db.contest.rate_constraint.represent = name_user_list
 db.define_table('submission',
     Field('author', db.auth_user,  default=auth.user_id),
     Field('date', 'datetime', default=datetime.utcnow()),
-    Field('contest', db.contest),
+    Field('contest_id', db.contest),
     Field('content', 'upload'),
     Field('comments', 'list:reference comment'),
     Field('is_featured', 'boolean', default=False),
@@ -81,6 +81,9 @@ db.define_table('submission',
     
 db.submission.id.readable = db.submission.id.writable = False
 db.submission.is_featured.readable = db.submission.is_featured.writable = False
+db.submission.comments.readable = db.submission.comments.writable = False
+db.submission.is_featured.readable = db.submission.is_featured.writable = False
+db.submission.contest_id.readable = db.submission.contest_id.writable = False
     
 db.define_table('comment',
     Field('author', db.auth_user,  default=auth.user_id),
