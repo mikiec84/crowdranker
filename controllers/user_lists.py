@@ -19,6 +19,11 @@ def index():
     else:
         old_managers = []
         old_members = []
+    # Adds a few comments.
+    if len(request.args) > 0 and (request.args[0] == 'edit' or request.args[0] == 'new'):
+        db.user_list.name.comment = T('Name of user list')
+        db.user_list.managers.comment = T('Email addresses of users who can manage the list')
+        db.user_list.email_list.commentn = T('Email addresses of list members')
     # Gets the lists.
     q = (db.user_list.id.belongs(list_ids))
     grid = SQLFORM.grid(q, 

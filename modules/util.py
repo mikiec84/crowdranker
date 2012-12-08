@@ -16,6 +16,9 @@ def union_id_list(l1, l2):
             id1l.append(id)
     return id1l
     
+def id_list(l):
+    return [el['id'] for el in l]
+    
 def list_append_unique(l, el):
     """Appends an element to a list, if not present."""
     if l == None:

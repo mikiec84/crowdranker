@@ -9,20 +9,22 @@ def subopen_index():
         l = []
     else:
         l = util.get_list(props.contests_can_submit)
-    q_all = ((db.contest.open_date < datetime.utcnow()) &
-             (db.contest.close_date > datetime.utcnow()) &
-             (db.contest.is_active) &
-             (db.contest.submit_constraint == None))
-    c_all = db(q_all).select().as_list()
+    q_all = ((db.contest.open_date < datetime.utcnow())
+             & (db.contest.close_date > datetime.utcnow()) 
+             & (db.contest.is_active == True) 
+             & (db.contest.submit_constraint == None)
+             )
+    c_all = db(q_all).select(db.contest.id).as_list()
     if len(l) > 0:
-        q_user = ((db.contest.open_date < datetime.utcnow()) &
-                  (db.contest.close_date > datetime.utcnow()) &
-                  (db.contest.is_active) &
-                  (db.contest.id.belongs(l)))
-        c_user = db(q_user).select().as_list()
+        q_user = ((db.contest.open_date < datetime.utcnow())
+                  & (db.contest.close_date > datetime.utcnow())
+                  & (db.contest.is_active == True)
+                  & (db.contest.id.belongs(l))
+                  )
+        c_user = db(q_user).select(db.contest_id).as_list()
         c = util.union_id_list(c_all, c_user)
     else:
-        c = c_all
+        c = util.id_list(c_all)
     q = (db.contest.id.belongs(c))
     grid = SQLFORM.grid(q,
         field_id=db.contest.id,
@@ -120,6 +122,7 @@ def validate_contest(form):
     form.vars.managers = util.normalize_email_list(form.vars.managers)
     if auth.user.email not in form.vars.managers:
         form.vars.managers = [auth.user.email] + form.vars.managers
+    
 
 def add_contest_to_user_managers(id, user_list):
     for m in user_list:
