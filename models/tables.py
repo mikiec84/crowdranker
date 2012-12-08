@@ -12,13 +12,6 @@ db.define_table('user_list',
     format = '%(name)s',
     )
 
-def f_anyone(name, row):
-    if row == None:
-        return 'Anyone'
-    else:
-        return name
-
-db.user_list.name.represent = f_anyone
 db.user_list.id.readable = db.user_list.id.writable = False
 db.user_list.creation_date.writable = db.user_list.creation_date.readable = False 
 db.user_list.name.required = True   
@@ -38,12 +31,18 @@ db.define_table('user_properties',
 
 db.user_properties.email.required = True
 
+def name_user_list(id, row):
+    if id == None or id == '':
+        return T('Anyone')
+    else:
+        return db.user_list(id).name
+
 db.define_table('contest',
     Field('name'),
     Field('creation_date', 'datetime', default=datetime.utcnow()),
     Field('managers', 'list:string'),
-    Field('submit_constraint', db.user_list),
-    Field('rate_constraint', db.user_list),
+    Field('submit_constraint', db.user_list, represent=name_user_list),
+    Field('rate_constraint', db.user_list, represent=name_user_list),
     Field('open_date', 'datetime', default=datetime.utcnow()),
     Field('close_date', 'datetime'),
     Field('rate_open_date', 'datetime'),
