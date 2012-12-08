@@ -1,6 +1,5 @@
 # coding: utf8
 
-import myvalidators
 import util
 
 @auth.requires_login()
@@ -64,9 +63,9 @@ def managed_index():
     q = (db.contest.id.belongs(managed_contest_list))    
     # Constrains the user lists to those managed by the user.
     list_q = (db.user_list.id.belongs(managed_user_lists))
-    db.contest.submit_constraint.requires = myvalidators.MAYBE_IN_DB(
+    db.contest.submit_constraint.requires = IS_IN_DB(
         db(list_q), 'user_list.id', '%(name)s', zero=T('-- Everybody --'), optional=True)
-    db.contest.rate_constraint.requires = myvalidators.MAYBE_IN_DB(
+    db.contest.rate_constraint.requires = IS_IN_DB(
         db(list_q), 'user_list.id', '%(name)s', zero=T('-- Everybody --'), optional=True)
     # Keeps track of old managers, if this is an update.
     if len(request.args) > 2 and request.args[-3] == 'edit':

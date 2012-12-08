@@ -7,7 +7,10 @@ def index():
     """Index of user list one can manage or use."""
     # Reads the list of ids of lists managed by the user.
     list_ids_l = db(db.user_properties.email == auth.user.email).select(db.user_properties.managed_user_lists).first()
-    list_ids = util.get_list(list_ids_l.managed_user_lists)
+    if list_ids_l == None:
+        list_ids = []
+    else:
+        list_ids = util.get_list(list_ids_l.managed_user_lists)
     # Keeps track of old managers, if this is an update.
     if len(request.args) > 2 and request.args[-3] == 'edit':
         ul = db.user_list[request.args[-1]]

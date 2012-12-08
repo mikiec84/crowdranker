@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import controller_util
 import util
 
 from gluon.custom_import import track_changes; track_changes(True)
