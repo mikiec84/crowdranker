@@ -11,11 +11,12 @@ def submit():
     if props == None: 
         contest_ids = []
     else:
-        contest_ids = util.id_list(util.get_list(props.contests_can_submit))
+        contest_ids = util.get_list(props.contests_can_submit)
     # Is the contest open for submission?
     if not (c.submit_constraint == None or c.id in contest_ids):
         redirect('closed', args=['permission'])
-    if not (c.is_active and c.open_date < datetime.utcnow() and c.close_date > datetime.utcnow()):
+    t = datetime.utcnow()
+    if not (c.is_active and c.open_date <= t and c.close_date >= t):
         redirect('closed', args=['deadline'])
     # Ok, the user can submit.  Looks for previous submissions.
     logger.debug('Ok, generating crud')

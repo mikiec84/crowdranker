@@ -7,6 +7,7 @@ cache/*
 databases/*
 errors/*
 sessions/*
+uploads/*
 *.pyc
 *.bak
 

@@ -3,6 +3,51 @@
 import util
 
 @auth.requires_login()
+def view_contest():
+    c = db.contest(request.args(0)) or redirect(URL('default', 'index'))
+    props = db(db.user_properties.email == auth.user.email).select().first()
+    if props == None: 
+        can_submit = False
+        can_rate = False
+    else:
+        can_submit = c.id in util.get_list(props.contests_can_submit)
+        can_rate = c.id in util.get_list(props.contests_can_rate)
+        has_submitted = c.id in util.get_list(props.contests_has_submitted)
+        has_rated = c.id in util.get_list(props.contests_has_rated)
+        can_manage = c.id in util.get_list(props.contests_can_manage)
+    form = crud.read(db.contest, c.id)
+    if can_submit:
+        form.addbutton(T('Submit to this contest'), URL('submission', 'submit', args=[c.id]))
+    if can_rate:
+        form.addbutton(T('Rate submissions'), URL('rating', 'rate', args=[c.id]))
+    if has_submitted:
+        form.addbutton(T('View submission feedback'), URL('feedback', 'index', args=[c.id]))
+    if can_manage:
+        form.addbutton(T('Edit'), URL('manage_contest', args=[c.id]))
+    return dict(form=form, contest=c, has_rated=has_rated)
+
+                
+@auth.requires_login()
+def manage_contest():
+    c = db.contest(request.args(0)) or redirect(URL('default', 'index'))
+    props = db(db.user_properties.email == auth.user.email).select().first()
+    if props == None or c.id not in util.get_list(props.contests_can_manage):
+        session.flash = T('You cannot manage this contest')
+        redirect(URL('default', 'index'))
+    # Generates a form for editing.
+    add_help_for_contest('bogus')
+    # Creates a function used to process the update.
+    updater = update_contest(c.managers, c.submit_constraint, c_rate_constraint)
+    form = SQLFORM(db.contest)
+    if form.process(onvalidate=validate_contest).accepted():
+        # Fix the permissions.
+        updater(form)
+        db.commit()
+        redirect(URL('view_contest', args=[c.id]))
+    return dict(form=form)
+        
+
+@auth.requires_login()
 def subopen_index():
     props = db(db.user_properties.email == auth.user.email).select(db.user_properties.contests_can_submit).first()
     if props == None: 
@@ -34,7 +79,7 @@ def subopen_index():
         create=False,
         editable=False,
         deletable=False,
-        links=[dict(header='Submit', 
+        links=[dict(header=T('Submit'), 
             body = lambda r: A(T('submit'), _href=URL('submission', 'submit', args=[r.id])))],
         )
     return dict(grid=grid)
@@ -95,7 +140,7 @@ def submitted_index():
         editable=False,
         deletable=False,
         links=[dict(header='Feedback', 
-            body = lambda r: A(T('view feedback'), _href=URL('feedback', 'view', args=[r.id])))],
+            body = lambda r: A(T('view feedback'), _href=URL('feedback', 'index', args=[r.id])))],
         )
     return dict(grid=grid)
 
@@ -122,19 +167,13 @@ def managed_index():
         old_managers = c.managers
         old_submit_constraint = c.submit_constraint
         old_rate_constraint = c.rate_constraint
-
     else:
         old_managers = []
         old_submit_constraint = None
         old_rate_constraint = None
     if len(request.args) > 0 and (request.args[0] == 'edit' or request.args[0] == 'new'):
-        # Let's add a bit of help for editing
-        db.contest.is_active.comment = 'Uncheck to prevent all access to this contest.'
-        db.contest.managers.comment = 'Email addresses of contest managers.'
-        db.contest.name.comment = 'Name of the contest'
-        db.contest.featured_submissions.comment = (
-            'Enable raters to flag submissions as featured. '
-            'Submitters can request to see featured submissions.')
+        # Adds some editing help
+        add_help_for_contest('bogus')
     grid = SQLFORM.grid(q,
         field_id=db.contest.id,
         fields=[db.contest.name, db.contest.managers, db.contest.is_active],
@@ -147,6 +186,27 @@ def managed_index():
         onupdate=update_contest(old_managers, old_submit_constraint, old_rate_constraint),
         )
     return dict(grid=grid)
+    
+def add_help_for_contest(bogus):
+    # Let's add a bit of help for editing
+    db.contest.is_active.comment = 'Uncheck to prevent all access to this contest.'
+    db.contest.managers.comment = 'Email addresses of contest managers.'
+    db.contest.name.comment = 'Name of the contest'
+    db.contest.featured_submissions.comment = (
+        'Enable raters to flag submissions as featured. '
+        'Submitters can request to see featured submissions.')
+    db.contest.feedback_accessible_immediately.comment = (
+        'The feedback can be accessible immediately, or once '
+        'the contest closes.')
+    db.contest.rating_available_to_all.comment = (
+        'The ratings will be publicly visible.')
+    db.contest.feedback_available_to_all.comment = (
+        'The feedback to submissions will be available to all.')
+    db.contest.feedback_is_anonymous.comment = (
+        'The identity of users providing feedback is not revealed.')
+    db.contest.submissions_are_anonymized.comment = (
+        'The identities of submission authors are not revealed to the raters.')
+
     
 def validate_contest(form):
     """Validates the form contest, splitting managers listed on the same line."""

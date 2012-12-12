@@ -16,8 +16,18 @@ def union_id_list(l1, l2):
             id1l.append(id)
     return id1l
     
+def get_list(f):
+    """Unfortunately, empty list fields are often returned as None rather than the empty list."""
+    if f == None:
+        return []
+    else:
+        return f
+
 def id_list(l):
     return [el['id'] for el in l]
+    
+def get_id_list(f):
+    return id_list(get_list(f))
     
 def list_append_unique(l, el):
     """Appends an element to a list, if not present."""
@@ -69,13 +79,6 @@ def normalize_email_list(l):
         ll = split_emails(el)
         r += ll
     return r
-
-def get_list(f):
-    """Unfortunately, empty list fields are often returned as None rather than the empty list."""
-    if f == None:
-        return []
-    else:
-        return f
 
 def is_none(s):
     """Checks whether something is empty or None"""

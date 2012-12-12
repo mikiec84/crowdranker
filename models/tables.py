@@ -46,8 +46,13 @@ db.define_table('contest',
     Field('rate_close_date', 'datetime', required=True),
     Field('featured_submissions', 'boolean', required=True, default=False),
     Field('is_active', 'boolean', required=True, default=True),
+    Field('feedback_accessible_immediately', 'boolean', default=False),
+    Field('rating_available_to_all', 'boolean', default=False),
+    Field('feedback_available_to_all', 'boolean', default=False),
+    Field('feedback_is_anonymous', 'boolean', default=True),
+    Field('submissions_are_anonymized', 'boolean', default=True),
     )
-
+    
 db.contest.name.required = True
 db.contest.creation_date.writable = db.contest.creation_date.readable = False
 db.contest.id.readable = db.contest.id.writable = False
@@ -77,9 +82,7 @@ db.define_table('submission',
     Field('date', 'datetime', default=datetime.utcnow()),
     Field('contest_id', db.contest),
     Field('content', 'upload'),
-    Field('notes', 'text'),
-    Field('comments', 'list:reference comment'),
-    Field('is_featured', 'boolean', default=False),
+    Field('is_featured', 'boolean'),
     )
     
 db.submission.id.readable = db.submission.id.writable = False
@@ -93,16 +96,24 @@ db.submission.contest_id.readable = db.submission.contest_id.writable = False
 db.define_table('comment',
     Field('author', db.auth_user,  default=auth.user_id),
     Field('date', 'datetime', default=datetime.utcnow()),
-    Field('submission', db.submission),
+    Field('submission_id', db.submission),
     Field('content', 'text'),
-    Field('useful', 'integer'),
     )
     
 db.define_table('comparison', # An ordering of submissions, from worst to best.
     Field('author', db.auth_user,  default=auth.user_id),
     Field('date', 'datetime', default=datetime.utcnow()),
-    Field('contest', db.contest),
-    Field('ratings', 'list:reference submission'),
+    Field('contest_id', db.contest),
+    Field('ordering', 'list:reference submission'),
+    Field('feature_it', 'boolean'),
+    )
+    
+db.define_table('task', # Tasks a user should complete for reviewing.
+    Field('user', db.auth_user, default=auth.user_id),
+    Field('submission_id', db.submission),
+    Field('contest_id', db.contest),
+    Field('assigned_date', 'datetime', default=datetime.utcnow()),
+    Field('completed_date', 'datetime', default=datetime.datetime(MAXYEAR, 0, 0, 0, 0, 0)),
     )
 
 db.define_table('quality', # Quality of a submission in a context.
