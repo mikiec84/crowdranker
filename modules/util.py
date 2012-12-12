@@ -2,10 +2,14 @@
 # coding: utf8
 from gluon import *
 import re
+import string
+import random
 
 email_split_pattern = re.compile('[,\s]+')
 whitespace = re.compile('\s+')
 any_whitespace = re.compile('\s*')
+vowels = 'aeiou'
+consonants = 'bcdfgmnpqrstvwz'
 
 def union_id_list(l1, l2):
     """Computes the union of the 'id' elements of two lists of dictionaries."""
@@ -86,3 +90,13 @@ def is_none(s):
         return True
     else:
         return any_whitespace.match(str(s))
+        
+def get_random_id(n_sections=4, section_length=6):
+    """Produces a memorable random string."""
+    sections = []
+    for i in range(n_sections):
+        s = ''
+        for j in range(section_length / 2):
+            s += random.choice(consonants) + random.choice(vowels)
+        sections.append(s)
+    return '_'.join(sections)

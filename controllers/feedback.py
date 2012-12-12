@@ -3,16 +3,44 @@
 import util
 
 @auth.requires_login()
-def contest_index():
-    """Produces a list of the feedback obtained for a given contest.
-    This is somewhat overkill, but in general, a user can have many
-    submissions for the same contest."""
+def index():
+    """Produces a list of the feedback obtained for a given contest,
+    or for all contests."""
     contest_id = request.args(0)
-    if contest_id == None:
-        redirect(URL('default', 'index'))
-    q = (db.submission.author == auth.user_id 
-        & db.submission.contest_id == contest_id)
+    if contest_id == 'all':
+        q = (db.submission.author == auth.user_id)
+    else:
+        q = (db.submission.author == auth.user_id 
+            & db.submission.contest_id == contest_id)
     grid = SQLFORM.grid(q,
         fields=[db.submission.id, db.submission.date],
         csv=False, details=False, create=False, editable=False,
-        links=[dict(header='Contest',
+        args=request.args[1:],
+        links=[
+            dict(header=T('Contest'), body = lambda r: 
+                A(T('Contest'), _href=URL('contests', 'view_contest', args=[r.contest_id]))),
+            dict(header=T('Submission'), body = lambda r: 
+                A(T('submission'), _href=URL('submission', 'view_own_submission', args=[r.id]))),
+            dict(header=T('Feedback'), body = lambda r:
+                A(T('feedback'), _href=URL('view_feedback', args=[r.id]))),
+            ],
+        )
+    return form(grid=grid)
+    
+
+@auth.requires_login()
+def view_feedback():
+    """Shows detailed information and feedback for a given submission."""
+    sub = db.submission(request.args(0)) or redirect(URL('default', 'index'))
+    if sub.author != auth.user_id:
+        redirect(URL('default', 'index'))
+    # Makes a grid of comments.
+    q = (db.comment.submission_id == sub_id)
+    grid = SQLFORM.grid(q,
+        fields=[], details=True, 
+        csv=False, create=False, editable=False,
+        args=request.args[1:],
+        )
+    # Reads the quality of the submission.
+    qual = db(db.quality.submission_id == sub.id).select().first()
+    return dict(sub=sub, grid=grid, quality=qual)

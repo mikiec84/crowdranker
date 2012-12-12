@@ -17,9 +17,9 @@ def view_contest():
         can_manage = c.id in util.get_list(props.contests_can_manage)
     form = crud.read(db.contest, c.id)
     if can_submit:
-        form.addbutton(T('Submit to this contest'), URL('submission', 'submit', args=[c.id]))
+        form.addbutton(T('Submit to this contest'), URL('submission', 'submissions_contest', args=[c.id]))
     if can_rate:
-        form.addbutton(T('Rate submissions'), URL('rating', 'rate', args=[c.id]))
+        form.addbutton(T('Rate submissions'), URL('rating', 'accept_review', args=[c.id]))
     if has_submitted:
         form.addbutton(T('View submission feedback'), URL('feedback', 'index', args=[c.id]))
     if can_manage:
@@ -118,7 +118,7 @@ def rateopen_index():
         editable=False,
         deletable=False,
         links=[dict(header='Rate', 
-            body = lambda r: A(T('rate'), _href=URL('rating', 'rate', args=[r.id])))],
+            body = lambda r: A(T('rate'), _href=URL('rating', 'accept_review', args=[r.id])))],
         )
     return dict(grid=grid)
 

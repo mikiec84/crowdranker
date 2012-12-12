@@ -4,7 +4,7 @@ import util
 import ranker
 
 @auth.requires_login()
-def rate():
+def accept_review():
     """Asks a user whether the user is willing to accept a rating task for a contest,
     and if so, picks a task and adds it to the set of tasks for the user."""
     # Checks the permissions.
@@ -33,10 +33,11 @@ def rate():
         # Creates a reviewing task.
         db.task.insert(submission_id = new_item, contest_id = c.id)
         db.commit()
-        session.flash = T('You can find your reviewing assignments in the Tasks menu.')
+        session.flash = T('A review has been added to your review assignments.')
         redirect('task', args=[new_item])
     return dict(contest=c, form=form)
-      
+
+            
 def closed():
     if args[0] == 'deadline':
         msg = T('The rating deadline has passed.')
@@ -64,15 +65,18 @@ def task_index():
         field_id=db.task.id,
         create=False, editable=False, deletable=False,
         links=[
-            dict(header='Contest', body=A(T('Contest', _href=URL('contests', 'view_contest', args=[r.contest_id])))),
+            dict(header='Contest', body=A(T('Contest'), _href=URL('contests', 'view_contest', args=[r.contest_id]))),
+            dict(header='Submission', body=A(T('view'), _href=URL('submission', 'view_submission', args=[r.id]))),
             dict(header='Review', body = review_link),],
         )
     return dict(grid=grid)
+
        
 def review_link(r):
     if r.completed_date > datetime.utcnow():
         return A(T('Enter review'), _href=URL('review', args=[r.id]))
     else:
+        # TODO(luca): Allow resubmitting a review.
         return T('Completed on ') + str(r.completed_date)
 
 
