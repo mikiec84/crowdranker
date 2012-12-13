@@ -9,22 +9,26 @@ def view_contest():
     if props == None: 
         can_submit = False
         can_rate = False
+        has_submitted = False
+        has_rated = False
+        can_manage = False
     else:
-        can_submit = c.id in util.get_list(props.contests_can_submit)
-        can_rate = c.id in util.get_list(props.contests_can_rate)
+        can_submit = c.id in util.get_list(props.contests_can_submit) or util.is_none(c.submit_constraint)
+        can_rate = c.id in util.get_list(props.contests_can_rate) or util.is_none(c.rate_constraint)
         has_submitted = c.id in util.get_list(props.contests_has_submitted)
         has_rated = c.id in util.get_list(props.contests_has_rated)
         can_manage = c.id in util.get_list(props.contests_can_manage)
-    form = crud.read(db.contest, c.id)
+    contest_form = SQLFORM(db.contest, record=c, readonly=True)
+    button_form = SQLFORM.factory()
     if can_submit:
-        form.addbutton(T('Submit to this contest'), URL('submission', 'submissions_contest', args=[c.id]))
+        button_form.add_button(T('Submit to this contest'), URL('submission', 'submissions_contest', args=[c.id]))
     if can_rate:
-        form.addbutton(T('Rate submissions'), URL('rating', 'accept_review', args=[c.id]))
+        button_form.add_button(T('Rate submissions'), URL('rating', 'accept_review', args=[c.id]))
     if has_submitted:
-        form.addbutton(T('View submission feedback'), URL('feedback', 'index', args=[c.id]))
+        button_form.add_button(T('View submission feedback'), URL('feedback', 'index', args=[c.id]))
     if can_manage:
-        form.addbutton(T('Edit'), URL('manage_contest', args=[c.id]))
-    return dict(form=form, contest=c, has_rated=has_rated)
+        button_form.add_button(T('Edit'), URL('manage_contest', args=[c.id]))
+    return dict(contest_form=contest_form, button_form=button_form,contest=c, has_rated=has_rated)
 
                 
 @auth.requires_login()

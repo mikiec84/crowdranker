@@ -86,14 +86,11 @@ db.define_table('submission',
     Field('title'), # Visible only to author
     Field('identifier'), # Visible to all.
     Field('content', 'upload'),
-    Field('is_featured', 'boolean'),
     )
     
 db.submission.id.readable = db.submission.id.writable = False
 db.submission.author.writable = False
 db.submission.date.writable = False
-db.submission.is_featured.readable = db.submission.is_featured.writable = False
-db.submission.is_featured.readable = db.submission.is_featured.writable = False
 db.submission.contest_id.readable = db.submission.contest_id.writable = False
 db.submission.identifier.writable = False
 
@@ -114,16 +111,20 @@ db.define_table('comparison', # An ordering of submissions, from worst to best.
     Field('date', 'datetime', default=datetime.utcnow()),
     Field('contest_id', db.contest),
     Field('ordering', 'list:reference submission'),
-    Field('feature_it', 'boolean'),
     )
     
 db.define_table('task', # Tasks a user should complete for reviewing.
-    Field('user', db.auth_user, default=auth.user_id),
+    Field('user_id', db.auth_user, default=auth.user_id),
     Field('submission_id', db.submission),
     Field('contest_id', db.contest),
     Field('assigned_date', 'datetime', default=datetime.utcnow()),
     Field('completed_date', 'datetime', default=datetime(dates.MAXYEAR, 12, 1)),
     )
+
+db.task.id.readable = db.task.id.writable = False
+db.task.user_id.readable = db.task.user_id.writable = False
+db.task.submission_id.readable = db.task.submission_id.writable = False
+db.task.contest_id.readable = db.task.contest_id.writable = False
 
 db.define_table('quality', # Quality of a submission in a context.
     Field('contest_id', db.contest),

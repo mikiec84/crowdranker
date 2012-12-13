@@ -21,10 +21,14 @@ def accept_review():
     # The user can rate the contest.
     contest_form = SQLFORM(db.contest, record=c, readonly=True)
     # Gets any previous ratings for the contest.
-    confirmation_form = FORM.confirm('Do you accept to review a submission?',
-        {'Decline': URL('default', 'index')})
+    confirmation_form = FORM.confirm(T('Accept'),
+        {T('Decline'): URL('default', 'index')})
     if confirmation_form.accepted:
-        previous_ratings = db(db.comparison.author == auth.user_id & db.comparison.contest == c.id).select.first()
+        # Reads the most recent ratings given by the user.
+        # TODO(luca): we should really poll the rating system for this; that's what
+        # should keep track of these things.
+        previous_ratings = db((db.comparison.author == auth.user_id) 
+            & (db.comparison.contest_id == c.id)).select(orderby=~db.comparison.date).first()
         if previous_ratings == None:
             old_items = []
             new_item = ranker.get_item(db, c.id, auth.user_id, [])
@@ -35,7 +39,7 @@ def accept_review():
         db.task.insert(submission_id = new_item, contest_id = c.id)
         db.commit()
         session.flash = T('A review has been added to your review assignments.')
-        redirect('task', args=[new_item])
+        redirect(URL('task_index', args=[new_item]))
     return dict(contest_form=contest_form, confirmation_form=confirmation_form)
 
             
@@ -49,25 +53,27 @@ def closed():
 
 @auth.requires_login()
 def task_index():
+    if not request.args(0):
+        redirect(URL('default', 'index'))
     mode = request.args(0)
-    if mode in ['open', 'completed']:
-        args = request.args[:1]
-    else:
-        mode = 'all'
-        args = request.args
     if mode == 'completed':
         q = (db.task.user_id == auth.user_id & completed_date < datetime.utcnow())
     elif mode == 'all':
         q = (db.task.user_id == auth.user_id)
     elif mode == 'open':
         q = (db.task.user_id == auth.user_id & completed_date < datetime.utcnow())
+    else:
+        # The mode if a specific item.
+        q = (db.task.id == mode)
     grid = SQLFORM.grid(q,
-        args=args,
+        args=request.args[:1],
         field_id=db.task.id,
-        create=False, editable=False, deletable=False,
+        create=False, editable=False, deletable=False, csv=False,
         links=[
-            dict(header='Contest', body=A(T('Contest'), _href=URL('contests', 'view_contest', args=[r.contest_id]))),
-            dict(header='Submission', body=A(T('view'), _href=URL('submission', 'view_submission', args=[r.id]))),
+            dict(header='Contest', 
+                body = lambda r: A(T('Contest'), _href=URL('contests', 'view_contest', args=[r.contest_id]))),
+            dict(header='Submission', 
+                body = lambda r: A(T('view'), _href=URL('submission', 'view_submission', args=[r.id]))),
             dict(header='Review', body = review_link),],
         )
     return dict(grid=grid)
