@@ -2,6 +2,7 @@
 
 import util
 import ranker
+import gluon.contrib.simplejson as simplejson
 
 @auth.requires_login()
 def accept_review():
@@ -57,11 +58,11 @@ def task_index():
         redirect(URL('default', 'index'))
     mode = request.args(0)
     if mode == 'completed':
-        q = (db.task.user_id == auth.user_id & completed_date < datetime.utcnow())
+        q = ((db.task.user_id == auth.user_id) & (db.task.completed_date < datetime.utcnow()))
     elif mode == 'all':
         q = (db.task.user_id == auth.user_id)
     elif mode == 'open':
-        q = (db.task.user_id == auth.user_id & completed_date < datetime.utcnow())
+        q = ((db.task.user_id == auth.user_id) & (db.task.completed_date > datetime.utcnow()))
     else:
         # The mode if a specific item.
         q = (db.task.id == mode)
@@ -95,15 +96,15 @@ def review():
         redirect(URL('default', 'index'))
     # Ok, the task belongs to the user. 
     # Gets the last reviewing task done for the same contest.
-    last_comparison = db(db.comparison.author == auth.user_id
-        & db.comparison.contest_id == t.contest_id).select(orderby=~db.comparison.date).first()
+    last_comparison = db((db.comparison.author == auth.user_id)
+        & (db.comparison.contest_id == t.contest_id)).select(orderby=~db.comparison.date).first()
     if last_comparison == None:
         last_ordering = []
     else:
         last_ordering = util.get_list(last_comparison.ordering)
     # Reads any comments previously given by the user on this submission.
-    previous_comments = db(db.comment.author == auth.user_id 
-        & db.comment.submission_id == t.submission_id).select(orderby=~db.comment.date).first()
+    previous_comments = db((db.comment.author == auth.user_id) 
+        & (db.comment.submission_id == t.submission_id)).select(orderby=~db.comment.date).first()
     if previous_comments == None:
         previous_comment_text = ''
     else:
@@ -111,10 +112,9 @@ def review():
     # TODO(luca): fix this code.
     form = SQLFORM.factory(
         Field('comments', 'text', default=previous_comment_text),
-        Field('feature_this_solution', 'boolean', default=False),
         hidden=dict(order=simplejson.dumps(last_ordering))
         )
-    if form.process(onvalidate=decode_order_json).accepted():
+    if form.process(onvalidate=decode_order_json).accepted:
         # Creates a new comparison in the db.
         comparison_id = db.comparison.insert(
             contest_id = t.contest_id,
