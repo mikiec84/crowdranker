@@ -1,6 +1,7 @@
 # coding: utf8
 
 from datetime import datetime
+import datetime as dates # Ah, what a mess these python names
 
 db.auth_user._format='%(email)s'
 
@@ -82,7 +83,8 @@ db.define_table('submission',
     Field('author', db.auth_user,  default=auth.user_id),
     Field('date', 'datetime', default=datetime.utcnow()),
     Field('contest_id', db.contest),
-    Field('title'),
+    Field('title'), # Visible only to author
+    Field('identifier'), # Visible to all.
     Field('content', 'upload'),
     Field('is_featured', 'boolean'),
     )
@@ -91,17 +93,22 @@ db.submission.id.readable = db.submission.id.writable = False
 db.submission.author.writable = False
 db.submission.date.writable = False
 db.submission.is_featured.readable = db.submission.is_featured.writable = False
-db.submission.comments.readable = db.submission.comments.writable = False
 db.submission.is_featured.readable = db.submission.is_featured.writable = False
 db.submission.contest_id.readable = db.submission.contest_id.writable = False
-    
+db.submission.identifier.writable = False
+
 db.define_table('comment',
     Field('author', db.auth_user,  default=auth.user_id),
     Field('date', 'datetime', default=datetime.utcnow()),
     Field('submission_id', db.submission),
     Field('content', 'text'),
     )
-    
+
+# For generating automatic display of comments.
+db.comment.date.readable = False
+db.comment.author.readable = False
+db.comment.submission_id.readable = False
+        
 db.define_table('comparison', # An ordering of submissions, from worst to best.
     Field('author', db.auth_user,  default=auth.user_id),
     Field('date', 'datetime', default=datetime.utcnow()),
@@ -115,13 +122,14 @@ db.define_table('task', # Tasks a user should complete for reviewing.
     Field('submission_id', db.submission),
     Field('contest_id', db.contest),
     Field('assigned_date', 'datetime', default=datetime.utcnow()),
-    Field('completed_date', 'datetime', default=datetime.datetime(MAXYEAR, 0, 0, 0, 0, 0)),
+    Field('completed_date', 'datetime', default=datetime(dates.MAXYEAR, 12, 1)),
     )
 
 db.define_table('quality', # Quality of a submission in a context.
-    Field('contest', db.contest),
-    Field('submission', db.submission),
+    Field('contest_id', db.contest),
+    Field('submission_id', db.submission),
     Field('distribution', 'blob'),
     Field('average', 'double'),
     Field('stdev', 'double'),
+    Field('percentile', 'double'),
     )

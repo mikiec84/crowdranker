@@ -16,26 +16,27 @@ def accept_review():
     if not (c.rate_constraint == None or c.id in c_can_rate):
         redirect('closed', args=['permission'])
     t = datetime.utcnow()
-    if not (c_is_active and c.rate_open_date <= t and c.rate_close.date >= t):
+    if not (c.is_active and c.rate_open_date <= t and c.rate_close_date >= t):
         redirect('closed', args=['deadline'])
     # The user can rate the contest.
+    contest_form = SQLFORM(db.contest, record=c, readonly=True)
     # Gets any previous ratings for the contest.
-    form = FORM.confirm('Do you accept to review a submission?',
+    confirmation_form = FORM.confirm('Do you accept to review a submission?',
         {'Decline': URL('default', 'index')})
-    if form.accepted:
+    if confirmation_form.accepted:
         previous_ratings = db(db.comparison.author == auth.user_id & db.comparison.contest == c.id).select.first()
         if previous_ratings == None:
             old_items = []
-            new_item = ranker.get_item(db, c.id, [])
+            new_item = ranker.get_item(db, c.id, auth.user_id, [])
         else:
             old_items = util.get_list(previous_ratings.ratings)
-            new_item = ranker.get_item(db, c.id, old_items)
+            new_item = ranker.get_item(db, c.id, auth.user_id, old_items)
         # Creates a reviewing task.
         db.task.insert(submission_id = new_item, contest_id = c.id)
         db.commit()
         session.flash = T('A review has been added to your review assignments.')
         redirect('task', args=[new_item])
-    return dict(contest=c, form=form)
+    return dict(contest_form=contest_form, confirmation_form=confirmation_form)
 
             
 def closed():

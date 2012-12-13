@@ -71,6 +71,7 @@ def submit():
     db.submission.title.readable = db.submission.title.writable = True
     # Produces an identifier for the submission.  This will make it anonymous.
     random_id = util.get_random_id()
+    add_submission_comments('bogus')
     form = SQLFORM(db.submission, sub, deletable=True, upload=URL('download'))
     form.vars.contest_id = c.id
     form.vars.identifier = random_id
@@ -103,6 +104,7 @@ def resubmit():
         redirect(URL('feedback', 'index', args=[c.id]))
     # The author can access the title.
     db.submission.title.readable = db.submission.title.writable = True
+    add_submission_comments('bogus')
     form = SQLFORM(db.submission, sub, deletable=True, upload=URL('download'))
     form.vars.contest_id = sub.contest_id
     if form.process().accepted:
@@ -135,7 +137,9 @@ def view_own_submission():
     form.addbutton(T('View contest'), URL('contests', 'view_contest', args=[subm.contest_id]))
     form.addbutton(T('View feedback'), URL('feedback', 'view_feedback', args=[subm.id]))
     return dict(form=form)
-    
+   
+def add_submission_comments(bogus):
+   db.submission.title.comment = T('The title is visible to you only.') 
    
 def download():
     return response.download(request, db)

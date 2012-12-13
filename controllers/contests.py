@@ -117,8 +117,8 @@ def rateopen_index():
         create=False,
         editable=False,
         deletable=False,
-        links=[dict(header='Rate', 
-            body = lambda r: A(T('rate'), _href=URL('rating', 'accept_review', args=[r.id])))],
+        links=[dict(header='Review', 
+            body = lambda r: A(T('Accept reviewing task'), _href=URL('rating', 'accept_review', args=[r.id])))],
         )
     return dict(grid=grid)
 
@@ -133,24 +133,30 @@ def submitted_index():
     q = (db.contest.id.belongs(l))
     grid = SQLFORM.grid(q,
         field_id=db.contest.id,
-        fields=[db.contest.name],
+        fields=[db.contest.name, db.contest.rate_open_date, db.contest.rate_close_date, db.contest.feedback_accessible_immediately],
         csv=False,
         details=True,
         create=False,
         editable=False,
         deletable=False,
-        links=[dict(header='Feedback', 
-            body = lambda r: A(T('view feedback'), _href=URL('feedback', 'index', args=[r.id])))],
+        links=[dict(header='Feedback', body = lambda r: link_feedback(r))],
         )
     return dict(grid=grid)
 
+def link_feedback(contest):
+    """Decides if it can show feedback for this contest."""
+    if ((contest.rate_close_date < datetime.utcnow()) | contest.feedback_accessible_immediately):
+        return A(T('View feedback'), _href=URL('feedback', 'index', args=[r.id]))
+    else:
+        return T('Not yet available')
+        
         
 @auth.requires_login()
 def managed_index():
-    props = db(db.user_properties.email == auth.user.email).select(db.user_properties.contests_can_manage).first()
+    props = db(db.user_properties.email == auth.user.email).select().first()
     if props == None:
         managed_contest_list = []
-        managed_user_lists = None
+        managed_user_lists = []
     else:
         managed_contest_list = util.get_list(props.contests_can_manage)
         managed_user_lists = util.get_list(props.managed_user_lists)
@@ -192,8 +198,10 @@ def add_help_for_contest(bogus):
     db.contest.is_active.comment = 'Uncheck to prevent all access to this contest.'
     db.contest.managers.comment = 'Email addresses of contest managers.'
     db.contest.name.comment = 'Name of the contest'
+    db.contest.allow_multiple_submissions.comment = (
+        'Allow users to submit multiple independent pieces of work to this contest.')
     db.contest.featured_submissions.comment = (
-        'Enable raters to flag submissions as featured. '
+        'Allow raters to flag submissions as featured. '
         'Submitters can request to see featured submissions.')
     db.contest.feedback_accessible_immediately.comment = (
         'The feedback can be accessible immediately, or once '

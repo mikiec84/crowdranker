@@ -34,6 +34,11 @@ def view_feedback():
     sub = db.submission(request.args(0)) or redirect(URL('default', 'index'))
     if sub.author != auth.user_id:
         redirect(URL('default', 'index'))
+    # Checks whether we have the permission to show the feedback already.
+    c = db.contest(sub.contest_id) or redirect(URL('default', 'index'))
+    if not (datetime.utcnow() > c.rate_close_date | c.feedback_accessible_immediately):
+        session.flash = T('The contest is still running.')
+        redirect(URL('default', 'index'))
     # Makes a grid of comments.
     q = (db.comment.submission_id == sub_id)
     grid = SQLFORM.grid(q,
