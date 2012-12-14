@@ -167,10 +167,10 @@ def managed_index():
     q = (db.contest.id.belongs(managed_contest_list))    
     # Constrains the user lists to those managed by the user.
     list_q = (db.user_list.id.belongs(managed_user_lists))
-    db.contest.submit_constraint.requires = IS_IN_DB(
-        db(list_q), 'user_list.id', '%(name)s', zero=T('-- Everybody --'), required=False)
-    db.contest.rate_constraint.requires = IS_IN_DB(
-        db(list_q), 'user_list.id', '%(name)s', zero=T('-- Everybody --'), required=False)
+    db.contest.submit_constraint.requires = IS_EMPTY_OR(IS_IN_DB(
+        db(list_q), 'user_list.id', '%(name)s', zero=T('-- Everybody --'), required=False))
+    db.contest.rate_constraint.requires = IS_EMPTY_OR(IS_IN_DB(
+        db(list_q), 'user_list.id', '%(name)s', zero=T('-- Everybody --'), required=False))
     # Keeps track of old managers, if this is an update.
     if len(request.args) > 2 and request.args[-3] == 'edit':
         c = db.contest[request.args[-1]]
@@ -204,9 +204,6 @@ def add_help_for_contest(bogus):
     db.contest.name.comment = 'Name of the contest'
     db.contest.allow_multiple_submissions.comment = (
         'Allow users to submit multiple independent pieces of work to this contest.')
-    db.contest.featured_submissions.comment = (
-        'Allow raters to flag submissions as featured. '
-        'Submitters can request to see featured submissions.')
     db.contest.feedback_accessible_immediately.comment = (
         'The feedback can be accessible immediately, or once '
         'the contest closes.')
