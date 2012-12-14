@@ -3,6 +3,8 @@
 from datetime import datetime
 import datetime as dates # Ah, what a mess these python names
 
+STRING_FIELD_LENGTH = 512 # Default length of string fields.
+
 db.auth_user._format='%(email)s'
 
 db.define_table('user_list',
@@ -46,7 +48,7 @@ db.define_table('contest',
     Field('rate_open_date', 'datetime', required=True),
     Field('rate_close_date', 'datetime', required=True),
     Field('allow_multiple_submissions', 'boolean', default=True),
-    Field('featured_submissions', 'boolean', required=True, default=False),
+    Field('submission_title_is_file_name', 'boolean', default=False),
     Field('is_active', 'boolean', required=True, default=True),
     Field('feedback_accessible_immediately', 'boolean', default=False),
     Field('rating_available_to_all', 'boolean', default=False),
@@ -84,7 +86,7 @@ db.define_table('submission',
     Field('date', 'datetime', default=datetime.utcnow()),
     Field('contest_id', db.contest),
     Field('title'), # Visible only to author
-    Field('identifier'), # Visible to all.
+    Field('identifier'), # Visible to all, unique.
     Field('content', 'upload'),
     )
     
@@ -117,6 +119,7 @@ db.define_table('task', # Tasks a user should complete for reviewing.
     Field('user_id', db.auth_user, default=auth.user_id),
     Field('submission_id', db.submission),
     Field('contest_id', db.contest),
+    Field('submission_name'), # Name of the submission from the point of view of the user.
     Field('assigned_date', 'datetime', default=datetime.utcnow()),
     Field('completed_date', 'datetime', default=datetime(dates.MAXYEAR, 12, 1)),
     )
@@ -125,10 +128,12 @@ db.task.id.readable = db.task.id.writable = False
 db.task.user_id.readable = db.task.user_id.writable = False
 db.task.submission_id.readable = db.task.submission_id.writable = False
 db.task.contest_id.readable = db.task.contest_id.writable = False
+db.task.submission_name.writable = False
 
 db.define_table('quality', # Quality of a submission in a context.
     Field('contest_id', db.contest),
     Field('submission_id', db.submission),
+    Field('user_id', db.auth_user),
     Field('distribution', 'blob'),
     Field('average', 'double'),
     Field('stdev', 'double'),

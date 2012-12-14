@@ -116,19 +116,26 @@ def resubmit():
 @auth.requires_login()
 def view_submission():
     """Allows viewing a submission by someone who has the task to review it.
-    This function is accessed by task, not submission, to check access."""
+    This function is accessed by task id, not submission id, to check access
+    and anonymize the submission."""
+    # TODO(mbrich): here we need to be able to download the submission, and:
+    # * For the author, download it under the original name.
+    # * For a user, download it as t.submission_name + the original extension of the file.
     t = db.task(request.args(0)) or redirect(URL('default', 'index'))
     if t.user_id != auth.user_id:
         redirect(URL('default', 'index'))
     subm = db.submission(t.submission_id) or redirect(URL('default', 'index'))
-    # Shows the submission, except for the title.
-    form = crud.read(db.submission, t.submission_id)
-    return dict(form=form, subm=subm)
+    # Shows the submission, except for the title (unless we are showing it to the author).
+    if subm.author != auth.user_id:
+        db.submission.title.readable = False
+    form = SQLFORM(db.submission, record = subm, readonly = True)
+    return dict(form=form)
 
    
 @auth.requires_login()
 def view_own_submission():
-    """Allows viewing a submission by the submission owner."""
+    """Allows viewing a submission by the submission owner.
+    The argument is the submission id."""
     subm = db.submission(request.args(0)) or redirect(URL('default', 'index'))
     if subm.author != auth.user_id:
         session.flash = T('You cannot view this submission.')

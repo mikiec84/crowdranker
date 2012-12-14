@@ -37,7 +37,10 @@ def accept_review():
             old_items = util.get_list(previous_ratings.ratings)
             new_item = ranker.get_item(db, c.id, auth.user_id, old_items)
         # Creates a reviewing task.
-        db.task.insert(submission_id = new_item, contest_id = c.id)
+        # To name it, counts how many tasks the user has already for this contest.
+        num_tasks = db((db.task.contest_id == c.id) & (db.task.user_id == auth.user_id)).count()
+        task_name = (c.name + ' ' + T('Submission') + ' ' + str(num_tasks + 1))[:STRING_FIELD_LENGTH]
+        db.task.insert(submission_id = new_item, contest_id = c.id, submission_name = task_name)
         db.commit()
         session.flash = T('A review has been added to your review assignments.')
         redirect(URL('task_index', args=[new_item]))
@@ -72,9 +75,9 @@ def task_index():
         create=False, editable=False, deletable=False, csv=False,
         links=[
             dict(header='Contest', 
-                body = lambda r: A(T('Contest'), _href=URL('contests', 'view_contest', args=[r.contest_id]))),
+                body = lambda r: A(db.contest(r.contest_id).name, _href=URL('contests', 'view_contest', args=[r.contest_id]))),
             dict(header='Submission', 
-                body = lambda r: A(T('view'), _href=URL('submission', 'view_submission', args=[r.id]))),
+                body = lambda r: A(r.submission_name, _href=URL('submission', 'view_submission', args=[r.id]))),
             dict(header='Review', body = review_link),],
         )
     return dict(grid=grid)
@@ -91,6 +94,8 @@ def review_link(r):
 @auth.requires_login()        
 def review():
     """Enters the review, and comparisons, for a particular task."""
+    # TODO(mbrich): This is one of the functions that would benefit from your help.
+    # Here is where teh comparisons are entered.
     t = db.task(request.args(0)) or redirect(URL('default', 'index'))
     if t.user_id != auth.user_id:
         redirect(URL('default', 'index'))
@@ -102,6 +107,12 @@ def review():
         last_ordering = []
     else:
         last_ordering = util.get_list(last_comparison.ordering)
+    # Now we need to find the names of the submissions (for the user) that were 
+    # used in this last ordering.
+    # We create a submission_id to name mapping, that will be passed in json to the view.
+    name_of_submission = {}
+    for i in last_ordering:
+        name_of_submission[i] = db.task(i).submission_name
     # Reads any comments previously given by the user on this submission.
     previous_comments = db((db.comment.author == auth.user_id) 
         & (db.comment.submission_id == t.submission_id)).select(orderby=~db.comment.date).first()
@@ -109,7 +120,7 @@ def review():
         previous_comment_text = ''
     else:
         previous_comment_text = previous_comments.content
-    # TODO(luca): fix this code.
+    # TODO(mbrich): fix this code.
     form = SQLFORM.factory(
         Field('comments', 'text', default=previous_comment_text),
         hidden=dict(order=simplejson.dumps(last_ordering))
@@ -133,7 +144,8 @@ def review():
         # All updates done.
         db.commit()
         redirect(URL('task_index', args=['open']))
-    return dict(form=form, task=t)
+    return dict(form=form, task=t, task_names = simplejson.dumps(task_names), 
+        last_ordering = simplejson.dumps(last_ordering))
         
         
 def decode_order_json(form):
