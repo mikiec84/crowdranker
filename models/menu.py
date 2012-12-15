@@ -27,7 +27,7 @@ response.menu = [
         (T('you manage'), False, URL('contests', 'managed_index'), []),
         (T('open for submission'), False, URL('contests', 'subopen_index'), []),
         (T('open for rating'), False, URL('contests', 'rateopen_index'), []),
-        (T('where you submitted'), False, URL('contests', 'submitted_inxed'), []),
+        (T('where you submitted'), False, URL('contests', 'submitted_index'), []),
         ]),
     (T('User lists'), False, URL('user_lists', 'index'), []),
     (T('Reviews'), False, None, [
