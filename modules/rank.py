@@ -65,8 +65,8 @@ class Rank:
         # "outside" they have ids from orig_items_id, so orig_items_id[n]
         # is original id of item n.
         self.orig_items_id = items
-        self.num_items = len(items)
-        self.k = k
+        num_items = len(items)
+        self.num_items = num_items
         self.num_bins = num_bins
         self.cost_obj = cost_obj
         self.alpha = alpha
@@ -117,7 +117,7 @@ class Rank:
         plt.clf()
         for i in range(self.num_items):
             plt.plot(self.qdistr[i, :])
-        plt.title(self.get_title_for_plot(**kwargs))
+        #plt.title(self.get_title_for_plot(**kwargs))
         if hold:
             plt.show()
         else:
@@ -194,10 +194,12 @@ class Rank:
         id2percentile = self.compute_percentile()
         qdistr_param = self.get_qdistr_parameters()
         result = {}
-        for idx in xrange(len(self.num_items)):
+        for idx in xrange(self.num_items):
             avrg = qdistr_param[2 * idx]
             stdev = qdistr_param[2 * idx + 1]
             result[self.orig_items_id[idx]] = (id2percentile[idx], avrg, stdev)
+        print 'rank2id'
+        print self.rank2id
         return result
 
     def n_comparisons_update(self, descend_list):
@@ -318,7 +320,9 @@ class Rank:
         If old_items is None then method returns 2 items to compare.
         """
         if old_items == None:
-            return self.sample_n_items(2)
+            l = self.sample_n_items(2)
+            return [self.orig_items_id[x] for x in l]
+
         taken_ids = [idx for idx in range(self.num_items) if \
                         self.orig_items_id[idx] in old_items]
         free_ids = [idx for idx in range(self.num_items) if \
@@ -326,25 +330,29 @@ class Rank:
         # l[idx] is expected loss of for items with ids
         # idx/len(taken_ids) and idx%len(taken_ids)
         l = np.zeros(len(taken_ids) * len(free_ids))
-        for i in taken_ids:
-            for j in free_ids:
-                    # We are choosing pairs (i, j) such that p(i) < p(j)
-                    if self.id2rank[i] < self.id2rank[j]:
-                        l[i * len(taken_ids) + j] = self.get_expected_loss(i, j)
+        for i in xrange(len(taken_ids)):
+            for j in xrange(len(free_ids)):
+                    ii = taken_ids[i]
+                    jj = free_ids[j]
+                    if self.id2rank[ii] < self.id2rank[jj]:
+                        l[i * len(free_ids) + j] = self.get_expected_loss(ii, jj)
                     else:
-                        l[i * len(taken_ids) + j] = 0
+                        l[i * len(free_ids) + j] = self.get_expected_loss(jj, ii)
         # normalization
+        #print l
         l /= l.sum()
 
         # randomly choosing a pair
         cs = l.cumsum()
         rn = np.random.uniform()
         idx = cs.searchsorted(rn)
-        i, j = idx/len(taken_ids), idx%len(taken_ids)
+        i, j = idx/len(free_ids), idx%len(free_ids)
+        ii = taken_ids[i]
+        jj = free_ids[j]
         # sanity check
-        if self.id2rank[i] >= self.id2rank[j]:
-            raise Exception('There is an error in sampling!')
-        return self.orig_items_id[j]
+        #if self.id2rank[ii] >= self.id2rank[jj]:
+        #    raise Exception('There is an error in sampling!')
+        return self.orig_items_id[jj]
 
     def shift_vector(self, vec):
         """ Shifts vector one position right filling the most left element
@@ -356,7 +364,7 @@ class Rank:
 
     def get_expected_loss(self, i, j):
         """ Calculate expected loss l(i, j) between items i and j.
-        It is implied that p(i) < p(j).
+        It is implied that r(i) < r(j).
         """
         if self.cost_obj == None:
             return self.get_missrank_prob(i, j)
@@ -369,7 +377,7 @@ class Rank:
         return self.cost_obj.calculate(i, j, id2rank)
 
     def get_missrank_prob(self, i, k):
-        """ Method returns probability that p(i) > p(k) where p(i) is a rank
+        """ Method returns probability that r(i) > r(k) where r(i) is a rank
         of an item with id i.
         """
         q_k = self.qdistr[k, :]
@@ -425,15 +433,14 @@ class Rank:
         self.qdistr = self.qdistr / np.sum(self.qdistr, 1) [:, np.newaxis]
 
 
-    def sort_by_user(self, items, user):
-        """ Method simulates sorting by a user.
+    def sort_items_truthfully(self, items):
+        """ Method is for testing purposes.
+        It simulates sorting by a truthful user.
         Returns sorted list of items so rank(result[i]) > rank(result[j])
         if i > j.
-
-        User is an object with a sort function:
-        user.sort(items, id2rank_true, qdist_true).
-
-        items is a list of ids of items to sort.
         """
-        return user.sort(items, self.id2rank_true, self.quality_true)
-
+        items_ids = [idx for idx in range(self.num_items) if \
+                        self.orig_items_id[idx] in items]
+        values = np.array(self.quality_true)[items_ids]
+        idx = np.argsort(values)
+        return [self.orig_items_id[x] for x in np.array(items_ids)[idx]]
