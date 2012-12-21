@@ -10,8 +10,8 @@ def index():
     if contest_id == 'all':
         q = (db.submission.author == auth.user_id)
     else:
-        q = (db.submission.author == auth.user_id 
-            & db.submission.contest_id == contest_id)
+        q = ((db.submission.author == auth.user_id) 
+            & (db.submission.contest_id == contest_id))
     grid = SQLFORM.grid(q,
         fields=[db.submission.id, db.submission.date],
         csv=False, details=False, create=False, editable=False,
