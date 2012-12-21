@@ -2,11 +2,8 @@
 
 import numpy as np
 import random
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import time
-import scipy
-import scipy.stats
-import scipy.stats.distributions
 import math
 
 class Cost:
@@ -79,10 +76,15 @@ class Rank:
             # Does a Gaussian distribution centered in the center.
             print num_items, num_bins
             x, y = np.mgrid[0:num_items, 0:num_bins]
-            self.qdistr = scipy.stats.distributions.norm.pdf(y, loc=num_bins / 2, scale = num_bins / 8)
+            self.qdistr = np.zeros((self.num_items, self.num_bins))
+            for i in xrange(self.num_items):
+                self.qdistr[i, :] = self.get_normal_vector(self.num_bins,
+                                                        self.num_bins / 2,
+                                                        self.num_bins / 8)
+            #self.qdistr = scipy.stats.distributions.norm.pdf(y, loc=num_bins / 2, scale = num_bins / 8)
 
             # Normalization.
-            self.qdistr = self.qdistr / np.sum(self.qdistr, 1) [:, np.newaxis]
+            #self.qdistr = self.qdistr / np.sum(self.qdistr, 1) [:, np.newaxis]
             self.qdistr_init = self.qdistr.copy()
             # Plotting, for testing.
             #plt.plot(self.qdistr[0, :])
@@ -113,25 +115,33 @@ class Rank:
         result.restore_qdistr_from_parameters(qdistr_param)
         return result
 
-    def plot_distributions(self, hold=False, **kwargs):
-        plt.clf()
-        for i in range(self.num_items):
-            plt.plot(self.qdistr[i, :])
-        #plt.title(self.get_title_for_plot(**kwargs))
-        if hold:
-            plt.show()
-        else:
-            plt.ioff()
-            plt.draw()
-        time.sleep(.3)
+    def get_normal_vector(self, num_bins, average, stdev):
+        x_array = np.arange(num_bins)
+        dist = x_array - average
+        # In literature sigma is standard deviation and sigma**2 is variance.
+        d = np.exp(-dist * dist / (2.0 * stdev * stdev))
+        d = d / np.sum(d)
+        return d
 
-    def get_title_for_plot(self, **kwargs):
-        result = ''
-        for key in kwargs:
-            result += '%s %s, ' % (key, kwargs[key])
-        result += 'raking error %s %%, ' % self.get_ranking_error()
-        result += 'quality metric %s ' % self.get_quality_metric()
-        return result
+    #def plot_distributions(self, hold=False, **kwargs):
+    #    plt.clf()
+    #    for i in range(self.num_items):
+    #        plt.plot(self.qdistr[i, :])
+    #    #plt.title(self.get_title_for_plot(**kwargs))
+    #    if hold:
+    #        plt.show()
+    #    else:
+    #        plt.ioff()
+    #        plt.draw()
+    #    time.sleep(.3)
+
+    #def get_title_for_plot(self, **kwargs):
+    #    result = ''
+    #    for key in kwargs:
+    #        result += '%s %s, ' % (key, kwargs[key])
+    #    result += 'raking error %s %%, ' % self.get_ranking_error()
+    #    result += 'quality metric %s ' % self.get_quality_metric()
+    #    return result
 
 
     def generate_true_items_quality(self):
@@ -425,12 +435,13 @@ class Rank:
         for i in xrange(self.num_items):
             mean = w[2 * i]
             std = w[2 * i + 1]
-            self.qdistr[i,:] = scipy.stats.distributions.norm.pdf(y, loc=mean,
-                                                                scale=std)
+            self.qdistr[i, :] = self.get_normal_vector(self.num_bins, mean, std)
+            #self.qdistr[i,:] = scipy.stats.distributions.norm.pdf(y, loc=mean,
+            #                                                    scale=std)
             if np.sum(self.qdistr[i,:]) == 0:
                 print 'ERROR, sum should not be zero !!!'
         # Normalization.
-        self.qdistr = self.qdistr / np.sum(self.qdistr, 1) [:, np.newaxis]
+        #self.qdistr = self.qdistr / np.sum(self.qdistr, 1) [:, np.newaxis]
 
 
     def sort_items_truthfully(self, items):
