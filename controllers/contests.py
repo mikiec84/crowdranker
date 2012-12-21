@@ -168,9 +168,9 @@ def managed_index():
     # Constrains the user lists to those managed by the user.
     list_q = (db.user_list.id.belongs(managed_user_lists))
     db.contest.submit_constraint.requires = IS_EMPTY_OR(IS_IN_DB(
-        db(list_q), 'user_list.id', '%(name)s', zero=T('-- Everybody --'), required=False))
+        db(list_q), 'user_list.id', '%(name)s', zero=T('-- Everybody --')))
     db.contest.rate_constraint.requires = IS_EMPTY_OR(IS_IN_DB(
-        db(list_q), 'user_list.id', '%(name)s', zero=T('-- Everybody --'), required=False))
+        db(list_q), 'user_list.id', '%(name)s', zero=T('-- Everybody --')))
     # Keeps track of old managers, if this is an update.
     if len(request.args) > 2 and request.args[-3] == 'edit':
         c = db.contest[request.args[-1]]
