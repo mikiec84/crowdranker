@@ -19,16 +19,16 @@ def view_contest():
         has_rated = c.id in util.get_list(props.contests_has_rated)
         can_manage = c.id in util.get_list(props.contests_can_manage)
     contest_form = SQLFORM(db.contest, record=c, readonly=True)
-    button_form = SQLFORM.factory()
+    link_list = []
     if can_submit:
-        button_form.add_button(T('Submit to this contest'), URL('submission', 'submissions_contest', args=[c.id]))
+        link_list.append(A(T('Submit to this contest'), _href=URL('submission', 'submissions_contest', args=[c.id])))
     if can_rate:
-        button_form.add_button(T('Rate submissions'), URL('rating', 'accept_review', args=[c.id]))
+        link_list.append(A(T('Rate submissions'), _href=URL('rating', 'accept_review', args=[c.id])))
     if has_submitted:
-        button_form.add_button(T('View submission feedback'), URL('feedback', 'index', args=[c.id]))
+        link_list.append(A(T('View submission feedback'), _href=URL('feedback', 'index', args=[c.id])))
     if can_manage:
-        button_form.add_button(T('Edit'), URL('manage_contest', args=[c.id]))
-    return dict(contest_form=contest_form, button_form=button_form,contest=c, has_rated=has_rated)
+        link_list.append(A(T('Edit'), _href=URL('manage_contest', args=[c.id])))
+    return dict(form=contest_form, link_list=link_list, contest=c, has_rated=has_rated)
 
                 
 @auth.requires_login()

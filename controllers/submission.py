@@ -100,11 +100,10 @@ def resubmit():
     t = datetime.utcnow()
     if not (c.is_active and c.open_date <= t and c.close_date >= t):
         # Send to view feedback.
-        session.flash = T('The submission deadline has passed.')
+        session.flash = T('The contest is not open to submissions.')
         redirect(URL('feedback', 'index', args=[c.id]))
     # The author can access the title.
     db.submission.title.readable = db.submission.title.writable = True
-    add_submission_comments('bogus')
     form = SQLFORM(db.submission, sub, deletable=True, upload=URL('download'))
     form.vars.contest_id = sub.contest_id
     if form.process().accepted:
@@ -128,7 +127,7 @@ def view_submission():
     # Shows the submission, except for the title (unless we are showing it to the author).
     if subm.author != auth.user_id:
         db.submission.title.readable = False
-    form = SQLFORM(db.submission, record = subm, readonly = True)
+    form = SQLFORM(db.submission, record = subm, readonly=True)
     return dict(form=form)
 
    
@@ -140,13 +139,18 @@ def view_own_submission():
     if subm.author != auth.user_id:
         session.flash = T('You cannot view this submission.')
         redirect(URL('default', 'index'))
-    form = crud.read(db.submission, subm.id)
-    form.addbutton(T('View contest'), URL('contests', 'view_contest', args=[subm.contest_id]))
-    form.addbutton(T('View feedback'), URL('feedback', 'view_feedback', args=[subm.id]))
-    return dict(form=form)
-   
-def add_submission_comments(bogus):
-   db.submission.title.comment = T('The title is visible to you only.') 
+    # If the contest is still open for submissions, then we allow editing of the submission.
+    c = db.contest(subm.contest_id) or redirect(URL('default', 'index'))
+    t = datetime.utcnow()
+    if (c.is_active and c.open_date <= t and c.close_date >= t):
+        form = SQLFORM(db.submission, record = subm)
+        if form.process().accepted:
+            session.flash = T('Your submission has been updated.')
+            redirect(URL('feedback', 'index', args=['all']))
+    else:
+        form = SQLFORM(db.submission, record = subm, readonly=True, buttons=[])
+    return dict(form=form, subm=subm)
+
    
 def download():
     return response.download(request, db)

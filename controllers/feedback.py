@@ -21,7 +21,7 @@ def index():
         user_signature=False,
         links=[
             dict(header=T('Contest'), body = lambda r: 
-                A(get_contest_name(r.contest_id), _href=URL('contest', 'view_contest', args=[r.contest_id]))),
+                A(get_contest_name(r.contest_id), _href=URL('contests', 'view_contest', args=[r.contest_id]))),
             dict(header=T('Submission'), body = lambda r: 
                 A(r.title, _href=URL('submission', 'view_own_submission', args=[r.id]))),
             dict(header=T('Feedback'), body = lambda r:
@@ -42,12 +42,12 @@ def view_feedback():
     sub = db.submission(request.args(0)) or redirect(URL('default', 'index'))
     if sub.author != auth.user_id:
         session.flash = T('This is not your submission.')
-        redirect(URL('default', 'index'))
+        redirect(URL('feedback', 'index', args=['all']))
     # Checks whether we have the permission to show the feedback already.
     c = db.contest(sub.contest_id) or redirect(URL('default', 'index'))
     if not ((datetime.utcnow() > c.rate_close_date) or c.feedback_accessible_immediately):
         session.flash = T('The contest is still open to submissions.')
-        redirect(URL('default', 'index'))
+        redirect(URL('feedback', 'index', args=['all']))
     # Makes a grid of comments.
     q = (db.comment.submission_id == sub_id)
     grid = SQLFORM.grid(q,

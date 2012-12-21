@@ -1,0 +1,12 @@
+{{extend 'layout.html'}}
+
+<h1>{{=subm.title}}</h1>
+
+{{=form}}
+
+<p>{{=A(T('View contest'), _href=URL('contests', 'view_contest', args=[subm.contest_id]))}}</p>
+<p>{{=A(T('View feedback'), _href=URL('feedback', 'view_feedback', args=[subm.id]))}}</p>
+
+{{if request.is_local:}}
+{{=response.toolbar()}}
+{{pass}}

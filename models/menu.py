@@ -24,10 +24,10 @@ response.google_analytics_id = None
 response.menu = [
     (T('Home'), False, URL('default', 'index'), []),
     (T('Contests'), False, None, [
-        (T('you manage'), False, URL('contests', 'managed_index'), []),
-        (T('open for submission'), False, URL('contests', 'subopen_index'), []),
-        (T('open for rating'), False, URL('contests', 'rateopen_index'), []),
-        (T('where you submitted'), False, URL('contests', 'submitted_index'), []),
+        (T('Contests I manage'), False, URL('contests', 'managed_index'), []),
+        (T('Contests open for submission'), False, URL('contests', 'subopen_index'), []),
+        (T('Contests open for rating'), False, URL('contests', 'rateopen_index'), []),
+        (T('Contests where I submitted'), False, URL('contests', 'submitted_index'), []),
         ]),
     (T('User lists'), False, URL('user_lists', 'index'), []),
     (T('Reviews'), False, None, [
@@ -35,7 +35,7 @@ response.menu = [
         (T('Done'), False, URL('rating', 'task_index', args=['completed']), []),
         (T('All'),  False, URL('rating', 'task_index', args=['all']), []),
         ]),
-    (T('Feedback'), False, URL('feedback', 'index', args=['all']), []),
+    (T('My submissions'), False, URL('feedback', 'index', args=['all']), []),
 ]
 
 #########################################################################
