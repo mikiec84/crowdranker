@@ -8,7 +8,6 @@ def index():
     """
     Main index.
     """
-    response.flash = None
     user_is_admin = is_user_admin(auth)
     return dict(user_is_admin=user_is_admin)
                                                     

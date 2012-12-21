@@ -12,32 +12,41 @@ def index():
     else:
         q = ((db.submission.author == auth.user_id) 
             & (db.submission.contest_id == contest_id))
+    db.submission.contest_id.readable = False # prevents use in form
+    db.submission.title.readable = False 
     grid = SQLFORM.grid(q,
-        fields=[db.submission.id, db.submission.date],
+        fields=[db.submission.id, db.submission.title, db.submission.date, db.submission.contest_id],
         csv=False, details=False, create=False, editable=False,
         args=request.args[1:],
+        user_signature=False,
         links=[
             dict(header=T('Contest'), body = lambda r: 
-                A(T('Contest'), _href=URL('contests', 'view_contest', args=[r.contest_id]))),
+                A(get_contest_name(r.contest_id), _href=URL('contest', 'view_contest', args=[r.contest_id]))),
             dict(header=T('Submission'), body = lambda r: 
-                A(T('submission'), _href=URL('submission', 'view_own_submission', args=[r.id]))),
+                A(r.title, _href=URL('submission', 'view_own_submission', args=[r.id]))),
             dict(header=T('Feedback'), body = lambda r:
-                A(T('feedback'), _href=URL('view_feedback', args=[r.id]))),
+                A(T('view'), _href=URL('view_feedback', args=[r.id]))),
             ],
         )
-    return form(grid=grid)
-    
+    return dict(grid=grid)
+
+def get_contest_name(contest_id):
+    n = db(db.contest.id == contest_id).select(db.contest.name).first()
+    if n == None:
+        return ''
+    return n.name
 
 @auth.requires_login()
 def view_feedback():
     """Shows detailed information and feedback for a given submission."""
     sub = db.submission(request.args(0)) or redirect(URL('default', 'index'))
     if sub.author != auth.user_id:
+        session.flash = T('This is not your submission.')
         redirect(URL('default', 'index'))
     # Checks whether we have the permission to show the feedback already.
     c = db.contest(sub.contest_id) or redirect(URL('default', 'index'))
-    if not (datetime.utcnow() > c.rate_close_date | c.feedback_accessible_immediately):
-        session.flash = T('The contest is still running.')
+    if not ((datetime.utcnow() > c.rate_close_date) or c.feedback_accessible_immediately):
+        session.flash = T('The contest is still open to submissions.')
         redirect(URL('default', 'index'))
     # Makes a grid of comments.
     q = (db.comment.submission_id == sub_id)

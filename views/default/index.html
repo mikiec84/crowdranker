@@ -1,5 +1,13 @@
-{{left_sidebar_enabled,right_sidebar_enabled=False,False}}
 {{extend 'layout.html'}}
 
 <h1>Welcome</h1>
 This text will explain how to use this system.
+
+{{if request.is_local:}}
+{{if len(response._vars)==1:}}
+{{=BEAUTIFY(response._vars.values()[0])}}
+{{elif len(response._vars)>1:}}
+{{=BEAUTIFY(response._vars)}}
+{{pass}}
+{{=response.toolbar()}}
+{{pass}}
