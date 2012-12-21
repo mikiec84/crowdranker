@@ -150,7 +150,7 @@ def submitted_index():
 def link_feedback(contest):
     """Decides if it can show feedback for this contest."""
     if ((contest.rate_close_date < datetime.utcnow()) | contest.feedback_accessible_immediately):
-        return A(T('View feedback'), _href=URL('feedback', 'index', args=[r.id]))
+        return A(T('View feedback'), _href=URL('feedback', 'index', args=[contest.id]))
     else:
         return T('Not yet available')
         
