@@ -3,6 +3,10 @@
 from gluon import *
 from rank import Rank
 
+NUM_BINS = 2001
+AVRG = num_bins / 2
+STDEV = num_bins / 8
+
 def get_all_items_and_qdistr_param(db, contest_id):
     """ Returns a tuple (items, qdistr_param) where:
         - itmes is a list of submissions id.
@@ -30,22 +34,7 @@ def get_init_average_stdev():
     """ Method returns tuple with average and stdev for initializing
     field in table quality.
     """
-    num_bins = 2001
-    avrg = num_bins / 2
-    stdev = num_bins / 8
-    return avrg, stdev
-
-def init_qdistr(db, contest_id, dist_type='gauss'):
-    """ Initializing average and stdev values in table quality for each
-    submission in given contest.
-    """
-    if dist_type == 'gauss':
-        num_bins = 2001
-        avrg = num_bins / 2
-        stdev = num_bins / 8
-        db(db.quality.contest_id == contest_id).update(average=avrg, stdev=stdev)
-    else:
-        raise Exception("Type of init distribution is not known.")
+    return AVRG, STDEV
 
 def get_item(db, contest_id, user_id, old_items):
     """
@@ -54,6 +43,8 @@ def get_item(db, contest_id, user_id, old_items):
     """
     items, qdistr_param = get_all_items_and_qdistr_param(db, contest_id)
     rankobj = Rank.from_qdistr_param(items, qdistr_param)
+    # TODO(mshavlov): return None if there is no item that can be compared.  Also
+    # ensure that you do not return items that are authored by user_id.
     return rankobj.sample_item(old_items)
 
 def process_comparison(db, contest_id, user_id, sorted_items, new_item):

@@ -32,10 +32,13 @@ def accept_review():
             & (db.comparison.contest_id == c.id)).select(orderby=~db.comparison.date).first()
         if previous_ratings == None:
             old_items = []
-            new_item = ranker.get_item(db, c.id, auth.user_id, [])
+            new_item = fake_get_item(db, c.id, auth.user_id, [])
         else:
             old_items = util.get_list(previous_ratings.ratings)
-            new_item = ranker.get_item(db, c.id, auth.user_id, old_items)
+            new_item = fake_get_item(db, c.id, auth.user_id, old_items)
+        if new_item == None:
+            session.flash = T('There are no items to review so far.')
+            redirect(URL('contests', 'rateopen_index'))
         # Creates a reviewing task.
         # To name it, counts how many tasks the user has already for this contest.
         num_tasks = db((db.task.contest_id == c.id) & (db.task.user_id == auth.user_id)).count()
@@ -45,6 +48,15 @@ def accept_review():
         session.flash = T('A review has been added to your review assignments.')
         redirect(URL('task_index', args=[new_item]))
     return dict(contest_form=contest_form, confirmation_form=confirmation_form)
+
+            
+def fake_get_item(db, c_id, user_id, oldlist):
+    """Fake, for testing."""
+    s = db(db.submission.contest_id == c_id).select(db.submission.id).first()
+    if s == None:
+        return None
+    else:
+        return s.id
 
             
 def closed():

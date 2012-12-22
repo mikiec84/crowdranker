@@ -1,6 +1,7 @@
 # coding: utf8
 
 import util
+import ranker
 
 @auth.requires_login()
 def submissions_contest():
@@ -85,6 +86,9 @@ def submit():
         submitted_ids = util.id_list(util.get_list(props.contests_has_submitted))
         submitted_ids = util.list_append_unique(submitted_ids, c.id)
         props.update_record(contests_has_submitted = submitted_ids)
+        # Assigns the initial distribution to the submission.
+        avg, stdev = ranker.get_init_average_stdev()
+        db.quality.insert(contest_id=c.id, submission_id=form.vars.id, user_id=auth.user_id, average=avg, stdev=stdev)
         db.commit()
         session.flash = T('Your submission has been accepted.')
         redirect(URL('feedback', 'index', args=['all']))
