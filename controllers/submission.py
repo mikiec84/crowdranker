@@ -12,20 +12,22 @@ def my_submissions_index():
     q = ((db.submission.author == auth.user_id) 
             & (db.submission.contest_id == c.id))
     db.submission.contest_id.readable = False
+    db.submission.title.readable = False
     grid = SQLFORM.grid(q,
         args=request.args[1:],
         field_id = db.submission.id,
-        fields = [db.submission.title, db.submission.contest_id],
+        fields = [db.submission.id, db.submission.title, db.submission.contest_id],
         create = False,
+        user_signature = False,
         details = False,
         csv = False,
         editable = False,
         deletable = False,
         links = [
-            #dict(header = T('Contest'), body = lambda r:
-            #    A(T('contest'), _href=URL('contests', 'view_contest', args=[r.contest_id]))),
-            dict(header = T('Resubmit'), body = lambda r:
-                A(T('resubmit'), _href=URL('resubmit', args=[r.id]))),
+            dict(header = T('Contest'), body = lambda r:
+                A(T('contest'), _href=URL('contests', 'view_contest', args=[r.contest_id]))),
+            dict(header = T('Submission'), body = lambda r:
+                A(T(r.title), _href=URL('view_own_submission', args=[r.id]))),
             dict(header = T('Feedback'), body = lambda r:
                 A(T('feedback'), _href=URL('feedback', 'submission', args=[r.id]))),
             ]
@@ -51,7 +53,6 @@ def submit():
     if not (c.is_active and c.open_date <= t and c.close_date >= t):
         redirect('closed', args=['deadline'])
     # Ok, the user can submit.  Looks for previous submissions.
-    logger.debug('Ok, generating crud')
     sub = db((db.submission.author == auth.user_id) & (db.submission.contest_id == c.id)).select().first()
     # The author can access the title.
     db.submission.title.readable = db.submission.title.writable = True
@@ -75,32 +76,6 @@ def submit():
         db.quality.insert(contest_id=c.id, submission_id=form.vars.id, user_id=auth.user_id, average=avg, stdev=stdev)
         db.commit()
         session.flash = T('Your submission has been accepted.')
-        redirect(URL('feedback', 'index', args=['all']))
-    return dict(form=form)
-         
-         
-@auth.requires_login()
-def resubmit():
-    """Resubmit a particular submission, if the deadline is still open."""
-    subm = db.submission(request.args(0)) or redirect(URL('default', 'index'))
-    c = db.contest(subm.contest_id) or redirect(URL('default', 'index'))
-    if (subm.author != auth.user_id):
-        session.flash = T('You are not the author of the original submission.')
-        redirect(URL('feedback', 'index', args=['all']))
-    # Checks if the submission deadline has passed.
-    t = datetime.utcnow()
-    if not (c.is_active and c.open_date <= t and c.close_date >= t):
-        # Send to view feedback.
-        session.flash = T('The contest is not open to submissions.')
-        redirect(URL('feedback', 'index', args=[c.id]))
-    # The author can access the title.
-    db.submission.title.readable = db.submission.title.writable = True
-    form = SQLFORM(db.submission, subm, deletable=True, upload=URL('download_author', args=[subm.id]))
-    form.vars.contest_id = subm.contest_id
-    if request.vars.content != None and request.vars.content != '':
-        form.vars.original_filename = request.vars.content.filename
-    if form.process().accepted:
-        session.flash = T('Your resubmission has been accepted.')
         redirect(URL('feedback', 'index', args=['all']))
     return dict(form=form)
          

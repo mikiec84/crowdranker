@@ -1,0 +1,9 @@
+{{extend 'layout.html'}}
+
+<h1>Submissions to {{=contest.name}}</h1>
+
+{{=grid}}
+
+{{if request.is_local:}}
+{{=response.toolbar()}}
+{{pass}}
