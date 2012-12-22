@@ -23,8 +23,9 @@ def get_all_items_and_qdistr_param(db, contest_id):
         quality = db((db.quality.contest_id == contest_id) &
                   (db.quality.submission_id == x.id)).select(db.quality.average,
                   db.quality.stdev).first()
-        # TODO(mshavlov): you need to handle here the case where quality is None, as there can be nothing in the 
-        # table yet. In fact, you need to cope with the fact that some items may not have a quality yet.
+        # TODO(mshavlov): check that I correctly deal with quality == None
+        if quality == None:
+            return None, None
         qdistr_param.append(quality.average)
         qdistr_param.append(quality.stdev)
     # Ok, items and qdistr_param are filled.
@@ -42,10 +43,16 @@ def get_item(db, contest_id, user_id, old_items):
     function returns two items to compare.
     """
     items, qdistr_param = get_all_items_and_qdistr_param(db, contest_id)
+    # If items is None then some submission does not have qualities yet,
+    # we need to know qualities of for all submission to correctly choose an
+    # item.
+    if items == None:
+        return None
     rankobj = Rank.from_qdistr_param(items, qdistr_param)
-    # TODO(mshavlov): return None if there is no item that can be compared.  Also
-    # ensure that you do not return items that are authored by user_id.
-    return rankobj.sample_item(old_items)
+    # Find submission that is authored by the user.
+    user_submission_id = db((db.submission.contest_id == contest_id) &
+                            (db.submission.author == user_id)).select(db.submissions.id).first()
+    return rankobj.sample_item(old_items, user_submission_id)
 
 def process_comparison(db, contest_id, user_id, sorted_items, new_item):
     """ Function updates quality distributions and rank of submissions (items).
@@ -58,9 +65,13 @@ def process_comparison(db, contest_id, user_id, sorted_items, new_item):
         to the user. If sorted_items contains only two elements then
         new_item is None.
     """
-    # todo(michael): discuss concurrency issue
+    # TODO(mshavlov): discuss concurrency issue
     # as an example (db(query).select(..., for_update=True))
     items, qdistr_param = get_all_items_and_qdistr_param(db, contest_id)
+    # If items is None then some submission does not have qualities yet,
+    # therefore we cannot process comparison.
+    if items == None:
+        return None
     rankobj = Rank.from_qdistr_param(items, qdistr_param)
     result = rankobj.update(sorted_items, new_item)
     # Updating the DB.
