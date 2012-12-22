@@ -285,21 +285,30 @@ class Rank:
         # Update id2rank and rank2id vectors.
         self.rank2id, self.id2rank = self.compute_ranks(self.qdistr)
 
-    def sample(self):
-        """ Returns two items to compare.
+    def sample(self, black_item=None):
+        """ Returns two items to compare. If there is no two items to sample
+        from then None is returned.
         Sampling by loss-driven comparison
         algorithm.
+        black_item cannot be sampled.
         """
-        # l is num_items^2 array; l[idx] is expected loss of for items with ids
-        # idx/num_items and idx%num_items
-        l = np.zeros(self.num_items ** 2)
-        for i in xrange(self.num_items):
-            for j in xrange(self.num_items):
+        indices = range(self.num_items)
+        if not black_item == None:
+            del indices[black_item]
+        if len(indices) < 2:
+            return None
+        # l is len(indices)^2 array; l[idx] is expected loss of for items with ids
+        # idx/len(indices) and idx%len(indices)
+        l = np.zeros(len(indices) ** 2)
+        for i in xrange(len(indices)):
+            for j in xrange(len(indices)):
                     # We are choosing pairs (i, j) such that p(i) < p(j)
-                    if self.id2rank[i] < self.id2rank[j]:
-                        l[i * self.num_items + j] = self.get_expected_loss(i, j)
+                    ii = indices[i]
+                    jj = indices[j]
+                    if self.id2rank[ii] < self.id2rank[jj]:
+                        l[i * len(indices) + j] = self.get_expected_loss(ii, jj)
                     else:
-                        l[i * self.num_items + j] = 0
+                        l[i * len(indices) + j] = 0
         # normalization
         l /= l.sum()
 
@@ -307,11 +316,13 @@ class Rank:
         cs = l.cumsum()
         rn = np.random.uniform()
         idx = cs.searchsorted(rn)
-        i, j = idx/self.num_items, idx%self.num_items
+        i, j = idx/len(indices), idx%len(indices)
         # sanity check
-        if self.id2rank[i] >= self.id2rank[j]:
+        ii = indices[i]
+        jj = indices[j]
+        if self.id2rank[ii] >= self.id2rank[jj]:
             raise Exception('There is an error in sampling!')
-        return i, j
+        return ii, jj
 
     def sample_n_items(self, n):
         items = set()
@@ -325,18 +336,29 @@ class Rank:
                 items.remove(i if random.random() < 0.5 else j)
                 return list(items)
 
-    def sample_item(self, old_items):
+    def sample_item(self, old_items, black_item):
         """ Method samples an item given items the user receivd before.
         If old_items is None then method returns 2 items to compare.
+        black_item is the item which should not be sampled.
+        If it is impossible to sample an item then None is returned.
         """
         if old_items == None:
-            l = self.sample_n_items(2)
+            if black_item == None:
+                l = self.sample()
+            else:
+                l = self.sample(self.orig_items_id.index(black_item))
+            if l == None:
+                return None
             return [self.orig_items_id[x] for x in l]
 
         taken_ids = [idx for idx in range(self.num_items) if \
                         self.orig_items_id[idx] in old_items]
         free_ids = [idx for idx in range(self.num_items) if \
-                        not self.orig_items_id[idx] in old_items]
+                        (not self.orig_items_id[idx] in old_items and
+                         not self.orig_items_id[idx] == black_item)]
+        # If there are no items to pick from then return None.
+        if len(free_ids) == 0:
+            return None
         # l[idx] is expected loss of for items with ids
         # idx/len(taken_ids) and idx%len(taken_ids)
         l = np.zeros(len(taken_ids) * len(free_ids))
