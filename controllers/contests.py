@@ -21,7 +21,7 @@ def view_contest():
     contest_form = SQLFORM(db.contest, record=c, readonly=True)
     link_list = []
     if can_submit:
-        link_list.append(A(T('Submit to this contest'), _href=URL('submission', 'submissions_contest', args=[c.id])))
+        link_list.append(A(T('Submit to this contest'), _href=URL('submission', 'submit', args=[c.id])))
     if can_rate:
         link_list.append(A(T('Rate submissions'), _href=URL('rating', 'accept_review', args=[c.id])))
     if has_submitted:
