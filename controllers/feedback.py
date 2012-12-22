@@ -40,7 +40,7 @@ def get_contest_name(contest_id):
 def view_feedback():
     """Shows detailed information and feedback for a given submission."""
     subm = db.submission(request.args(0)) or redirect(URL('default', 'index'))
-    if sub.author != auth.user_id:
+    if subm.author != auth.user_id:
         session.flash = T('This is not your submission.')
         redirect(URL('feedback', 'index', args=['all']))
     # Checks whether we have the permission to show the feedback already.
