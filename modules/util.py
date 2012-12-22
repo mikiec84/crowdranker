@@ -6,8 +6,7 @@ import string
 import random
 
 email_split_pattern = re.compile('[,\s]+')
-whitespace = re.compile('\s+')
-any_whitespace = re.compile('\s*')
+whitespace = re.compile('\s+$')
 vowels = 'aeiouy'
 consonants = 'bcdfgmnpqrstvwz'
 
@@ -93,10 +92,10 @@ def normalize_email_list(l):
 
 def is_none(s):
     """Checks whether something is empty or None"""
-    if s == None:
+    if s == None or len(s) == 0:
         return True
     else:
-        return any_whitespace.match(str(s))
+        return whitespace.match(str(s))
         
 def get_random_id(n_sections=6, section_length=6):
     """Produces a memorable random string."""

@@ -58,7 +58,6 @@ def subopen_index():
         for c in c_user:
             if c.open_date < t and c.id not in c_all_open:
                 c_all_open.append(c.id)
-    logger.debug('c_all_open: ' + str(c_all_open))
     q = (db.contest.id.belongs(c_all_open))
     grid = SQLFORM.grid(q,
         field_id=db.contest.id,
@@ -246,7 +245,6 @@ def add_contest_to_user_managers(id, user_list):
         u = db(db.user_properties.email == m).select(db.user_properties.contests_can_manage).first()
         if u == None:
             # We never heard of this user, but we still create the permission.
-            logger.debug("Creating user properties for email:" + str(m) + "<")
             db.user_properties.insert(email=m)
             db.commit()
             l = []
@@ -257,11 +255,10 @@ def add_contest_to_user_managers(id, user_list):
     db.commit()
         
 def add_contest_to_user_submit(id, user_list):
-    for m in user_list:
+    for m in user_list.email_list:
         u = db(db.user_properties.email == m).select(db.user_properties.contests_can_submit).first()
         if u == None:
             # We never heard of this user, but we still create the permission.
-            logger.debug("Creating user properties for email:" + str(m) + "<")
             db.user_properties.insert(email=m)
             db.commit()
             l = []
@@ -272,11 +269,10 @@ def add_contest_to_user_submit(id, user_list):
     db.commit()
         
 def add_contest_to_user_rate(id, user_list):
-    for m in user_list:
+    for m in user_list.email_list:
         u = db(db.user_properties.email == m).select(db.user_properties.contests_can_rate).first()
         if u == None:
             # We never heard of this user, but we still create the permission.
-            logger.debug("Creating user properties for email:" + str(m) + "<")
             db.user_properties.insert(email=m)
             db.commit()
             l = []
@@ -294,16 +290,16 @@ def delete_contest_from_managers(id, managers):
             db(db.user_properties.email == m).update(contests_can_manage = l)
     db.commit()
        
-def delete_contest_from_submitters(id, users):
-    for m in users:
+def delete_contest_from_submitters(id, user_list):
+    for m in user_list.email_list:
         u = db(db.user_properties.email == m).select(db.user_properties.contests_can_submit).first()
         if u != None:
             l = util.list_remove(u.contests_can_submit, id)
             db(db.user_properties.email == m).update(contests_can_submit = l)
     db.commit()
        
-def delete_contest_from_raters(id, users):
-    for m in users:
+def delete_contest_from_raters(id, user_list):
+    for m in user_list.email_list:
         u = db(db.user_properties.email == m).select(db.user_properties.contests_can_rate).first()
         if u != None:
             l = util.list_remove(u.contests_can_rate, id)
@@ -317,7 +313,6 @@ def create_contest(form):
     # If there is a submit constraint, we need to allow all the users
     # in the list to submit.
     if not util.is_none(form.vars.submit_constraint):
-        logger.debug("form.vars.submit_contraints is:" + str(form.vars.submit_constraint) + "<")
         user_list = db.user_list[form.vars.submit_constraint].email_list
         # We need to add everybody in that list to submit.
         add_contest_to_user_submit(form.vars.id, user_list)
@@ -337,7 +332,7 @@ def update_contest(old_managers, old_submit_constraint, old_rate_constraint):
         # Submitters.
         if old_submit_constraint != form.vars.submit_constraint:
             # We need to update.
-            if not util.is_none(old_submit_constraint):
+	    if old_submit_constraint != None:
                 user_list = db.user_list[old_submit_constraint]
                 delete_contest_from_submitters(form.vars.id, user_list)
             if not util.is_none(form.vars.submit_constraint):
@@ -346,7 +341,7 @@ def update_contest(old_managers, old_submit_constraint, old_rate_constraint):
         # Raters.
         if old_rate_constraint != form.vars.rate_constraint:
             # We need to update.
-            if not util.is_none(old_rate_constraint):
+	    if old_rate_constraint != None:
                 user_list = db.user_list[old_rate_constraint]
                 delete_contest_from_raters(form.vars.id, user_list)
             if not util.is_none(form.vars.rate_constraint):
@@ -357,9 +352,9 @@ def update_contest(old_managers, old_submit_constraint, old_rate_constraint):
 def delete_contest(table, id):
     c = db.contest[id]
     delete_contest_from_managers(id, c.managers)
-    if not util.is_none(c.submit_constraint):
+    if c.submit_constraint != None:
         user_list = db.user_list[c.submit_constraint]
         delete_contest_from_submitters(id, user_list)
-    if not util.is_none(c.rate_constraint):
+    if c.rate_constraint != None:
         user_list = db.user_list[c.rate_constraint]
         delete_contest_from_raters(id, user_list)
