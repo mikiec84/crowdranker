@@ -208,6 +208,9 @@ def managed_index():
         onvalidation=validate_contest,
         oncreate=create_contest,
         onupdate=update_contest(old_managers, old_submit_constraint, old_rate_constraint),
+        links_in_grid=False,
+        links=[dict(header='Assign reviewers', body = lambda r:
+            A(T('Assign reviewers'), _href=URL('rating', 'assign_reviewers', args=[r.id]))),]
         )
     return dict(grid=grid)
     
