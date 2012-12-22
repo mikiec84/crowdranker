@@ -82,7 +82,7 @@ def task_index():
         # The mode if a specific item.
         q = (db.task.id == mode)
     grid = SQLFORM.grid(q,
-        args=request.args[:1],
+        args=request.args[1:],
         field_id=db.task.id,
         create=False, editable=False, deletable=False, csv=False,
         links=[

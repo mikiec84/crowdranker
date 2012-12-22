@@ -4,41 +4,26 @@ import util
 import ranker
 
 @auth.requires_login()
-def submissions_contest():
-    """This allows people to create a new submission for a contest."""
+def my_submissions_index():
+    """Index of submissions to a context."""
     # Gets information on this specific contest.
     c = db.contest(request.args(0)) or redirect(URL('default', 'index'))
-    # Gets information on the user.
-    props = db(db.user_properties.email == auth.user.email).select().first()
-    if props == None: 
-        contest_ids = []
-    else:
-        contest_ids = util.get_list(props.contests_can_submit)
-    # Is the contest open for submission?
-    if not (c.submit_constraint == None or c.id in contest_ids):
-        session.flash = T('You cannot submit to this contest.')
-        redirect(URL('default', 'index'))
-    # Checks if the submission deadline has passed.
-    t = datetime.utcnow()
-    if not (c.is_active and c.open_date <= t and c.close_date >= t):
-        # Send to view feedback.
-        session.flash = T('The submission deadline has passed.')
-        redirect(URL('feedback', 'index', args=[c.id]))
     # Gets the list of all submissions to the given contest.
-    q = (db.submission.author == auth.user_id 
-            & db.submission.contest_id == c.id)
-    can_add = db(q).count() == 0 or c.allow_multiple_submissions
+    q = ((db.submission.author == auth.user_id) 
+            & (db.submission.contest_id == c.id))
+    db.submission.contest_id.readable = False
     grid = SQLFORM.grid(q,
+        args=request.args[1:],
         field_id = db.submission.id,
-        fields = [db.submission.title],
+        fields = [db.submission.title, db.submission.contest_id],
         create = False,
         details = False,
         csv = False,
         editable = False,
         deletable = False,
         links = [
-            # dict(header = T('Contest'), body = lambda r:
-            #     A(T('contest'), _href=URL('contests', 'view_contest', args=[r.contest_id]))),
+            #dict(header = T('Contest'), body = lambda r:
+            #    A(T('contest'), _href=URL('contests', 'view_contest', args=[r.contest_id]))),
             dict(header = T('Resubmit'), body = lambda r:
                 A(T('resubmit'), _href=URL('resubmit', args=[r.id]))),
             dict(header = T('Feedback'), body = lambda r:
@@ -46,7 +31,7 @@ def submissions_contest():
             ]
         )
     # TODO(luca): check can_add to see if we can include a link to submit, below.
-    return dict(grid=grid, contest=c, can_add=can_add)
+    return dict(grid=grid, contest=c)
         
 
 @auth.requires_login()
@@ -71,11 +56,10 @@ def submit():
     # The author can access the title.
     db.submission.title.readable = db.submission.title.writable = True
     # Produces an identifier for the submission.
-    random_id = util.get_random_id()
+    db.submission.identifier.default = util.get_random_id()
     # TODO(luca): check that it is fine to do the download link without parameters.
     form = SQLFORM(db.submission, sub, deletable=True, upload=URL('download_auhor', args=[None]))
     form.vars.contest_id = c.id
-    form.vars.identifier = random_id
     if request.vars.content != None and request.vars.content != '':
         form.vars.original_filename = request.vars.content.filename
     # TODO(luca): once on appengine, see http://stackoverflow.com/questions/8008213/web2py-upload-with-original-filename
@@ -178,7 +162,7 @@ def validate_task(t_id, user_id):
     t = db.task(request.args(0))
     if t == None:
         return None
-    if t.user_id != auth.user_id:
+    if t.user_id != user_id:
         return None
     subm = db.submission(t.submission_id)
     if subm == None:

@@ -25,7 +25,7 @@ def view_contest():
     if can_rate:
         link_list.append(A(T('Rate submissions'), _href=URL('rating', 'accept_review', args=[c.id])))
     if has_submitted:
-        link_list.append(A(T('View submission feedback'), _href=URL('feedback', 'index', args=[c.id])))
+        link_list.append(A(T('View my submissions'), _href=URL('submission', 'my_submissions_index', args=[c.id])))
     if can_manage:
         link_list.append(A(T('Edit'), _href=URL('manage_contest', args=[c.id])))
     return dict(form=contest_form, link_list=link_list, contest=c, has_rated=has_rated)
@@ -151,7 +151,10 @@ def submitted_index():
         create=False,
         editable=False,
         deletable=False,
-        links=[dict(header='Feedback', body = lambda r: link_feedback(r))],
+        links=[dict(header='Feedback', body = lambda r: link_feedback(r)),
+                dict(header='Submissions', body = lambda r: 
+                A(T('view submissions'), _href=URL('submission', 'my_submissions_index', args=[r.id]))),
+            ],
         )
     return dict(grid=grid)
 
