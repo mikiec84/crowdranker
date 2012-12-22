@@ -164,6 +164,21 @@ def link_feedback(contest):
         return A(T('View feedback'), _href=URL('feedback', 'index', args=[contest.id]))
     else:
         return T('Not yet available')
+
+                
+@auth.requires_login()
+def reviewing_duties():
+    q = ((db.reviewing_duties.user_id == auth.user_id) & (db.reviewing_duties.num_reviews > 0))
+    grid = SQLFORM.grid(q,
+        field_id=db.reviewing_duties.id,
+        user_signature=False,
+        fields = [db.reviewing_duties.contest_id, db.reviewing_duties.num_reviews],
+        csv = False, details = False, create = False, editable = False, deletable = False,
+        links = [dict(header='Accept', body = lambda r:
+            A(T('Accept to do a review'), _href=URL('rating', 'accept_review', args=[r.contest_id]))),
+            ],
+        )
+    return dict(grid=grid)
         
         
 @auth.requires_login()
