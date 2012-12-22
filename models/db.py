@@ -61,6 +61,12 @@ auth.settings.registration_requires_verification = False
 auth.settings.registration_requires_approval = False
 auth.settings.reset_password_requires_verification = True
 
+##### This tells web2py to use GAE logins.
+if request.env.web2py_runtime_gae:
+    from gluon.contrib.login_methods.gae_google_account import GaeGoogleAccount
+    auth.settings.login_form = GaeGoogleAccount()
+
+
 ## if you need to use OpenID, Facebook, MySpace, Twitter, Linkedin, etc.
 ## register with janrain.com, write your domain:api_key in private/janrain.key
 from gluon.contrib.login_methods.rpx_account import use_janrain
