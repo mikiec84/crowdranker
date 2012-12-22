@@ -54,20 +54,22 @@ def submit():
         redirect('closed', args=['deadline'])
     # Ok, the user can submit.  Looks for previous submissions.
     sub = db((db.submission.author == auth.user_id) & (db.submission.contest_id == c.id)).select().first()
+    if sub != None and not c.allow_multiple_submissions:
+        session.flash = T('You have already submitted to this contest.')
+        redirect(URL('my_submissions_index', args=[c.id]))
     # The author can access the title.
     db.submission.title.readable = db.submission.title.writable = True
     # Produces an identifier for the submission.
     db.submission.identifier.default = util.get_random_id()
     # TODO(luca): check that it is fine to do the download link without parameters.
-    form = SQLFORM(db.submission, sub, deletable=True, upload=URL('download_auhor', args=[None]))
+    form = SQLFORM(db.submission, upload=URL('download_auhor', args=[None]))
     form.vars.contest_id = c.id
     if request.vars.content != None and request.vars.content != '':
         form.vars.original_filename = request.vars.content.filename
-    # TODO(luca): once on appengine, see http://stackoverflow.com/questions/8008213/web2py-upload-with-original-filename
-    # for changing the name of the file to the random_id.
     if form.process().accepted:
         # Adds the contest to the list of contests where the user submitted.
-        # TODO(luca): Note that a user can then delete the submission.
+        # TODO(luca): Enable users to delete submissions.  But this is complicated; we need to 
+        # delete also their quality information etc.  For the moment, no deletion.
         submitted_ids = util.id_list(util.get_list(props.contests_has_submitted))
         submitted_ids = util.list_append_unique(submitted_ids, c.id)
         props.update_record(contests_has_submitted = submitted_ids)
