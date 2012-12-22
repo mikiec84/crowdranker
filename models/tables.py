@@ -85,7 +85,8 @@ db.define_table('submission',
     Field('author', db.auth_user,  default=auth.user_id),
     Field('date', 'datetime', default=datetime.utcnow()),
     Field('contest_id', db.contest),
-    Field('title'), # Visible only to author
+    Field('title'),
+    Field('original_filename'),
     Field('identifier'), # Visible to all, unique.
     Field('content', 'upload'),
     )
@@ -93,6 +94,7 @@ db.define_table('submission',
 db.submission.id.readable = db.submission.id.writable = False
 db.submission.author.writable = False
 db.submission.date.writable = False
+db.submission.original_filename.readable = db.submission.original_filename.writable = False
 db.submission.contest_id.readable = db.submission.contest_id.writable = False
 db.submission.identifier.writable = False
 

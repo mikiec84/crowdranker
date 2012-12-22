@@ -3,6 +3,9 @@
 <h1>{{=subm.title}}</h1>
 
 {{=form}}
+{{if download_link != None:}}
+{{=P(TAG['']('Submission: ', A(subm.original_filename, _href=download_link)))}}
+{{pass}}
 
 <p>{{=A(T('View contest'), _href=URL('contests', 'view_contest', args=[subm.contest_id]))}}</p>
 <p>{{=A(T('View feedback'), _href=URL('feedback', 'view_feedback', args=[subm.id]))}}</p>

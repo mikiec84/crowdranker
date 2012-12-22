@@ -8,7 +8,7 @@ import random
 email_split_pattern = re.compile('[,\s]+')
 whitespace = re.compile('\s+')
 any_whitespace = re.compile('\s*')
-vowels = 'aeiou'
+vowels = 'aeiouy'
 consonants = 'bcdfgmnpqrstvwz'
 
 def union_id_list(l1, l2):
@@ -98,7 +98,7 @@ def is_none(s):
     else:
         return any_whitespace.match(str(s))
         
-def get_random_id(n_sections=4, section_length=6):
+def get_random_id(n_sections=6, section_length=6):
     """Produces a memorable random string."""
     sections = []
     for i in range(n_sections):

@@ -69,11 +69,13 @@ def submit():
     sub = db((db.submission.author == auth.user_id) & (db.submission.contest_id == c.id)).select().first()
     # The author can access the title.
     db.submission.title.readable = db.submission.title.writable = True
-    # Produces an identifier for the submission.  This will make it anonymous.
+    # Produces an identifier for the submission.
     random_id = util.get_random_id()
     form = SQLFORM(db.submission, sub, deletable=True, upload=URL('download'))
     form.vars.contest_id = c.id
     form.vars.identifier = random_id
+    if request.vars.content != None:
+        form.vars.original_filename = request.vars.content.filename
     # TODO(luca): once on appengine, see http://stackoverflow.com/questions/8008213/web2py-upload-with-original-filename
     # for changing the name of the file to the random_id.
     if form.process().accepted:
@@ -105,6 +107,8 @@ def resubmit():
     db.submission.title.readable = db.submission.title.writable = True
     form = SQLFORM(db.submission, sub, deletable=True, upload=URL('download'))
     form.vars.contest_id = sub.contest_id
+    if request.vars.content != None:
+        form.vars.original_filename = request.vars.content.filename
     if form.process().accepted:
         session.flash = T('Your resubmission has been accepted.')
         redirect(URL('feedback', 'index', args=['all']))
@@ -121,6 +125,7 @@ def view_submission():
     # * For a user, download it as t.submission_name + the original extension of the file.
     t = db.task(request.args(0)) or redirect(URL('default', 'index'))
     if t.user_id != auth.user_id:
+        session.flash(T('Not authorized.'))
         redirect(URL('default', 'index'))
     subm = db.submission(t.submission_id) or redirect(URL('default', 'index'))
     # Shows the submission, except for the title (unless we are showing it to the author).
@@ -141,14 +146,20 @@ def view_own_submission():
     # If the contest is still open for submissions, then we allow editing of the submission.
     c = db.contest(subm.contest_id) or redirect(URL('default', 'index'))
     t = datetime.utcnow()
+    download_link = None
     if (c.is_active and c.open_date <= t and c.close_date >= t):
-        form = SQLFORM(db.submission, record = subm)
+        form = SQLFORM(db.submission, subm, upload=URL('download'))
+        if request.vars.content != None:
+            form.vars.original_filename = request.vars.content.filename
         if form.process().accepted:
             session.flash = T('Your submission has been updated.')
             redirect(URL('feedback', 'index', args=['all']))
     else:
-        form = SQLFORM(db.submission, record = subm, readonly=True, buttons=[])
-    return dict(form=form, subm=subm)
+        db.submission.content.readable = False
+        form = SQLFORM(db.submission, subm, readonly=True, upload=URL('download'), buttons=[])
+        if subm.content != None and len(subm.content) > 0:
+            download_link = URL('download', args=[subm.content])
+    return dict(form=form, subm=subm, download_link=download_link)
 
    
 def download():
