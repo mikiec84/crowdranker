@@ -27,28 +27,8 @@ def view_contest():
     if has_submitted:
         link_list.append(A(T('View my submissions'), _href=URL('submission', 'my_submissions_index', args=[c.id])))
     if can_manage:
-        link_list.append(A(T('Edit'), _href=URL('manage_contest', args=[c.id])))
+        link_list.append(A(T('Edit'), _href=URL('managed_index', vars=dict(cid=c.id))))
     return dict(form=contest_form, link_list=link_list, contest=c, has_rated=has_rated)
-
-                
-@auth.requires_login()
-def manage_contest():
-    c = db.contest(request.args(0)) or redirect(URL('default', 'index'))
-    props = db(db.user_properties.email == auth.user.email).select().first()
-    if props == None or c.id not in util.get_list(props.contests_can_manage):
-        session.flash = T('You cannot manage this contest')
-        redirect(URL('default', 'index'))
-    # Generates a form for editing.
-    add_help_for_contest('bogus')
-    # Creates a function used to process the update.
-    updater = update_contest(c.managers, c.submit_constraint, c_rate_constraint)
-    form = SQLFORM(db.contest)
-    if form.process(onvalidate=validate_contest).accepted():
-        # Fix the permissions.
-        updater(form)
-        db.commit()
-        redirect(URL('view_contest', args=[c.id]))
-    return dict(form=form)
         
 
 @auth.requires_login()
@@ -191,6 +171,14 @@ def managed_index():
         managed_contest_list = util.get_list(props.contests_can_manage)
         managed_user_lists = util.get_list(props.managed_user_lists)
     q = (db.contest.id.belongs(managed_contest_list))    
+    # Deals with search parameter.
+    if request.vars.cid and request.vars.cid != '':
+        try:
+            cid = int(request.vars.cid)
+        except ValueError:
+            cid = None
+        if cid != None and cid in managed_contest_list:
+            q = (db.contest.id == cid)
     # Constrains the user lists to those managed by the user.
     list_q = (db.user_list.id.belongs(managed_user_lists))
     db.contest.submit_constraint.requires = IS_EMPTY_OR(IS_IN_DB(

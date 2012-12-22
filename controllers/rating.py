@@ -25,6 +25,11 @@ def accept_review():
     confirmation_form = FORM.confirm(T('Accept'),
         {T('Decline'): URL('default', 'index')})
     if confirmation_form.accepted:
+        # Decreases the reviewing duties.
+        duties = db((db.reviewing_duties.user_id == auth.user_id) &
+            (db.reviewing_duties.contest_id == c.id)).select().first()
+        if duties != None and duties.num_reviews > 0:
+            db.duties.update_record(num_reviews = num_reviews - 1)
         # Reads the most recent ratings given by the user.
         # TODO(luca): we should really poll the rating system for this; that's what
         # should keep track of these things.
