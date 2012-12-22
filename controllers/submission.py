@@ -206,6 +206,5 @@ def download_reviewer():
         session.flash = T('Not authorized.')
         redirect(URL('default', 'index'))
     (t, s, c) = v
-    # TODO(luca): rename download.
     request.args = request.args[1:]    
-    return response.download(request, db)
+    return response.download(request, db, attachment=False)

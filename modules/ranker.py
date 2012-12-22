@@ -19,6 +19,8 @@ def get_all_items_and_qdistr_param(db, contest_id):
         quality = db((db.quality.contest_id == contest_id) &
                   (db.quality.submission_id == x.id)).select(db.quality.average,
                   db.quality.stdev).first()
+        # TODO(mshavlov): you need to handle here the case where quality is None, as there can be nothing in the 
+        # table yet. In fact, you need to cope with the fact that some items may not have a quality yet.
         qdistr_param.append(quality.average)
         qdistr_param.append(quality.stdev)
     # Ok, items and qdistr_param are filled.
