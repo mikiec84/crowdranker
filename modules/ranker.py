@@ -4,8 +4,8 @@ from gluon import *
 from rank import Rank
 
 NUM_BINS = 2001
-AVRG = num_bins / 2
-STDEV = num_bins / 8
+AVRG = NUM_BINS / 2
+STDEV = NUM_BINS / 8
 
 def get_all_items_and_qdistr_param(db, contest_id):
     """ Returns a tuple (items, qdistr_param) where:

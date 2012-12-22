@@ -58,14 +58,26 @@ def accept_review():
     c = db.contest(request.args(0)) or redirect('default', 'index')
     props = db(db.user_properties.email == auth.user.email).select(db.user_properties.contests_can_rate).first()
     if props == None:
-        redirect('closed', args=['permission'])
-    c_can_rate = util.get_list(props.contests_can_rate)
+	c_can_rate = []
+    else:
+	c_can_rate = util.get_list(props.contests_can_rate)
     if not (c.rate_constraint == None or c.id in c_can_rate):
-        redirect('closed', args=['permission'])
+	session.flash = T('You cannot rate this contest.')
+        redirect(URL('contests', 'rateopen_index'))
     t = datetime.utcnow()
     if not (c.is_active and c.rate_open_date <= t and c.rate_close_date >= t):
-        redirect('closed', args=['deadline'])
+        session.flash = T('This contest is not open for rating.')
+        redirect(URL('contests', 'rateopen_index'))
     # The user can rate the contest.
+    # Does the user have any pending reviewing tasks for the contest?
+    num_open_tasks = db((db.task.user_id == auth.user_id) &
+			(db.task.contest_id == c.id) &
+			(db.task.completed_date > datetime.utcnow())).count()
+    if num_open_tasks > c.max_number_outstanding_reviews:
+	session.flash = T('You have too many reviews outstanding for this contest. '
+			  'Complete some of them before accepting additional reviewing tasks.')
+	redirect(URL('rating', 'task_index', args=['open']))
+	# This contest_form is used to display the contest.
     contest_form = SQLFORM(db.contest, record=c, readonly=True)
     # Gets any previous ratings for the contest.
     confirmation_form = FORM.confirm(T('Accept'),
@@ -110,14 +122,6 @@ def fake_get_item(db, c_id, user_id, oldlist):
         return s.id
 
             
-def closed():
-    if args[0] == 'deadline':
-        msg = T('The rating deadline has passed.')
-    else:
-        msg = T('You do not have permission to rate submissions to this contest.')
-    return dict(msg=msg)
-
-
 @auth.requires_login()
 def task_index():
     if not request.args(0):
@@ -135,6 +139,7 @@ def task_index():
     grid = SQLFORM.grid(q,
         args=request.args[1:],
         field_id=db.task.id,
+	user_signature=False,
         create=False, editable=False, deletable=False, csv=False,
         links=[
             dict(header='Contest', 

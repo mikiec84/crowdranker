@@ -231,6 +231,10 @@ def add_help_for_contest(bogus):
         'The identity of users providing feedback is not revealed.')
     db.contest.submissions_are_anonymized.comment = (
         'The identities of submission authors are not revealed to the raters.')
+    db.contest.max_number_outstanding_reviews.comment = (
+	'How many outstanding reviews for this contest can a user have at any given time. '
+        'Enter a number between 1 and 100.  The lower, the more accurate the rankings are, '
+	'since choosing later which submissions need additional reviews improves accuracy.')
 
     
 def validate_contest(form):

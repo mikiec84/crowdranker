@@ -55,6 +55,7 @@ db.define_table('contest',
     Field('feedback_available_to_all', 'boolean', default=False),
     Field('feedback_is_anonymous', 'boolean', default=True),
     Field('submissions_are_anonymized', 'boolean', default=True),
+    Field('max_number_outstanding_reviews', 'integer', default=1),
     )
     
 db.contest.name.required = True
@@ -71,6 +72,8 @@ db.contest.rate_open_date.label = 'Rating opening date'
 db.contest.rate_open_date.default = datetime.utcnow()
 db.contest.rate_close_date.label = 'Rating deadline'
 db.contest.rate_close_date.default = datetime.utcnow()
+db.contest.max_number_outstanding_reviews.requires = IS_INT_IN_RANGE(1, 100,
+    error_message=T('Enter a number between 0 and 100.'))
 
 def name_user_list(id, row):
     if id == None or id == '':
