@@ -58,23 +58,28 @@ def subopen_index():
         l = []
     else:
         l = util.get_list(props.contests_can_submit)
-    q_all = ((db.contest.open_date < datetime.utcnow())
-             & (db.contest.close_date > datetime.utcnow()) 
-             & (db.contest.is_active == True) 
-             & (db.contest.submit_constraint == None)
+    t = datetime.utcnow()
+    q_all = ((db.contest.close_date > t) &
+             (db.contest.is_active == True) &
+             (db.contest.submit_constraint == None)
              )
-    c_all = db(q_all).select(db.contest.id).as_list()
+    c_all = db(q_all).select(db.contest.id, db.contest.open_date)
+    # Filters by close date as well.
+    c_all_open = []
+    for c in c_all:
+        if c.open_date < t:
+            c_all_open.append(c.id)
     if len(l) > 0:
-        q_user = ((db.contest.open_date < datetime.utcnow())
-                  & (db.contest.close_date > datetime.utcnow())
-                  & (db.contest.is_active == True)
-                  & (db.contest.id.belongs(l))
+        q_user = ((db.contest.close_date > t) &
+                  (db.contest.is_active == True) &
+                  (db.contest.id.belongs(l))
                   )
-        c_user = db(q_user).select(db.contest.id).as_list()
-        c = util.union_id_list(c_all, c_user)
-    else:
-        c = util.id_list(c_all)
-    q = (db.contest.id.belongs(c))
+        c_user = db(q_user).select(db.contest.id, db.contest.open_date)
+        for c in c_user:
+            if c.open_date < t and c.id not in c_all_open:
+                c_all_open.append(c.id)
+    logger.debug('c_all_open: ' + str(c_all_open))
+    q = (db.contest.id.belongs(c_all_open))
     grid = SQLFORM.grid(q,
         field_id=db.contest.id,
         fields=[db.contest.name, db.contest.close_date],
@@ -96,23 +101,26 @@ def rateopen_index():
         l = []
     else:
         l = util.get_list(props.contests_can_rate)
-    q_all = ((db.contest.rate_open_date < datetime.utcnow())
-             & (db.contest.rate_close_date > datetime.utcnow()) 
-             & (db.contest.is_active == True) 
-             & (db.contest.rate_constraint == None)
+    t = datetime.utcnow()
+    q_all = ((db.contest.rate_close_date > datetime.utcnow()) &
+             (db.contest.is_active == True) &
+             (db.contest.rate_constraint == None)
              )
-    c_all = db(q_all).select(db.contest.id).as_list()
+    c_all = db(q_all).select(db.contest.id, db.contest.open_date)
+    c_all_open = []
+    for c in c_all:
+        if c.open_date < t:
+            c_all_open.append(c.id)    
     if len(l) > 0:
-        q_user = ((db.contest.rate_open_date < datetime.utcnow())
-                  & (db.contest.rate_close_date > datetime.utcnow())
-                  & (db.contest.is_active == True)
-                  & (db.contest.id.belongs(l))
+        q_user = ((db.contest.rate_close_date > datetime.utcnow()) &
+                  (db.contest.is_active == True) &
+                  (db.contest.id.belongs(l))
                   )
-        c_user = db(q_user).select(db.contest.id).as_list()
-        c = util.union_id_list(c_all, c_user)
-    else:
-        c = util.id_list(c_all)
-    q = (db.contest.id.belongs(c))
+        c_user = db(q_user).select(db.contest.id, db.contest.open_date)
+        for c in c_user:
+            if c.open_date < t and c.id not in c_all_open:
+                c_all_open.append(c.id)        
+    q = (db.contest.id.belongs(c_all_open))
     grid = SQLFORM.grid(q,
         field_id=db.contest.id,
         fields=[db.contest.name, db.contest.close_date],

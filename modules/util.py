@@ -19,7 +19,14 @@ def union_id_list(l1, l2):
         if not (id in id1l):
             id1l.append(id)
     return id1l
-    
+
+def union_list(l1, l2):
+    l = l1.copy()
+    for el in l2:
+        if el not in l:
+            l.append(el)
+    return l
+            
 def get_list(f):
     """Unfortunately, empty list fields are often returned as None rather than the empty list."""
     if f == None:

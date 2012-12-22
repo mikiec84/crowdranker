@@ -71,7 +71,6 @@ def submit():
     db.submission.title.readable = db.submission.title.writable = True
     # Produces an identifier for the submission.  This will make it anonymous.
     random_id = util.get_random_id()
-    add_submission_comments('bogus')
     form = SQLFORM(db.submission, sub, deletable=True, upload=URL('download'))
     form.vars.contest_id = c.id
     form.vars.identifier = random_id
@@ -84,8 +83,8 @@ def submit():
         submitted_ids = util.list_append_unique(submitted_ids, c.id)
         props.update_record(contests_has_submitted = submitted_ids)
         db.commit()
-        response.flash = T('Your submission has been accepted.')
-        redirect(URL('default', 'index'))
+        session.flash = T('Your submission has been accepted.')
+        redirect(URL('feedback', 'index', args=['all']))
     return dict(form=form)
          
          
@@ -107,8 +106,8 @@ def resubmit():
     form = SQLFORM(db.submission, sub, deletable=True, upload=URL('download'))
     form.vars.contest_id = sub.contest_id
     if form.process().accepted:
-        response.flash = T('Your resubmission has been accepted.')
-        redirect(URL('default', 'index'))
+        session.flash = T('Your resubmission has been accepted.')
+        redirect(URL('feedback', 'index', args=['all']))
     return dict(form=form)
          
 
