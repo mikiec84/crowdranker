@@ -133,14 +133,14 @@ db.task.contest_id.readable = db.task.contest_id.writable = False
 db.task.submission_name.writable = False
 
 db.define_table('reviewing_duties', # Reviews a user should be doing.
-    Field('user_id', db.auth_user, default=auth.user_id),
+    Field('user_email'),
     Field('contest_id', db.contest),
     Field('num_reviews', 'integer'),
     Field('date_assigned', 'datetime', default=datetime.utcnow()),
     Field('last_performed', 'datetime', update=datetime.utcnow()),
     )
     
-db.reviewing_duties.user_id.readable = db.reviewing_duties.user_id.writable = False
+db.reviewing_duties.user_email.readable = db.reviewing_duties.user_email.writable = False
 db.reviewing_duties.contest_id.readable = db.reviewing_duties.contest_id.writable = False
 db.reviewing_duties.num_reviews.writable = False
 db.reviewing_duties.date_assigned.readable = db.reviewing_duties.date_assigned.writable = False

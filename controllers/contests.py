@@ -148,7 +148,7 @@ def link_feedback(contest):
                 
 @auth.requires_login()
 def reviewing_duties():
-    q = ((db.reviewing_duties.user_id == auth.user_id) & (db.reviewing_duties.num_reviews > 0))
+    q = ((db.reviewing_duties.user_email == auth.user.email) & (db.reviewing_duties.num_reviews > 0))
     grid = SQLFORM.grid(q,
         field_id=db.reviewing_duties.id,
         user_signature=False,

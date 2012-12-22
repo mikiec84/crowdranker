@@ -4,12 +4,58 @@ import util
 import ranker
 import gluon.contrib.simplejson as simplejson
 
+
+@auth.requires_login()
+def assign_reviewers():
+    c = db.contest(request.args(0)) or redirect('default', 'index')
+    props = db(db.user_properties.email == auth.user.email).select().first()
+    if props == None:
+        session.flash = T('You cannot assign reviewers to this contest.')
+        redirect(URL('default', 'index'))
+    managed_contests_list = util.get_list(props.contests_can_manage)
+    managed_user_lists = util.get_list(props.managed_user_lists)
+    if c.id not in managed_contests_list:
+        session.flash = T('You cannot assign reviewers to this contest.')
+        redirect(URL('default', 'index'))
+    # Constrains the user lists to those managed by the user.
+    list_q = (db.user_list.id.belongs(managed_user_lists))
+    form = SQLFORM.factory(Field('users', requires = IS_EMPTY_OR(IS_IN_DB(
+        db(list_q), 'user_list.id', '%(name)s', zero=T('-- Everybody --')))),
+        Field('number_of_reviews_per_user', 'integer'),
+        Field('incremental', 'boolean'),
+        )
+    if form.process().accepted:
+        if (util.is_none(form.vars.users) or form.vars.number_of_reviews_per_user == 0 
+                or (form.vars.number_of_reviews_per_user < 0 and not form.vars.incremental)):
+            session.flash = T('No reviewing duties added.')
+            redirect(URL('contests', 'managed_index'))
+        # TODO(luca): this should be implemented in terms of an appengine queue
+        user_list = db.user_list(form.vars.users)
+        for m in user_list.email_list:
+            current_asgn = db((db.reviewing_duties.user_email == m) &
+                (db.reviewing_duties.contest_id == c.id)).select().first()
+            if current_asgn == None:
+                # Creates a new one.
+                db.reviewing_duties.insert(user_email = m, contest_id = c.id, 
+                    num_reviews = form.vars.number_of_reviews_per_user)
+            else:
+                # Update an existing one
+                if form.vars.incremental:
+                    new_number = max(0, current_asgn.num_reviews + form.vars.number_of_reviews_per_user)
+                else:
+                    new_number = form.vars.number_of_reviews_per_user
+                current_asgn.update_record(num_reviews = new_number)
+        db.commit()
+        session.flash = T('The reviewing duties have been assigned.')
+        redirect(URL('contests', 'managed_index'))
+                
+
 @auth.requires_login()
 def accept_review():
     """Asks a user whether the user is willing to accept a rating task for a contest,
     and if so, picks a task and adds it to the set of tasks for the user."""
     # Checks the permissions.
-    c = db.contest(request.args[0]) or redirect('default', 'index')
+    c = db.contest(request.args(0)) or redirect('default', 'index')
     props = db(db.user_properties.email == auth.user.email).select(db.user_properties.contests_can_rate).first()
     if props == None:
         redirect('closed', args=['permission'])
@@ -26,7 +72,7 @@ def accept_review():
         {T('Decline'): URL('default', 'index')})
     if confirmation_form.accepted:
         # Decreases the reviewing duties.
-        duties = db((db.reviewing_duties.user_id == auth.user_id) &
+        duties = db((db.reviewing_duties.user_email == auth.user.email) &
             (db.reviewing_duties.contest_id == c.id)).select().first()
         if duties != None and duties.num_reviews > 0:
             db.duties.update_record(num_reviews = num_reviews - 1)
