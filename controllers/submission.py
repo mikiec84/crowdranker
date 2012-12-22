@@ -172,11 +172,10 @@ def download_submission( subm, is_attachment = False ):
 	# file_alias is the filename that will be displayed to the user.
 	# The way we build the alias depends on the contest settings,
 	# starting with anonymized submissions.
+    # NOTE: Not sure whether task names are working. Needs testing.
     if ( c.submissions_are_anonymized == True ):
-        t = db.task( subm.id )
-        t_name = t.submission_name if t != None else ''
-		
-        file_alias = c.name + '_' + t_name + original_ext
+        t = db.task( db.task.submission_id == subm.id )
+        file_alias = c.name + '_' + ( t.submission_name if t != None else '' )  + original_ext
 
     else:
         # If title_is_file_name is set, then we use that as the alias,
