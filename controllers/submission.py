@@ -156,19 +156,19 @@ def validate_task(t_id, user_id):
 
 def download_submission( src_filename, dst_filename = None, is_attachment = False ):
     # src_filename - the requested filename
-    # dst_filename - filename the user sees. src_filename is used if not given.
+    # dst_filename - filename the user sees. Blank if not given.
     # is_attachment is whether to force a download instead of stream.
 
     import gluon.fileutils
     import mimetypes
 
-
+    # Builds the relative path string from our current dir, to the uploads
+    # dir including the src_filename.  This will be used to open the file.
     src_path = os.path.join( request.folder,'uploads/', src_filename )
 
-	
     # (Mike) TODO: Make sure this module works as expected on GAE.
-    # (Mike) Future TODO: Make sure this checks file contents and that it doesnt
-    # just rely on file extension (which is not reliable).
+    # (Mike) Future TODO: This function only checks filename. Need a function
+    # that works on GAE AND also checks file contents to determine mime.
     response.headers['ContentType'] = mimetypes.guess_type( src_filename )
 
     if ( is_attachment == True ):
