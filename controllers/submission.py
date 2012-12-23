@@ -153,54 +153,36 @@ def validate_task(t_id, user_id):
     return (t, s, c)
 
 
-def download_submission( subm, is_attachment = False ):
 
-    import os
+def download_submission( src_filename, dst_filename = None, is_attachment = False ):
+    # src_filename - the requested filename
+    # dst_filename - filename the user sees. src_filename is used if not given.
+    # is_attachment is whether to force a download instead of stream.
+
     import gluon.fileutils
-	
-	# (Mike) TODO: Need error checking for contest in the case
-	# that the referenced contest no longer exists.
-    c = db.contest( subm.contest_id );
-
-    # Get the ext of the original file
-    original_ext = os.path.splitext( subm.original_filename )[1]
-
-    #file_path = "applications/crowdrank/uploads/" + subm.content
-    file_path = os.path.join( request.folder,'uploads/', subm.content )
+    import mimetypes
 
 
-	# file_alias is the filename that will be displayed to the user.
-	# The way we build the alias depends on the contest settings,
-	# starting with anonymized submissions.
-    # NOTE: Not sure whether task names are working. Needs testing.
-    if ( c.submissions_are_anonymized == True ):
-        t = db.task( db.task.submission_id == subm.id )
-        file_alias = c.name + '_' + ( t.submission_name if t != None else '' )  + original_ext
+    src_path = os.path.join( request.folder,'uploads/', src_filename )
 
-    else:
-        # If title_is_file_name is set, then we use that as the alias,
-        # otherwise we use the original filename.
-        if ( c.submission_title_is_file_name == True ):
-            file_alias = subm.title + original_ext
-	
-        else:
-            file_alias = subm.original_filename
-	
-
-    # Before alias is shown to the user we filter out anything that shouldn't
-    # be in a filename, replace spaces with underscores, and convert to lowercase.
-    file_alias =  gluon.fileutils.cleanpath( file_alias.replace( ' ', '_' ).lower() )
 	
     # (Mike) TODO: Make sure this module works as expected on GAE.
     # (Mike) Future TODO: Make sure this checks file contents and that it doesnt
     # just rely on file extension (which is not reliable).
-    import mimetypes
-    response.headers['ContentType'] = mimetypes.guess_type( file_path )
-	
-    if ( is_attachment == True ):
-        response.headers['Content-Disposition'] = "attachment; Filename=" + file_alias
+    response.headers['ContentType'] = mimetypes.guess_type( src_filename )
 
-    return response.stream( open( file_path, "rb" ), chunk_size = 4096 )
+    if ( is_attachment == True ):
+        if ( dst_filename != None ):
+             # Filter out anything that shouldn't be in a filename, replace spaces with 
+            # underscores, and convert to lowercase.
+            dst_filename = gluon.fileutils.cleanpath( dst_filename.replace( ' ', '_' ).lower() )
+            response.headers['Content-Disposition'] = "attachment; Filename=" + dst_filename
+
+        else:
+            response.headers['Content-Disposition'] = "attachment"
+
+
+    return response.stream( open( src_path, "rb" ), chunk_size = 4096 )
 
 	
 @auth.requires_login()
@@ -218,9 +200,9 @@ def download_author():
         redirect(URL('default', 'index'))
     request.args = request.args[1:]
 
-    #return response.download(request, db)
-    return download_submission( subm, True )
+    return response.download(request, db)
 	
+
 @auth.requires_login()
 def download_reviewer():
     # Checks that the reviewer has access.
@@ -229,7 +211,30 @@ def download_reviewer():
         session.flash = T('Not authorized.')
         redirect(URL('default', 'index'))
     (t, s, c) = v
-    request.args = request.args[1:] 
+
+    import os
+
+    # Get the ext of the original file
+    original_ext = os.path.splitext( s.original_filename )[1]
+
+
+    # file_alias is the filename that will be displayed to the user.
+    # The way we build the alias depends on the contest settings,
+    # starting with anonymized submissions.
+    # NOTE: Not sure whether task names are working. Needs testing.
+    if ( c.submissions_are_anonymized == True ):
+        file_alias = c.name + '_' + ( t.submission_name if t != None else '' )  + original_ext
+
+    else:
+        # If title_is_file_name is set, then we use that as the alias,
+        # otherwise we use the original filename.
+        if ( c.submission_title_is_file_name == True ):
+            file_alias = s.title + original_ext
+    
+        else:
+            file_alias = s.original_filename
+
+
     #return response.download(request, db, attachment=False)
-    return download_submission( s, True )
+    return download_submission( s, file_alias )
 	
