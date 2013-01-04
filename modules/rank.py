@@ -198,7 +198,6 @@ class Rank:
             to the user. If sorted_items contains only two elements then
             new_item is None.
         """
-        # todo(michael): For now, we don't care about new item.
         sorted_ids = [self.orig_items_id.index(x) for x in sorted_items]
         self.n_comparisons_update(sorted_ids)
         id2percentile = self.compute_percentile()
@@ -208,8 +207,6 @@ class Rank:
             avrg = qdistr_param[2 * idx]
             stdev = qdistr_param[2 * idx + 1]
             result[self.orig_items_id[idx]] = (id2percentile[idx], avrg, stdev)
-        print 'rank2id'
-        print self.rank2id
         return result
 
     def n_comparisons_update(self, descend_list):
@@ -342,7 +339,7 @@ class Rank:
         black_item is the item which should not be sampled.
         If it is impossible to sample an item then None is returned.
         """
-        if old_items == None:
+        if old_items == None or len(old_items) == 0:
             if black_item == None:
                 l = self.sample()
             else:
@@ -418,7 +415,8 @@ class Rank:
         return prob
 
     def get_quality_metric(self):
-        """ Returns quality metric for current quality distribution.
+        """ Returns quality metric for current quality distribution
+        for top-k problem.
         """
         q_true = np.sum(self.quality_true[self.rank2id_true[0:self.k]])
         q_alg = np.sum(self.quality_true[self.rank2id[0:self.k]])
@@ -477,3 +475,65 @@ class Rank:
         values = np.array(self.quality_true)[items_ids]
         idx = np.argsort(values)
         return [self.orig_items_id[x] for x in np.array(items_ids)[idx]]
+
+    def get_quality_of_order(self, qual_type='avrg_rank_error'):
+        """ Method calculates quality of current order of items.
+        (essentially it should be not quality but error)
+
+        quality types:
+            inversions - calculates normalized number of inversions.
+            avrg_rank_error - is average of |rank(i) - true_rank(i)| over all
+                              items.
+            stdev_rank_error - standard deviation of |rank(i) - true_rank(i)|
+        """
+        if qual_type == 'inversions':
+            seq = self.id2rank.argsort()
+            seq = [self.id2rank_true[x] for x in seq]
+            _, num_inv = self._sort_and_get_inv_num(seq)
+            return 2.0 * num_inv / len(seq) / (len(seq) - 1)
+        elif qual_type == 'avrg_rank_error':
+            seq = np.abs(self.id2rank_true - self.id2rank)
+            return np.mean(seq)
+        elif qual_type == 'stdev_rank_error':
+            seq = np.abs(self.id2rank_true - self.id2rank)
+            return np.std(seq)
+        else:
+            raise Exception("Quality type is unknown!")
+
+
+    def _sort_and_get_inv_num(self, seq):
+        """ Returns tuple (sorted_seq, num_inv) where sorted_seq is sorted
+        sequence seq and num_inv is number of invertions in seq.
+        Increasing order has zeor inversions.
+        Sequence 1, 5, 3, 2, have 3 inversions: (5,3), (5,2) and (3,2)
+        Maximum number of inversion in a sequence of length N is N * (N - 1) / 2
+
+        seq is a sequence with unique elements.
+        """
+        length = len(seq)
+        if length <= 1:
+            return seq, 0
+        left = seq[: (length / 2)]
+        right = seq[(length / 2) :]
+        left_sorted, num_inv_left = self._sort_and_get_inv_num(left)
+        right_sorted, num_inv_right = self._sort_and_get_inv_num(right)
+        # Merging and counting invertions.
+        length_l, length_r = len(left), len(right)
+        idx_l, idx_r = 0, 0
+        seq_sorted, num_inv = [0] * length, 0
+        for idx in xrange(length):
+            if idx_l == length_l:
+                seq_sorted[idx:] = right_sorted[idx_r :]
+                break
+            if idx_r == length_r:
+                seq_sorted[idx:] = left_sorted[idx_l :]
+                break
+            if left_sorted[idx_l] <= right_sorted[idx_r]:
+                seq_sorted[idx] = left_sorted[idx_l]
+                idx_l += 1
+            else:
+                seq_sorted[idx] = right_sorted[idx_r]
+                idx_r += 1
+                num_inv += length_l - idx_l
+        num_inv += num_inv_left + num_inv_right
+        return seq_sorted, num_inv
