@@ -92,6 +92,9 @@ db.define_table('submission',
     Field('original_filename'),
     Field('identifier'), # Visible to all, unique.
     Field('content', 'upload'),
+    Field('quality', 'double'),
+    Field('error', 'double'), # True rank of a submission is in the interval
+                              # [current_rank - error, current_rank + error]
     )
     
 db.submission.id.readable = db.submission.id.writable = False

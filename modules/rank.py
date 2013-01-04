@@ -209,6 +209,50 @@ class Rank:
             result[self.orig_items_id[idx]] = (id2percentile[idx], avrg, stdev)
         return result
 
+    def get_ranking_error_inthe_end_of_round(self, num_items_to_compare):
+        """ Method returns ranking error in the end of contest round.
+        Each contest consists of rounds. On the first round users compare 2
+        submissions, on the second round users compare 3 submsissions, etc.
+
+        Because we don't know true quality of submissions then we need to make
+        assumptions about how noisy will be users and return errors based on
+        experiments.
+        """
+        # Current assumption is that 5% of users will sort submission randomly
+        # (so 3 students out of 60 will order randomly).
+        # Another assumption is that each user is gaussian user with stdev
+        # equals 2 and any two heighbor submissions have distance 1 in quality.
+        # In experiments with above settings I measured average(avrg_rank_error)
+        # and stdev (stdev_rank_error) of ranking error
+        # (ranking error of item i is |rank(i) - true_rank(i)|).
+        #
+        # Method returns ranking error as avrg_rank_error + 2 * stdev_rank_error
+        if num_items_to_compare == 2: # First round.
+            avrg_rank_error = 10.9
+            stdev_rank_error = 8.8
+        elif num_items_to_compare == 3: # Second round.
+            avrg_rank_error = 6.6
+            stdev_rank_error = 6
+        elif num_items_to_compare == 4: # Third round.
+            avrg_rank_error = 3.6
+            stdev_rank_error = 3.6
+        elif num_items_to_compare == 5: # Fourth round.
+            avrg_rank_error = 2.1
+            stdev_rank_error = 2.1
+        elif num_items_to_compare == 6: # Fifth round.
+            avrg_rank_error = 1.4
+            stdev_rank_error = 1.3
+        elif num_items_to_compare == 7: # Round number six.
+            avrg_rank_error = 1.2
+            stdev_rank_error = 1.1
+        elif num_items_to_compare == 8: # Round number seven.
+            avrg_rank_error = 1
+            stdev_rank_error = 1
+        else:
+            return None
+        return avrg_rank_error + 2 * stdev_rank_error
+
+
     def n_comparisons_update(self, descend_list):
         """ Updates quality distributions given n ordered items.
         Item id is from set {0, 1, ..., num_items - 1}
