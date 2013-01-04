@@ -1,0 +1,62 @@
+{{extend 'layout.html'}}
+
+<h2>Enter Review: </h2>
+<style type="text/css">
+
+</style>
+
+
+<input type="hidden" value="" id="order" />
+<script type="text/javascript">
+
+var order_data = {};
+
+
+$( document ).ready( function()
+{
+	$(function() 
+	{
+		$( "#item_list" ).sortable({
+			update: function(event,ui)	
+			{
+				var new_order = $( "#item_list" ).sortable('toArray');
+			
+				var i = 0;
+				for ( var key in new_order ) 
+				{
+					var val = new_order[key];
+					var part = val.split("_");
+					
+					
+					i++;
+				}
+			}
+		} );
+	} );
+   
+   
+    $(function() {
+        $( "#item_list" ).sortable();
+        $( "#item_list" ).disableSelection();
+    } );
+} ); 
+ </script>
+{{=form.custom.begin}}
+<div class="alert alert-info"><i class="icon-info-sign"></i> Rank the following items from best to worst by dragging them into order. The best item should be first.</div>
+<ol id="item_list">
+    <li class="ui-state-default" id="item_12"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 1</li>
+    <li class="ui-state-default" id="item_13"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 2</li>
+    <li class="ui-state-default" id="item_14"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 3</li>
+    <li class="ui-state-default"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 4</li>
+    <li class="ui-state-default"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 5</li>
+    <li class="ui-state-default"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 6</li>
+    <li class="ui-state-default"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 7</li>
+</ol>
+<input type="hidden" name="feature_it" />
+
+{{=form.custom.submit}}
+
+{{=form.custom.end}}
+<link rel="stylesheet" href="http://code.jquery.com/ui/1.9.2/themes/base/jquery-ui.css" />
+
+<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/jquery-ui.min.js"></script>
