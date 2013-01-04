@@ -159,6 +159,22 @@ def review_link(r):
         return T('Completed on ') + str(r.completed_date)
 
 
+def can_review( id ):
+
+
+    return 1
+
+
+@auth.requires_login()
+def review_submitted():
+    """ mbrich - Confirm page shown when a review has successfully been submitted """
+    return dict()
+
+
+def review_deadline_closed():
+    """ mbrich - Page shown to the user when the rating dead for this contest has closed """
+    return dict()
+
 @auth.requires_login()        
 def review():
     """Enters the review, and comparisons, for a particular task."""
@@ -167,6 +183,14 @@ def review():
     t = db.task(request.args(0)) or redirect(URL('default', 'index'))
     if t.user_id != auth.user_id:
         redirect(URL('default', 'index'))
+
+    # mbrich - Check that the contest rating deadline is currently open.
+    # There are different ways to handle this like modifying or checking task
+    # entries but I've left it for now.
+    contest = db.contest( t.contest_id )
+    if datetime.utcnow() < contest.rate_open_date or datetime.utcnow() > contest.rate_close_date:
+        redirect( URL( 'rating', 'review_deadline_closed' ) )
+
     # Ok, the task belongs to the user. 
     # Gets the last reviewing task done for the same contest.
     last_comparison = db((db.comparison.author == auth.user_id)
@@ -188,16 +212,23 @@ def review():
         previous_comment_text = ''
     else:
         previous_comment_text = previous_comments.content
+
     # TODO(mbrich): fix this code.
     form = SQLFORM.factory(
         Field('comments', 'text', default=previous_comment_text),
         hidden=dict(order=simplejson.dumps(last_ordering))
         )
+
+    # Remove this and replace with the correct task_names
+    task_names = []
+
     if form.process(onvalidate=decode_order_json).accepted:
         # Creates a new comparison in the db.
+        # "feature_it" line was temporarily removed due to not being in table.
+        # feature_it = form.vars.feature_it,
         comparison_id = db.comparison.insert(
             contest_id = t.contest_id,
-            feature_it = form.vars.feature_it,
+            
             ordering = form.vars.order)
         # Marks the task as done.
         t.update_record(completed_date=datetime.utcnow())
@@ -211,7 +242,7 @@ def review():
         # TODO(luca): put it in a queue of things that need processing.
         # All updates done.
         db.commit()
-        redirect(URL('task_index', args=['open']))
+        redirect(URL('review_submitted', args=['open']))
     return dict(form=form, task=t, task_names = simplejson.dumps(task_names), 
         last_ordering = simplejson.dumps(last_ordering))
         
