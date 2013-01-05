@@ -1,21 +1,24 @@
-{{response.files.append(URL(r=request,c='static',f='js/json2.js'))}}
 {{response.files.append(URL(r=request,c='static',f='js/jquery-ui-1.9.2.custom.min.js'))}}
 {{response.files.append(URL(r=request,c='static',f='css/jquery-ui-1.9.2.custom.css'))}}
 {{extend 'layout.html'}}
 
-<h2>Enter Review for: {{=review_name}}</h2>
+<h2>Enter Review for: {{=task.submission_name}}</h2>
 <style type="text/css">
-    #sortable { list-style-type: none; margin: 0; padding: 0; width: 60%; }
+    #sortable { margin: 0; padding: 0; width: 60%; }
     #sortable li { margin: 0 3px 3px 3px; padding: 0.4em; padding-left: 1.5em; font-size: 1.4em; height: 18px; }
     #sortable li span { position: absolute; margin-left: -1.3em; }
 </style>
 
 
 <script type="text/javascript">
-var submission_names = [];
+
+var order_data = [];
 
 
-var order_data = [ 12, 13, 14, 15 ];
+{{for key in current_list:}}
+	order_data.push( {{=key}} );
+{{pass}}
+
 
 $( document ).ready( function()
 {
@@ -25,21 +28,27 @@ $( document ).ready( function()
 			update: function(event,ui)	
 			{
 				var new_order = $( "#item_list" ).sortable('toArray');
-			
+				$( "[name='order']" ).val( "[]" );				
+				order_data = [];
+
 				var i = 0;
-				var tmp = "";
+				var tmp = "[";
 				for ( var key in new_order ) 
 				{
 					var val = new_order[key];
 					var part = val.split("_");
-					
-					//order_data[part[1]] = i;
-					order_data[part[1]] = i;
+					//order_data.push( part[1] );
+					if ( i > 0 ) tmp += ",";
+					tmp += part[1]; 
 					
 					i++;
-				}
+					
+				} // ends for
+				tmp += "]"
 				
-				$( '#order' ).val( JSON.stringify( order_data ) );
+				$( "[name='order']" ).val( tmp );
+				
+				//$( "[name='order']" ).val( JSON.stringify( order_data ) );
 				
 			}
 		} );
@@ -54,14 +63,13 @@ $( document ).ready( function()
  </script>
 
 <div class="alert alert-info"><i class="icon-info-sign"></i> Rank this item relative to items that you have previously reviewed by dragging and dropping each item into place. The best item should be first.</div>
+{{=test_order}}
+
 <ol id="item_list">
-    <li class="ui-state-default" id="item_12"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 1</li>
-    <li class="ui-state-default" id="item_13"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 2</li>
-    <li class="ui-state-default" id="item_14"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 3</li>
-    <li class="ui-state-default" id="item_15"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 4</li>
-    <li class="ui-state-default" id="item_16"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 5</li>
-    <li class="ui-state-default" id="item_17"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 6</li>
-    <li class="ui-state-default" id="item_18"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 7</li>
+{{for key in current_list:}}
+	<li class="ui-state-{{if new_comparison_item == key:}}highlight{{else:}}default{{pass}}" id="item_{{=key}}"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span> {{=submissions[key]}}</li>
+    {{pass}}
+
 </ol>
 
 {{=form}}
