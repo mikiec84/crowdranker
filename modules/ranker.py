@@ -23,7 +23,6 @@ def get_all_items_and_qdistr_param(db, contest_id):
         quality = db((db.quality.contest_id == contest_id) &
                   (db.quality.submission_id == x.id)).select(db.quality.average,
                   db.quality.stdev).first()
-        # TODO(mshavlov): check that I correctly deal with quality == None
         if quality == None:
             return None, None
         qdistr_param.append(quality.average)
@@ -74,6 +73,7 @@ def process_comparison(db, contest_id, user_id, sorted_items, new_item):
         return None
     rankobj = Rank.from_qdistr_param(items, qdistr_param)
     result = rankobj.update(sorted_items, new_item)
+    rank_error = rankobj.get_ranking_error_inthe_end_of_round(len(sorted_items))
     # Updating the DB.
     for x in items:
         perc, avrg, stdev = result[x]
@@ -81,3 +81,8 @@ def process_comparison(db, contest_id, user_id, sorted_items, new_item):
            (db.quality.submission_id == x)).update(average=avrg,
                                                      stdev=stdev,
                                                 percentile=perc)
+        # Updating submission table with its quality and error.
+        db((db.submission.id == x) &
+           (db.submission.contest_id == contest_id)).update(quality=avrg,
+                                                              error=rank_error)
+
