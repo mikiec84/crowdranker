@@ -159,11 +159,6 @@ def review_link(r):
         return T('Completed on ') + str(r.completed_date)
 
 
-def can_review( id ):
-    """ mbrich - Function to check each of the entries in the sorted list """
-
-    return 1
-
 
 @auth.requires_login()
 def review_submitted():
@@ -172,7 +167,7 @@ def review_submitted():
 
 
 def review_deadline_closed():
-    """ mbrich - Page shown to the user when the rating dead for this contest has closed """
+    """ mbrich - Page shown to the user when the rating deadline for this contest has closed """
     return dict()
 
 @auth.requires_login()        
@@ -183,6 +178,7 @@ def review():
     t = db.task(request.args(0)) or redirect(URL('default', 'index'))
     if t.user_id != auth.user_id:
         redirect(URL('default', 'index'))
+
 
     # mbrich - Check that the contest rating deadline is currently open.
     # There are different ways to handle this like modifying or checking task
@@ -199,12 +195,19 @@ def review():
         last_ordering = []
     else:
         last_ordering = util.get_list(last_comparison.ordering)
+
     # Now we need to find the names of the submissions (for the user) that were 
     # used in this last ordering.
     # We create a submission_id to name mapping, that will be passed in json to the view.
-    name_of_submission = {}
+    submissions = {}
     for i in last_ordering:
-        name_of_submission[i] = db.task(i).submission_name
+        #submission_names[i] = db.task(i).submission_name
+        # Temporary. Fix
+        submissions[i] = db.submission(i).title
+        #submissions[i] = db.task( db.task.submission_id == i ).submission_name
+
+    new_comparison_item = t.submission_id
+
     # Reads any comments previously given by the user on this submission.
     previous_comments = db((db.comment.author == auth.user_id) 
         & (db.comment.submission_id == t.submission_id)).select(orderby=~db.comment.date).first()
@@ -213,7 +216,6 @@ def review():
     else:
         previous_comment_text = previous_comments.content
 
-    # TODO(mbrich): fix this code.
     form = SQLFORM.factory(
         Field('comments', 'text', default=previous_comment_text),
         hidden=dict(order=simplejson.dumps(last_ordering))
@@ -224,9 +226,10 @@ def review():
 
     if form.process(onvalidate=decode_order_json).accepted:
         # Creates a new comparison in the db.
+
         comparison_id = db.comparison.insert(
             contest_id = t.contest_id,
-            ordering = form.vars.order)
+            ordering = util.get_list( form.vars.order ) ) 
         # Marks the task as done.
         t.update_record(completed_date=datetime.utcnow())
         # Adds the comment to the comments for the submission, over-writing any previous
@@ -240,8 +243,14 @@ def review():
         # TODO(luca): put it in a queue of things that need processing.
         # All updates done.
         db.commit()
-        redirect(URL('review_submitted', args=['open']))
-    return dict(form=form, task=t, review_name = t.submission_name, task_names = simplejson.dumps(task_names), 
+        #redirect(URL('review_submitted', args=['open']))
+
+    return dict(form=form, task=t, 
+        submissions = submissions, 
+        task_names = simplejson.dumps(task_names), 
+        current_list = last_ordering,
+        new_comparison_item = new_comparison_item,
+        test_order = form.vars.order,
         last_ordering = simplejson.dumps(last_ordering))
         
         
