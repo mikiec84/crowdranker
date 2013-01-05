@@ -160,7 +160,7 @@ def review_link(r):
 
 
 def can_review( id ):
-
+    """ mbrich - Function to check each of the entries in the sorted list """
 
     return 1
 
@@ -186,7 +186,7 @@ def review():
 
     # mbrich - Check that the contest rating deadline is currently open.
     # There are different ways to handle this like modifying or checking task
-    # entries but I've left it for now.
+    # entries but I've done this for now.
     contest = db.contest( t.contest_id )
     if datetime.utcnow() < contest.rate_open_date or datetime.utcnow() > contest.rate_close_date:
         redirect( URL( 'rating', 'review_deadline_closed' ) )
@@ -224,11 +224,8 @@ def review():
 
     if form.process(onvalidate=decode_order_json).accepted:
         # Creates a new comparison in the db.
-        # "feature_it" line was temporarily removed due to not being in table.
-        # feature_it = form.vars.feature_it,
         comparison_id = db.comparison.insert(
             contest_id = t.contest_id,
-            
             ordering = form.vars.order)
         # Marks the task as done.
         t.update_record(completed_date=datetime.utcnow())
@@ -239,11 +236,12 @@ def review():
                 content = form.vars.comments)
         else:
             previous_comments.update_record(content = form.vars.comments)
+
         # TODO(luca): put it in a queue of things that need processing.
         # All updates done.
         db.commit()
         redirect(URL('review_submitted', args=['open']))
-    return dict(form=form, task=t, task_names = simplejson.dumps(task_names), 
+    return dict(form=form, task=t, review_name = t.submission_name, task_names = simplejson.dumps(task_names), 
         last_ordering = simplejson.dumps(last_ordering))
         
         

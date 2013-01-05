@@ -1,4 +1,6 @@
 {{response.files.append(URL(r=request,c='static',f='js/json2.js'))}}
+{{response.files.append(URL(r=request,c='static',f='js/jquery-ui-1.9.2.custom.min.js'))}}
+{{response.files.append(URL(r=request,c='static',f='css/jquery-ui-1.9.2.custom.css'))}}
 {{extend 'layout.html'}}
 
 <h2>Enter Review for: {{=review_name}}</h2>
@@ -10,8 +12,10 @@
 
 
 <script type="text/javascript">
+var submission_names = [];
 
-var order_data = { 12 : 0, 13 : 1, 14: 2 };
+
+var order_data = [ 12, 13, 14, 15 ];
 
 $( document ).ready( function()
 {
@@ -48,7 +52,7 @@ $( document ).ready( function()
     } );
 } ); 
  </script>
-{{=form.custom.begin}}
+
 <div class="alert alert-info"><i class="icon-info-sign"></i> Rank this item relative to items that you have previously reviewed by dragging and dropping each item into place. The best item should be first.</div>
 <ol id="item_list">
     <li class="ui-state-default" id="item_12"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 1</li>
@@ -59,11 +63,5 @@ $( document ).ready( function()
     <li class="ui-state-default" id="item_17"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 6</li>
     <li class="ui-state-default" id="item_18"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 7</li>
 </ol>
-<input type="hidden" name="feature_it" />
-<input type="hidden" name="order" id="order" />
-{{=form.custom.submit}}
 
-{{=form.custom.end}}
-
-<link rel="stylesheet" href="http://code.jquery.com/ui/1.9.2/themes/base/jquery-ui.css" />
-<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.9.2/jquery-ui.min.js"></script>
+{{=form}}
