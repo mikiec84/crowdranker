@@ -204,10 +204,13 @@ def review():
     submissions = {}
     for i in last_ordering:
         #submission_names[i] = db.task(i).submission_name
-        # Temporary. Fix
-        submissions[i] = db.submission(i).title
-        #submissions[i] = db.task( db.task.submission_id == i ).submission_name
 
+        # mbrich - TODO: Temporarily the real names are being used during testing.
+        # This needs to be the task.submission_name
+        submissions[i] = db.submission(i).title
+
+    # Used to check each draggable item and determine which one we should
+    # highlight (because its the current/new record).
     new_comparison_item = t.submission_id
 
     # Reads any comments previously given by the user on this submission.
@@ -225,11 +228,10 @@ def review():
 
     if form.process( onvalidation=decode_order_json ).accepted:
         # Creates a new comparison in the db.
-        #test = simplejson.loads( "[15,14,13,12]" ) 
-
         comparison_id = db.comparison.insert(
             contest_id = t.contest_id,
             ordering = simplejson.loads( request.vars.order ) ) 
+
         # Marks the task as done.
         t.update_record(completed_date=datetime.utcnow())
 
@@ -250,9 +252,7 @@ def review():
         submissions = submissions, 
         current_list = last_ordering,
         new_comparison_item = new_comparison_item,
-        test_order = "test",
-        test_decode = form.vars.order,
-        last_ordering = simplejson.dumps( last_ordering ) )
+        )
         
         
 def decode_order_json(form):
