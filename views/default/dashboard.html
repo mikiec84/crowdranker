@@ -1,0 +1,67 @@
+{{extend 'layout.html'}}
+<h1>Crowdrank Dashboard</h1>
+<style type="text/css">
+.submission_list li h3
+{
+	margin-top: 0;
+}
+
+.submission_list li
+{
+	margin: 5px;
+	padding: 5px;
+	list-style-type: none;
+}
+
+.submission_list
+{
+	padding-left: 0;
+	margin-left: 0;
+}
+
+.time_left_box
+{
+	width: 60px;
+	height: 60px;
+	font-size: 24px;
+	color: #FFCC66;
+	padding: 3px;
+	
+}
+</style>
+
+{{=todo_list}}
+
+<div class="row">
+	<div class="span4">
+    <h4>Todo List</h4>
+	{{
+    for duty in todo_list:
+    }}
+    {{=duty}}
+    {{pass}}
+
+</div>
+    <div class="span8">
+    	<h4>Upcoming Submission Deadlines</h4>
+        <ul class="submission_list">
+        {{for sub in sub_deadlines:}}
+        	<li style="height: 30px; width: 360px; display: table; border: 1px solid #000;">
+            	<h3>{{=sub.name}}</h3>
+                {{
+                delta = sub.close_date - datetime.utcnow()
+                days_left = delta.days
+                }}
+                <div class="pull-left time_left_box">
+                {{=days_left}} days left
+                </div>
+                
+                <br/>{{=days_left}} days left<br/>
+                Closes {{=sub.close_date}}
+                
+                </li>
+        {{pass}}
+        </ul>
+	</div>
+
+</div>

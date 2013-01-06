@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import util
+from datetime import date, timedelta
+
 
 from gluon.custom_import import track_changes; track_changes(True)
 
@@ -8,9 +10,42 @@ def index():
     """
     Main index.
     """
+    if auth.user_id != None:
+        redirect( URL( 'default', 'dashboard' ) )
+
     user_is_admin = is_user_admin(auth)
     return dict(user_is_admin=user_is_admin)
-                                                    
+
+
+@auth.requires_login()
+def dashboard():
+    """ mbrich - The dashboard is the homepage for users that have logged in. """
+
+    # Get the user's properties    
+    props = db( db.user_properties.email == auth.user.email ).select( db.user_properties.contests_can_submit ).first()
+
+    submit_list = [] if props == None else props
+
+    # Select all contests that the user can submit to, that are open right now,
+    # and that will be closed within 7 days.
+    time_limit = datetime.utcnow() + timedelta( days = 30 )
+    sub_deadlines = db( ( db.contest.id != None ) 
+        & ( db.contest.is_active == True ) 
+        & ( db.contest.open_date < datetime.utcnow() )
+        & ( db.contest.close_date > datetime.utcnow() )
+        & ( db.contest.close_date < time_limit ) ).select( orderby=~ db.contest.close_date )
+
+
+    deadlines = dict()
+    for sub in sub_deadlines:
+        deadlines[sub.id] = dict( name = sub.name )
+
+    # Get duties that the user must perform.
+    duties = db( db.reviewing_duties.contest_id != None ).select()
+
+    #todo_list = duties if duties != None else []
+    return dict( todo_list = duties, sub_deadlines = sub_deadlines )
+                                                
 def user():
     """
     exposes:
