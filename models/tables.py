@@ -28,7 +28,7 @@ db.define_table('user_properties',
     Field('email'), # Primary key
     Field('managed_user_lists', 'list:reference user_list'),
     Field('contests_can_manage', 'list:reference contest'),
-    Field('contests_can_submit', 'list:reference user_list'),
+    Field('contests_can_submit', 'list:reference user_list'), # TODO(luca): why is this not list:reference contest? 
     Field('contests_can_rate', 'list:reference user_list'),
     Field('contests_has_submitted', 'list:reference contest'),
     Field('contests_has_rated', 'list:reference contest'),
@@ -103,6 +103,8 @@ db.submission.date.writable = False
 db.submission.original_filename.readable = db.submission.original_filename.writable = False
 db.submission.contest_id.readable = db.submission.contest_id.writable = False
 db.submission.identifier.writable = False
+db.submission.quality.readable = db.submission.quality.writable = False
+db.submission.error.readable = db.submission.error.writable = False
 
 db.define_table('comment',
     Field('author', db.auth_user,  default=auth.user_id),

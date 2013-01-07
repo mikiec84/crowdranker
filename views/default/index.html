@@ -1,7 +1,24 @@
 {{extend 'layout.html'}}
 
 <h1>Welcome</h1>
-This text will explain how to use this system.
+
+The CrowdLab Ranking System supports the ranking and reviews of
+submissions sent to <em>contests</em>.
+A contest can represent a homework assignment, a conference.
+<ul>
+  <li> The <b>Contests</b> tab allows you to find
+  contests open for submission and review.
+  You can submit to open contests, and you can accept reviewing tasks
+  for contests for which you can review.
+  Site admins can also create new contests.
+  <li> The <b>User lists</b> tab allows site admins to create and manage lists
+  of users who can submit to contests or review submissions.
+  <li>The <b>Reviews</b> tab lists your reviewing tasks, and allows
+  you to enter reviews and ratings.</li> 
+  <li>The <b>My Submissions</b> tab allows you to access your
+  submissions and to view the reviews and ratings they received.</li>
+</ul>
+To access most functions, you need to log in with a Google account.
 
 {{if request.is_local:}}
 {{=response.toolbar()}}

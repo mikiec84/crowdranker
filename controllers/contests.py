@@ -75,6 +75,7 @@ def subopen_index():
 
 @auth.requires_login()
 def rateopen_index():
+    #TODO(luca): see if I can put an inline form for accepting review tasks.
     props = db(db.user_properties.email == auth.user.email).select(db.user_properties.contests_can_rate).first()
     if props == None:
         l = []

@@ -175,19 +175,38 @@ def review_deadline_closed():
 @auth.requires_login()        
 def review():
     """Enters the review, and comparisons, for a particular task."""
-    # TODO(mbrich): This is one of the functions that would benefit from your help.
-    # Here is where teh comparisons are entered.
+
+    def decode_order_json(form):
+	try:
+	    decoded_order = simplejson.loads(request.vars.order)
+	    form.vars.order = decoded_order
+	    # Validates the fact that submissions correspond only tasks that are completed in the past,
+	    # or the current one.
+	    for i in decoded_order:
+		if i != t.submission_id:
+		    # This must correspond to a previously done task.
+		    mt = db((db.task.submission_id == i) &
+			  (db.task.user_id == auth.user_id)).select.first()
+		    if mt == None or mt.completed_date < datetime.utcnow():
+			form.errors.order = T('Corruputed data received')
+			session.flash = T('Corrupted data received')
+			break
+	except ValueError:
+	    form.errors.order = T('Error in the received ranking')
+	    session.flash = T('Error in the received ranking')
+	    form.vars.order = []
+
+    # Here is where the comparisons are entered.
     t = db.task(request.args(0)) or redirect(URL('default', 'index'))
     if t.user_id != auth.user_id:
+	session.flash = T('Invalid request.')
         redirect(URL('default', 'index'))
 
-
     # mbrich - Check that the contest rating deadline is currently open.
-    # There are different ways to handle this like modifying or checking task
-    # entries but I've done this for now.
-    contest = db.contest( t.contest_id )
+    contest = db.contest(t.contest_id)
     if datetime.utcnow() < contest.rate_open_date or datetime.utcnow() > contest.rate_close_date:
-        redirect( URL( 'rating', 'review_deadline_closed' ) )
+	session.flash = T('The review deadline for this contest is closed.')
+        redirect(URL('contests', 'view_contest', args=[contest.id]))
 
     # Ok, the task belongs to the user. 
     # Gets the last reviewing task done for the same contest.
@@ -203,11 +222,12 @@ def review():
     # We create a submission_id to name mapping, that will be passed in json to the view.
     submissions = {}
     for i in last_ordering:
-        #submission_names[i] = db.task(i).submission_name
-
-        # mbrich - TODO: Temporarily the real names are being used during testing.
-        # This needs to be the task.submission_name
-        submissions[i] = db.submission(i).title
+	# Finds the task.
+	st = db((db.task.submission_id == i) &
+		(db.task.user_id == auth.user_id)).select().first()
+	if st != None:
+	    # It should always be non-None, as we never delete tasks.
+	    submissions[i] = st.submission_title
 
     # Used to check each draggable item and determine which one we should
     # highlight (because its the current/new record).
@@ -226,11 +246,11 @@ def review():
         hidden=dict(order=simplejson.dumps(last_ordering))
         )
 
-    if form.process( onvalidation=decode_order_json ).accepted:
+    if form.process(onvalidation=decode_order_json).accepted:
         # Creates a new comparison in the db.
         comparison_id = db.comparison.insert(
             contest_id = t.contest_id,
-            ordering = simplejson.loads( request.vars.order ) ) 
+            ordering = simplejson.loads(request.vars.order)) 
 
         # Marks the task as done.
         t.update_record(completed_date=datetime.utcnow())
@@ -255,11 +275,3 @@ def review():
         )
         
         
-def decode_order_json(form):
-    try:
-        decoded_order = simplejson.loads( request.vars.order )
-        form.vars.order = decoded_order
-
-    except ValueError:
-        form.errors.order = T('Error in the received ranking')
-        form.vars.order = []

@@ -87,24 +87,14 @@ def view_submission():
     """Allows viewing a submission by someone who has the task to review it.
     This function is accessed by task id, not submission id, to check access
     and anonymize the submission."""
-    # TODO(mbrich): here we need to be able to download the submission, and:
-    # * For the author, download it under the original name.
-    # * For a user, download it as t.submission_name + the original extension of the file.
     v = validate_task(request.args(0), auth.user_id)
     if v == None:
         session.flash(T('Not authorized.'))
         redirect(URL('default', 'index'))
     (t, subm, cont) = v
-    # Shows the submission, except for the title (unless we are showing it to the author).
-    if subm.author != auth.user_id:
-        db.submission.title.readable = False
-    # We want to rename the submission content, so let us not display it as part of the form.
-    db.submission.content.readable = False
-    form = SQLFORM(db.submission, record = subm, readonly=True)
-    download_link = None
-    if subm.content != None and len(subm.content) > 0:
-        download_link = URL('download_reviewer', args=[t.id, subm.content])    
-    return dict(form=form, download_link=download_link)
+    download_link = A(T('download'),
+		      _href=URL('download_reviewer', args=[t.id, subm.content]))    
+    return dict(title=t.submission_name, download_link=download_link)
 
    
 @auth.requires_login()
@@ -128,9 +118,10 @@ def view_own_submission():
             redirect(URL('feedback', 'index', args=['all']))
     else:
         db.submission.content.readable = False
-        form = SQLFORM(db.submission, subm, readonly=True, upload=URL('download_author', args=[subm.id]), buttons=[])
-        if subm.content != None and len(subm.content) > 0:
-            download_link = URL('download', args=[subm.content], vars=dict(s=subm.id))
+        form = SQLFORM(db.submission, subm, readonly=True,
+		       upload=URL('download_author', args=[subm.id]), buttons=[])
+	download_link = A(T('download'),
+			  _href=URL('download_author', args=[subm.id, subm.content]))
     return dict(form=form, subm=subm, download_link=download_link)
 
 
@@ -141,65 +132,29 @@ def validate_task(t_id, user_id):
         return None
     if t.user_id != user_id:
         return None
-    subm = db.submission(t.submission_id)
-    if subm == None:
+    s = db.submission(t.submission_id)
+    if s == None:
         return None
-    c = db.contest(subm.contest_id)
+    c = db.contest(s.contest_id)
     if c == None:
         return None
-    t = datetime.utcnow()
-    if c.rate_open_date > t or c.rate_close_date < t:
+    d = datetime.utcnow()
+    if c.rate_open_date > d or c.rate_close_date < d:
         return None
     return (t, s, c)
-
-
-
-def download_submission( src_filename, dst_filename = None, is_attachment = False ):
-    # src_filename - the requested filename
-    # dst_filename - filename the user sees. Blank if not given.
-    # is_attachment is whether to force a download instead of stream.
-
-    import gluon.fileutils
-    import mimetypes
-
-    # Builds the relative path string from our current dir, to the uploads
-    # dir including the src_filename.  This will be used to open the file.
-    src_path = os.path.join( request.folder,'uploads/', src_filename )
-
-    # (Mike) TODO: Make sure this module works as expected on GAE.
-    # (Mike) Future TODO: This function only checks filename. Need a function
-    # that works on GAE AND also checks file contents to determine mime.
-    response.headers['ContentType'] = mimetypes.guess_type( src_filename )
-
-    if ( is_attachment == True ):
-        if ( dst_filename != None ):
-             # Filter out anything that shouldn't be in a filename, replace spaces with 
-            # underscores, and convert to lowercase.
-            dst_filename = gluon.fileutils.cleanpath( dst_filename.replace( ' ', '_' ).lower() )
-            response.headers['Content-Disposition'] = "attachment; Filename=" + dst_filename
-
-        else:
-            response.headers['Content-Disposition'] = "attachment"
-
-
-    return response.stream( open( src_path, "rb" ), chunk_size = 4096 )
 
 	
 @auth.requires_login()
 def download_author():
-
     # The user must be the owner of the submission.
     subm = db.submission(request.args(0))
-	
-	# Internal error if we dont deal with subm being empty
     if (subm  == None):
         redirect(URL('default', 'index' ) )
-	
     if subm.author != auth.user_id:
         session.flash = T('Not authorized.')
         redirect(URL('default', 'index'))
-    request.args = request.args[1:]
-
+    # TODO(luca): The next line should be useless.
+    # request.args = request.args[1:]
     return response.download(request, db)
 	
 
@@ -211,30 +166,18 @@ def download_reviewer():
         session.flash = T('Not authorized.')
         redirect(URL('default', 'index'))
     (t, s, c) = v
-
-    import os
-
-    # Get the ext of the original file
-    original_ext = os.path.splitext( s.original_filename )[1]
-
-
-    # file_alias is the filename that will be displayed to the user.
-    # The way we build the alias depends on the contest settings,
-    # starting with anonymized submissions.
-    # NOTE: Not sure whether task names are working. Needs testing.
-    if ( c.submissions_are_anonymized == True ):
-        file_alias = c.name + '_' + ( t.submission_name if t != None else '' )  + original_ext
-
+    # Builds the download name for the file.
+    if c.submissions_are_anonymized:
+	# Get the extension of the original file
+	original_ext = s.original_filename.split('.')[-1]
+        file_alias = ( t.submission_name if t != None else 'submission' )  + '.' + original_ext
     else:
         # If title_is_file_name is set, then we use that as the alias,
         # otherwise we use the original filename.
-        if ( c.submission_title_is_file_name == True ):
-            file_alias = s.title + original_ext
-    
+        if c.submission_title_is_file_name:
+            file_alias = s.title + '.' + original_ext
         else:
             file_alias = s.original_filename
-
-
-    #return response.download(request, db, attachment=False)
-    return download_submission( s, file_alias )
-	
+    # TODO(luca): The next line should be useless.
+    request.args = request.args[1:]
+    return response.download(request, db, download_filename=file_alias)

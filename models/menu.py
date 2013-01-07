@@ -5,7 +5,7 @@
 ## Customize your APP title, subtitle and menus here
 #########################################################################
 
-response.title = T('CrowdLab Ranking System')
+response.title = None
 response.subtitle = T('')
 
 ## read more at http://dev.w3.org/html5/markup/meta.name.html
@@ -22,11 +22,11 @@ response.google_analytics_id = None
 #########################################################################
 
 response.menu = [
-    (T('Home'), False, URL('default', 'index'), []),
+    (T('CrowdLab Ranking System'), False, URL('default', 'index'), []),
     (T('Contests'), False, None, [
         (T('Contests I manage'), False, URL('contests', 'managed_index'), []),
         (T('Contests open for submission'), False, URL('contests', 'subopen_index'), []),
-        (T('Contests open for rating'), False, URL('contests', 'rateopen_index'), []),
+        (T('Contests open for review'), False, URL('contests', 'rateopen_index'), []),
         (T('Contests where I submitted'), False, URL('contests', 'submitted_index'), []),
         ]),
     (T('User lists'), False, URL('user_lists', 'index'), []),
