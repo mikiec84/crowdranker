@@ -46,7 +46,7 @@
     	<h4>Upcoming Submission Deadlines</h4>
         <ul class="submission_list">
         {{for sub in sub_deadlines:}}
-        	<li style="height: 30px; width: 360px; display: table; border: 1px solid #000;">
+        	<li class="span4">
             	<h3>{{=sub.name}}</h3>
                 {{
                 delta = sub.close_date - datetime.utcnow()
@@ -56,9 +56,8 @@
                 {{=days_left}} days left
                 </div>
                 
-                <br/>{{=days_left}} days left<br/>
                 Closes {{=sub.close_date}}
-                
+                <a class="btn btn-mini pull-right" href="{{=URL('contests', 'subopen_index/view/contest', args=sub.id, user_signature=True)}}">View Contest</a>
                 </li>
         {{pass}}
         </ul>
