@@ -136,6 +136,7 @@ def task_index():
     else:
         # The mode if a specific item.
         q = (db.task.id == mode)
+    db.task.submission_name.readable = False
     grid = SQLFORM.grid(q,
         args=request.args[1:],
         field_id=db.task.id,
@@ -153,7 +154,7 @@ def task_index():
        
 def review_link(r):
     if r.completed_date > datetime.utcnow():
-        return A(T('Enter review'), _href=URL('review', args=[r.id]))
+        return A(T('Enter review'), _class='btn', _href=URL('review', args=[r.id]))
     else:
         # TODO(luca): Allow resubmitting a review.
         return T('Completed on ') + str(r.completed_date)
