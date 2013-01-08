@@ -1,8 +1,16 @@
 {{extend 'layout.html'}}
 
+<h1>{{=contest.name}}</h1>
 {{=form}}
+
+{{if len(link_list) > 0:}}
 <ul>
 {{for l in link_list:}}
-    <li>{{=l}}</li>
+    <li class="btn">{{=l}}</li>
 {{pass}}
 </ul>
+{{pass}}
+
+{{if request.is_local:}}
+{{=response.toolbar()}}
+{{pass}}
