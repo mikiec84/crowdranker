@@ -68,7 +68,7 @@ def subopen_index():
         editable=False,
         deletable=False,
         links=[dict(header=T('Submit'), 
-            body = lambda r: A(T('submit'), _href=URL('submission', 'submit', args=[r.id])))],
+            body = lambda r: A(T('Submit'), _class='btn', _href=URL('submission', 'submit', args=[r.id])))],
         )
     return dict(grid=grid)
 
@@ -101,16 +101,19 @@ def rateopen_index():
             if c.open_date < t and c.id not in c_all_open:
                 c_all_open.append(c.id)        
     q = (db.contest.id.belongs(c_all_open))
+    db.contest.rate_close_date.label = T('Review deadline')
     grid = SQLFORM.grid(q,
         field_id=db.contest.id,
-        fields=[db.contest.name, db.contest.close_date],
+        fields=[db.contest.name, db.contest.rate_close_date],
         csv=False,
         details=True,
         create=False,
         editable=False,
         deletable=False,
         links=[dict(header='Review', 
-            body = lambda r: A(T('Accept reviewing task'), _href=URL('rating', 'accept_review', args=[r.id])))],
+            body = lambda r: A(T('Accept reviewing task'),
+			       _class='btn',
+			       _href=URL('rating', 'accept_review', args=[r.id])))],
         )
     return dict(grid=grid)
 
@@ -123,6 +126,9 @@ def submitted_index():
     else:
         l = util.id_list(util.get_list(props.contests_has_submitted))
     q = (db.contest.id.belongs(l))
+    db.contest.feedback_accessible_immediately.readable = False
+    db.contest.rate_open_date.readable = False
+    db.contest.rate_close_date.readable = False
     grid = SQLFORM.grid(q,
         field_id=db.contest.id,
         fields=[db.contest.name, db.contest.rate_open_date, db.contest.rate_close_date, db.contest.feedback_accessible_immediately],
@@ -133,7 +139,9 @@ def submitted_index():
         deletable=False,
         links=[dict(header='Feedback', body = lambda r: link_feedback(r)),
                 dict(header='Submissions', body = lambda r: 
-                A(T('view submissions'), _href=URL('submission', 'my_submissions_index', args=[r.id]))),
+                A(T('view submissions'),
+		  _class='btn',
+		  _href=URL('submission', 'my_submissions_index', args=[r.id]))),
             ],
         )
     return dict(grid=grid)
@@ -141,7 +149,7 @@ def submitted_index():
 def link_feedback(contest):
     """Decides if it can show feedback for this contest."""
     if ((contest.rate_close_date < datetime.utcnow()) | contest.feedback_accessible_immediately):
-        return A(T('View feedback'), _href=URL('feedback', 'index', args=[contest.id]))
+        return A(T('View feedback'), _class='btn', _href=URL('feedback', 'index', args=[contest.id]))
     else:
         return T('Not yet available')
 

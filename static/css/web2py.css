@@ -49,7 +49,7 @@ input[type=text],input[type=password],select{width:300px; margin-right:5px}
   clear:both;
 }
 
-.footer-content {position:relative; bottom:-4em; width:100%}
+.footer-content {position:relative; bottom:-1em; width:100%}
 
 .auth_navbar {
     white-space:nowrap;
