@@ -129,10 +129,13 @@ def task_index():
     mode = request.args(0)
     if mode == 'completed':
         q = ((db.task.user_id == auth.user_id) & (db.task.completed_date < datetime.utcnow()))
+	title = T('Reviews completed')
     elif mode == 'all':
         q = (db.task.user_id == auth.user_id)
+	title = T('All reviews')
     elif mode == 'open':
         q = ((db.task.user_id == auth.user_id) & (db.task.completed_date > datetime.utcnow()))
+	title = T('Reviews to submit')
     else:
         # The mode if a specific item.
         q = (db.task.id == mode)
@@ -149,7 +152,7 @@ def task_index():
                 body = lambda r: A(r.submission_name, _href=URL('submission', 'view_submission', args=[r.id]))),
             dict(header='Review', body = review_link),],
         )
-    return dict(grid=grid)
+    return dict(title=title, grid=grid)
 
        
 def review_link(r):
@@ -158,18 +161,6 @@ def review_link(r):
     else:
         # TODO(luca): Allow resubmitting a review.
         return T('Completed on ') + str(r.completed_date)
-
-
-
-@auth.requires_login()
-def review_submitted():
-    """ mbrich - Confirm page shown when a review has successfully been submitted """
-    return dict()
-
-
-def review_deadline_closed():
-    """ mbrich - Page shown to the user when the rating deadline for this contest has closed """
-    return dict()
 
 
 
@@ -267,7 +258,8 @@ def review():
         # TODO(luca): put it in a queue of things that need processing.
         # All updates done.
         db.commit()
-        redirect(URL('review_submitted', args=['open']))
+	session.flash = T('The review has been submitted.')
+	redirect(URL('rating', 'task_index', args=['open']))
 
     return dict(form=form, task=t, 
         submissions = submissions, 
