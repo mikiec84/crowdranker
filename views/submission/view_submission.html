@@ -1,0 +1,15 @@
+{{extend 'layout.html'}}
+
+<h1>Download Submission</h1>
+
+<div><table>
+  <tr><td style="font-weight:bold;vertical-align:top">Contest</td><td valign="top">:</td>
+  <td><div>{{=contest_link}}</div></td></tr>
+  <tr><td style="font-weight:bold;vertical-align:top">Submission</td><td valign="top">:</td>
+  <td><div>{{=download_link}}</div></td></tr>
+</table></div>
+
+{{if request.is_local:}}
+{{=response.toolbar()}}
+{{pass}}
+

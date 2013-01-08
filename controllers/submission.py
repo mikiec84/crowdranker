@@ -92,9 +92,10 @@ def view_submission():
         session.flash(T('Not authorized.'))
         redirect(URL('default', 'index'))
     (t, subm, cont) = v
-    download_link = A(T('download'),
-		      _href=URL('download_reviewer', args=[t.id, subm.content]))    
-    return dict(title=t.submission_name, download_link=download_link)
+    download_link = A(t.submission_name,
+		      _href=URL('download_reviewer', args=[t.id, subm.content]))
+    contest_link = A(cont.name, _href=URL('contests', 'view_contest', args=[cont.id]))
+    return dict(download_link=download_link, contest_link=contest_link)
 
    
 @auth.requires_login()
