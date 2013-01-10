@@ -9,51 +9,37 @@
     #sortable li span { position: absolute; margin-left: -1.3em; }
 </style>
 
-
 <script type="text/javascript">
 
 var order_data = [];
-
-
 {{for key in current_list:}}
 	order_data.push( {{=key}} );
 {{pass}}
 
-
-$( document ).ready( function()
-{
-	$(function() 
-	{
+$(document).ready(function() {
+	$(function() {
 		$( "#item_list" ).sortable({
-			update: function(event,ui)	
-			{
+			update: function(event,ui) {
 				var new_order = $( "#item_list" ).sortable('toArray');
 				$( "[name='order']" ).val( "[]" );				
 				order_data = [];
-
 				var i = 0;
 				var tmp = "[";
-				for ( var key in new_order ) 
-				{
+				for ( var key in new_order ) {
 					var val = new_order[key];
 					var part = val.split("_");
 					//order_data.push( part[1] );
 					if ( i > 0 ) tmp += ",";
-					tmp += part[1]; 
-					
+					tmp += part[1]; 	
 					i++;
-					
-				} // ends for
+				}
 				tmp += "]"
-				
 				$( "[name='order']" ).val( tmp );
 				
 				//$( "[name='order']" ).val( JSON.stringify( order_data ) );
-				
 			}
-		} );
-	} );
-   
+		});
+	});
    
     $(function() {
         $( "#item_list" ).sortable();

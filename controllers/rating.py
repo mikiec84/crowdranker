@@ -208,6 +208,9 @@ def review():
         last_ordering = []
     else:
         last_ordering = util.get_list(last_comparison.ordering)
+    current_list = last_ordering
+    if t.submission_id not in last_ordering:
+	current_list.append(t.submission_id)
 
     # Now we need to find the names of the submissions (for the user) that were 
     # used in this last ordering.
@@ -237,7 +240,7 @@ def review():
 
     form = SQLFORM.factory(
         Field('comments', 'text', default=previous_comment_text),
-        hidden=dict(order=simplejson.dumps(last_ordering))
+        hidden=dict(order=simplejson.dumps(current_list))
         )
 
     if form.process(onvalidation=decode_order_json).accepted:
@@ -265,7 +268,7 @@ def review():
 
     return dict(form=form, task=t, 
         submissions = submissions, 
-        current_list = last_ordering,
+        current_list = current_list,
         new_comparison_item = new_comparison_item,
         )
         
