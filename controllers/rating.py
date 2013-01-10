@@ -138,6 +138,7 @@ def task_index():
 	title = T('Reviews to submit')
     else:
         # The mode if a specific item.
+        title = T('')
         q = (db.task.id == mode)
     db.task.submission_name.readable = False
     grid = SQLFORM.grid(q,
