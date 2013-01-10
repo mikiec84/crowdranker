@@ -194,7 +194,7 @@ def review():
 	session.flash = T('Invalid request.')
         redirect(URL('default', 'index'))
 
-    # mbrich - Check that the contest rating deadline is currently open.
+    # Check that the contest rating deadline is currently open.
     contest = db.contest(t.contest_id)
     if datetime.utcnow() < contest.rate_open_date or datetime.utcnow() > contest.rate_close_date:
 	session.flash = T('The review deadline for this contest is closed.')
@@ -219,8 +219,10 @@ def review():
 		(db.task.user_id == auth.user_id)).select().first()
 	if st != None:
 	    # It should always be non-None, as we never delete tasks.
-	    submissions[i] = st.submission_title
-
+	    submissions[i] = st.submission_name
+    # Adds also the last submission.
+    submissions[t.submission_id] = t.submission_name
+	    
     # Used to check each draggable item and determine which one we should
     # highlight (because its the current/new record).
     new_comparison_item = t.submission_id
