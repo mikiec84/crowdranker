@@ -38,8 +38,7 @@ def get_init_average_stdev():
 
 def get_item(db, contest_id, user_id, old_items):
     """
-    If a user did not have items to rank then old_items is None. In this case
-    function returns two items to compare.
+    If a user did not have items to rank then old_items is None or empty string.
     """
     items, qdistr_param = get_all_items_and_qdistr_param(db, contest_id)
     # If items is None then some submission does not have qualities yet,
@@ -49,9 +48,9 @@ def get_item(db, contest_id, user_id, old_items):
         return None
     rankobj = Rank.from_qdistr_param(items, qdistr_param)
     # Find submission that is authored by the user.
-    user_submission_id = db((db.submission.contest_id == contest_id) &
-                            (db.submission.author == user_id)).select(db.submissions.id).first()
-    return rankobj.sample_item(old_items, user_submission_id)
+    users_submission_id = db((db.submission.contest_id == contest_id) &
+                            (db.submission.author == user_id)).select(db.submission.id).first()
+    return rankobj.sample_item(old_items, users_submission_id)
 
 def process_comparison(db, contest_id, user_id, sorted_items, new_item):
     """ Function updates quality distributions and rank of submissions (items).

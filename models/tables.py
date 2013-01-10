@@ -1,5 +1,5 @@
 # coding: utf8
-
+from gluon.custom_import import track_changes; track_changes(True) # for reloading modules
 from datetime import datetime
 import datetime as dates # Ah, what a mess these python names
 
