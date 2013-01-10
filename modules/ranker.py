@@ -63,6 +63,8 @@ def process_comparison(db, contest_id, user_id, sorted_items, new_item):
         to the user. If sorted_items contains only two elements then
         new_item is None.
     """
+    if len(sorted_items) <= 1:
+        return None
     # TODO(mshavlov): discuss concurrency issue
     # as an example (db(query).select(..., for_update=True))
     items, qdistr_param = get_all_items_and_qdistr_param(db, contest_id)

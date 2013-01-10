@@ -96,7 +96,7 @@ def accept_review():
         if previous_ratings == None:
             old_items = []
         else:
-            old_items = util.get_list(previous_ratings.ratings)
+            old_items = util.get_list(previous_ratings.ordering)
         new_item = ranker.get_item(db, c.id, auth.user_id, old_items)
         if new_item == None:
             session.flash = T('There are no items to review so far.')
@@ -169,7 +169,7 @@ def review():
 		if i != t.submission_id:
 		    # This must correspond to a previously done task.
 		    mt = db((db.task.submission_id == i) &
-			  (db.task.user_id == auth.user_id)).select.first()
+			  (db.task.user_id == auth.user_id)).select().first()
 		    if mt == None or mt.completed_date < datetime.utcnow():
 			form.errors.order = T('Corruputed data received')
 			session.flash = T('Corrupted data received')
@@ -253,6 +253,11 @@ def review():
 
         # TODO(luca): put it in a queue of things that need processing.
         # All updates done.
+        # Calling ranker.py directly.
+        comparison = db(db.comparison.id == comparison_id).select().first()
+        ordering = util.get_list(comparison.ordering)
+        ranker.process_comparison(db, t.contest_id, auth.user_id,
+                                  ordering[::-1], t.submission_id)
         db.commit()
 	session.flash = T('The review has been submitted.')
 	redirect(URL('rating', 'task_index', args=['open']))
