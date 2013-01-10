@@ -28,6 +28,7 @@ def view_contest():
         link_list.append(A(T('View my submissions'), _href=URL('submission', 'my_submissions_index', args=[c.id])))
     if can_manage:
         link_list.append(A(T('Edit'), _href=URL('managed_index', vars=dict(cid=c.id))))
+	link_list.append(A(T('Assign reviewers'), _href=URL('rating', 'assign_reviewers', args=[c.id])))
     return dict(form=contest_form, link_list=link_list, contest=c, has_rated=has_rated)
         
 
@@ -59,16 +60,21 @@ def subopen_index():
             if c.open_date < t and c.id not in c_all_open:
                 c_all_open.append(c.id)
     q = (db.contest.id.belongs(c_all_open))
+    db.contest.name.readable = False
     grid = SQLFORM.grid(q,
         field_id=db.contest.id,
         fields=[db.contest.name, db.contest.close_date],
         csv=False,
-        details=True,
+        details=False,
         create=False,
         editable=False,
         deletable=False,
-        links=[dict(header=T('Submit'), 
-            body = lambda r: A(T('Submit'), _class='btn', _href=URL('submission', 'submit', args=[r.id])))],
+        links=[
+	    dict(header=T('Contest'),
+		 body = lambda r: A(r.name, _href=URL('view_contest', args=[r.id]))),
+	    dict(header=T('Submit'), 
+		 body = lambda r: A(T('Submit'), _class='btn', _href=URL('submission', 'submit', args=[r.id]))),
+	    ],
         )
     return dict(grid=grid)
 
@@ -102,16 +108,20 @@ def rateopen_index():
                 c_all_open.append(c.id)        
     q = (db.contest.id.belongs(c_all_open))
     db.contest.rate_close_date.label = T('Review deadline')
+    db.contest.name.readable = False
     grid = SQLFORM.grid(q,
         field_id=db.contest.id,
         fields=[db.contest.name, db.contest.rate_close_date],
         csv=False,
-        details=True,
+        details=False,
         create=False,
         editable=False,
         deletable=False,
-        links=[dict(header='Review', 
-            body = lambda r: A(T('Accept reviewing task'),
+        links=[
+	    dict(header=T('Contest'),
+		 body = lambda r: A(r.name, _href=URL('view_contest', args=[r.id]))),
+	    dict(header='Review', 
+		 body = lambda r: A(T('Accept reviewing task'),
 			       _class='btn',
 			       _href=URL('rating', 'accept_review', args=[r.id])))],
         )
@@ -129,17 +139,21 @@ def submitted_index():
     db.contest.feedback_accessible_immediately.readable = False
     db.contest.rate_open_date.readable = False
     db.contest.rate_close_date.readable = False
+    db.contest.name.readable = False
     grid = SQLFORM.grid(q,
         field_id=db.contest.id,
         fields=[db.contest.name, db.contest.rate_open_date, db.contest.rate_close_date, db.contest.feedback_accessible_immediately],
         csv=False,
-        details=True,
+        details=False,
         create=False,
         editable=False,
         deletable=False,
-        links=[dict(header='Feedback', body = lambda r: link_feedback(r)),
-                dict(header='Submissions', body = lambda r: 
-                A(T('view submissions'),
+        links=[
+	    dict(header=T('Contest'),
+		 body = lambda r: A(r.name, _href=URL('view_contest', args=[r.id]))),
+	    dict(header='Feedback', body = lambda r: link_feedback(r)),
+            dict(header='My submissions', body = lambda r: 
+                A(T('My submissions'),
 		  _class='btn',
 		  _href=URL('submission', 'my_submissions_index', args=[r.id]))),
             ],
@@ -206,19 +220,20 @@ def managed_index():
     if len(request.args) > 0 and (request.args[0] == 'edit' or request.args[0] == 'new'):
         # Adds some editing help
         add_help_for_contest('bogus')
+    db.contest.name.readable = False
     grid = SQLFORM.grid(q,
         field_id=db.contest.id,
-        fields=[db.contest.name, db.contest.managers, db.contest.is_active],
+        fields=[db.contest.name, db.contest.is_active],
         csv=False,
-        details=True,
+        details=False,
         create=True,
         deletable=False, # Disabled; cannot delete contests with submissions.
         onvalidation=validate_contest,
         oncreate=create_contest,
         onupdate=update_contest(old_managers, old_submit_constraint, old_rate_constraint),
-        links_in_grid=False,
-        links=[dict(header='Assign reviewers', body = lambda r:
-            A(T('Assign reviewers'), _href=URL('rating', 'assign_reviewers', args=[r.id]))),]
+        links_in_grid=True,
+        links=[dict(header=T('Contest'), body = lambda r:
+            A(r.name, _href=URL('view_contest', args=[r.id]))),]
         )
     return dict(grid=grid)
     
