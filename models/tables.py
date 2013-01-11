@@ -86,6 +86,7 @@ db.contest.rate_constraint.represent = name_user_list
                                                 
 db.define_table('submission',
     Field('author', db.auth_user,  default=auth.user_id),
+    Field('email'),
     Field('date', 'datetime', default=datetime.utcnow()),
     Field('contest_id', db.contest),
     Field('title'),
@@ -99,6 +100,7 @@ db.define_table('submission',
     
 db.submission.id.readable = db.submission.id.writable = False
 db.submission.author.writable = False
+db.submission.email.writable = False
 db.submission.date.writable = False
 db.submission.original_filename.readable = db.submission.original_filename.writable = False
 db.submission.contest_id.readable = db.submission.contest_id.writable = False

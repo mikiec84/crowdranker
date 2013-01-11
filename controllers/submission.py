@@ -61,8 +61,9 @@ def submit():
     db.submission.title.readable = db.submission.title.writable = True
     # Produces an identifier for the submission.
     db.submission.identifier.default = util.get_random_id()
+    db.submission.email.default = auth.user.email
     # TODO(luca): check that it is fine to do the download link without parameters.
-    form = SQLFORM(db.submission,upload=URL('download_auhor', args=[None]))
+    form = SQLFORM(db.submission, upload=URL('download_auhor', args=[None]))
     form.vars.contest_id = c.id
     if request.vars.content != None and request.vars.content != '':
         form.vars.original_filename = request.vars.content.filename
@@ -159,6 +160,34 @@ def download_author():
     # request.args = request.args[1:]
     return response.download(request, db)
 	
+
+@auth.requires_login()
+def download_viewer():
+    """This method allows the download of a submission by someone who has access to
+    all the submissions of the contest.  We need to do all access control here."""
+    subm = db.submission(request.args(0)) or redirect(URL('default', 'index'))
+    c = db.contest(subm.contest_id) or redirect(URL('default', 'index'))
+    # Does the user have access to the contest submissions?
+    # TODO(luca): factor this in a permission module.
+    props = db(db.user_properties.email == auth.user.email).select().first()
+    can_manage = c.id in util.get_list(props.contests_can_manage)
+    can_view_ratings = can_manage or c.rating_available_to_all
+    if not can_view_ratings:
+	session.flash(T('Not authorized.'))
+	redirect(URL('default', 'index'))
+    # Creates an appropriate file name for the submission.
+    original_ext = s.original_filename.split('.')[-1]
+    filename = subm.email or 'anonymous'
+    if s.title != None and len(s.title) > 0:
+	filename += '_' + s.title
+    else:
+	filename += '_' + s.identifier
+    filename += '.' + original_ext
+    # Allows the download.
+    # TODO(luca): The next line should be useless.
+    request.args = request.args[1:]
+    return response.download(request, db, download_filename=filename)
+
 
 @auth.requires_login()
 def download_reviewer():

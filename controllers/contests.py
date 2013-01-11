@@ -18,6 +18,10 @@ def view_contest():
         has_submitted = c.id in util.get_list(props.contests_has_submitted)
         has_rated = c.id in util.get_list(props.contests_has_rated)
         can_manage = c.id in util.get_list(props.contests_can_manage)
+	# MAYDO(luca): Add option to allow only raters, or only submitters, to view
+	# all ratings.
+	# TODO(luca): put this access control in its own module to ensure consistency.
+	can_view_ratings = can_manage or c.rating_available_to_all
     contest_form = SQLFORM(db.contest, record=c, readonly=True)
     link_list = []
     if can_submit:
@@ -29,6 +33,8 @@ def view_contest():
     if can_manage:
         link_list.append(A(T('Edit'), _href=URL('managed_index', vars=dict(cid=c.id))))
 	link_list.append(A(T('Assign reviewers'), _href=URL('rating', 'assign_reviewers', args=[c.id])))
+    if can_view_ratings:
+        link_list.append(A(T('View ranking'), _href=URL('ranking', 'view_contest', args=[c.id])))
     return dict(form=contest_form, link_list=link_list, contest=c, has_rated=has_rated)
         
 
@@ -64,11 +70,7 @@ def subopen_index():
     grid = SQLFORM.grid(q,
         field_id=db.contest.id,
         fields=[db.contest.name, db.contest.close_date],
-        csv=False,
-        details=False,
-        create=False,
-        editable=False,
-        deletable=False,
+        csv=False, details=False, create=False, editable=False, deletable=False,
         links=[
 	    dict(header=T('Contest'),
 		 body = lambda r: A(r.name, _href=URL('view_contest', args=[r.id]))),
@@ -112,11 +114,7 @@ def rateopen_index():
     grid = SQLFORM.grid(q,
         field_id=db.contest.id,
         fields=[db.contest.name, db.contest.rate_close_date],
-        csv=False,
-        details=False,
-        create=False,
-        editable=False,
-        deletable=False,
+        csv=False, details=False, create=False, editable=False, deletable=False,
         links=[
 	    dict(header=T('Contest'),
 		 body = lambda r: A(r.name, _href=URL('view_contest', args=[r.id]))),
@@ -143,11 +141,7 @@ def submitted_index():
     grid = SQLFORM.grid(q,
         field_id=db.contest.id,
         fields=[db.contest.name, db.contest.rate_open_date, db.contest.rate_close_date, db.contest.feedback_accessible_immediately],
-        csv=False,
-        details=False,
-        create=False,
-        editable=False,
-        deletable=False,
+        csv=False, details=False, create=False, editable=False, deletable=False,
         links=[
 	    dict(header=T('Contest'),
 		 body = lambda r: A(r.name, _href=URL('view_contest', args=[r.id]))),
@@ -224,9 +218,7 @@ def managed_index():
     grid = SQLFORM.grid(q,
         field_id=db.contest.id,
         fields=[db.contest.name, db.contest.is_active],
-        csv=False,
-        details=False,
-        create=True,
+        csv=False, details=False, create=True,
         deletable=False, # Disabled; cannot delete contests with submissions.
         onvalidation=validate_contest,
         oncreate=create_contest,
