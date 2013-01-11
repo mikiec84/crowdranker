@@ -50,6 +50,8 @@ def get_item(db, contest_id, user_id, old_items):
     # Find submission that is authored by the user.
     users_submission_id = db((db.submission.contest_id == contest_id) &
                             (db.submission.author == user_id)).select(db.submission.id).first()
+    # TODO(michael): make nest line smarter using db.contest.can_run_own_submis
+    users_submission_id = None
     return rankobj.sample_item(old_items, users_submission_id)
 
 def process_comparison(db, contest_id, user_id, sorted_items, new_item):
