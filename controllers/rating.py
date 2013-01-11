@@ -130,28 +130,54 @@ def task_index():
     if mode == 'completed':
         q = ((db.task.user_id == auth.user_id) & (db.task.completed_date < datetime.utcnow()))
 	title = T('Reviews completed')
+	db.task.completed_date.readable = False
+        links=[
+	    dict(header='Deadline',
+		 body = lambda r: db.venue(r.venue_id).rate_close_date),
+            dict(header='Venue', 
+                body = lambda r: A(db.venue(r.venue_id).name, _href=URL('venues', 'view_venue', args=[r.venue_id]))),
+            dict(header='Submission', 
+                body = lambda r: A(r.submission_name, _href=URL('submission', 'view_submission', args=[r.id]))),]
     elif mode == 'all':
         q = (db.task.user_id == auth.user_id)
 	title = T('All reviews')
-    elif mode == 'open':
-        q = ((db.task.user_id == auth.user_id) & (db.task.completed_date > datetime.utcnow()))
-	title = T('Reviews to submit')
-    else:
-        # The mode if a specific item.
-        title = T('')
-        q = (db.task.id == mode)
-    db.task.submission_name.readable = False
-    grid = SQLFORM.grid(q,
-        args=request.args[:1],
-        field_id=db.task.id,
-	user_signature=False,
-        create=False, editable=False, deletable=False, csv=False,
         links=[
             dict(header='Venue', 
                 body = lambda r: A(db.venue(r.venue_id).name, _href=URL('venues', 'view_venue', args=[r.venue_id]))),
             dict(header='Submission', 
                 body = lambda r: A(r.submission_name, _href=URL('submission', 'view_submission', args=[r.id]))),
-            dict(header='Review', body = review_link),],
+            dict(header='Review', body = review_link),]
+    elif mode == 'open':
+        q = ((db.task.user_id == auth.user_id) & (db.task.completed_date > datetime.utcnow()))
+	db.task.completed_date.readable = False
+	title = T('Reviews to submit')
+        links=[
+	    dict(header='Deadline',
+		 body = lambda r: db.venue(r.venue_id).rate_close_date),
+            dict(header='Venue', 
+                body = lambda r: A(db.venue(r.venue_id).name, _href=URL('venues', 'view_venue', args=[r.venue_id]))),
+            dict(header='Submission', 
+                body = lambda r: A(r.submission_name, _href=URL('submission', 'view_submission', args=[r.id]))),
+            dict(header='Review', body = review_link),]
+    else:
+        # The mode if a specific item.
+        title = T('')
+        q = (db.task.id == mode)
+        links=[
+	    dict(header='Deadline',
+		 body = lambda r: db.venue(r.venue_id).rate_close_date),
+            dict(header='Venue', 
+                body = lambda r: A(db.venue(r.venue_id).name, _href=URL('venues', 'view_venue', args=[r.venue_id]))),
+            dict(header='Submission', 
+                body = lambda r: A(r.submission_name, _href=URL('submission', 'view_submission', args=[r.id]))),
+            dict(header='Review', body = review_link),]
+    db.task.submission_name.readable = False
+    grid = SQLFORM.grid(q,
+        args=request.args[:1],
+        field_id=db.task.id,
+	user_signature=False,
+        create=False, editable=False, deletable=False, csv=False, details=False,
+	links=links
         )
     return dict(title=title, grid=grid)
 
