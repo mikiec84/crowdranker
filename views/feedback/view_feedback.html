@@ -1,0 +1,24 @@
+{{extend 'layout.html'}}
+
+<h1>Submission Feedback</h1>
+
+<div><table>
+  <tr><td style="font-weight:bold">Title</td><td>:</td>
+  <td><div>{{=subm.title}}</div></td><td></td></tr>
+  <tr><td style="font-weight:bold">Identifier</td><td>:</td>
+  <td><div>{{=subm.identifier}}</div></td><td></td></tr>
+  <tr><td style="font-weight:bold">Contest</td><td>:</td>
+  <td><div>{{=contest_link}}</div></td><td></td></tr>
+  <tr><td style="font-weight:bold">Rating</td><td>:</td>
+  <td><div>{{=subm.quality}}</div></td><td></td></tr>
+  <tr><td style="font-weight:bold">Error</td><td>:</td>
+  <td><div>{{=subm.error}}</div></td><td></td></tr>
+  <tr><td style="font-weight:bold">Download</td><td>:</td>
+  <td><div>{{=download_link}}</div></td><td></td></tr>
+</table></div>
+
+{{=grid}}
+
+{{if request.is_local:}}
+{{=response.toolbar()}}
+{{pass}}

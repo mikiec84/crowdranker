@@ -123,7 +123,7 @@ def view_own_submission():
         db.submission.content.readable = False
         form = SQLFORM(db.submission, subm, readonly=True,
 		       upload=URL('download_author', args=[subm.id]), buttons=[])
-	download_link = A(T('download'),
+	download_link = A(T('download'), _class='btn',
 			  _href=URL('download_author', args=[subm.id, subm.content]))
     return dict(form=form, subm=subm, download_link=download_link)
 

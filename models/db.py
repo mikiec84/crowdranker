@@ -160,10 +160,11 @@ def get_configured_logger(name):
         logger.setLevel(logging.DEBUG)
 
         # Test entry:
-        logger.debug(name + ' logger created')
+        # logger.debug(name + ' logger created')
     else:
+	pass
         # Test entry:
-        logger.debug(name + ' already exists')
+        # logger.debug(name + ' already exists')
 
     return logger
 
