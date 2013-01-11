@@ -48,6 +48,7 @@ db.define_table('venue',
     Field('rate_close_date', 'datetime', required=True),
     Field('allow_multiple_submissions', 'boolean', default=True),
     Field('submission_title_is_file_name', 'boolean', default=False),
+    Field('allow_link_submission', 'boolean', default=False),
     Field('is_active', 'boolean', required=True, default=True),
     Field('feedback_accessible_immediately', 'boolean', default=False),
     Field('rating_available_to_all', 'boolean', default=False),
@@ -59,6 +60,7 @@ db.define_table('venue',
     )
     
 db.venue.name.required = True
+db.venue.name.requires = IS_LENGTH(minsize=8)
 db.venue.creation_date.writable = db.venue.creation_date.readable = False
 db.venue.id.readable = db.venue.id.writable = False
 db.venue.is_active.label = 'Active'
@@ -68,9 +70,9 @@ db.venue.open_date.label = 'Submission opening date'
 db.venue.open_date.default = datetime.utcnow()
 db.venue.close_date.label = 'Submission deadline'
 db.venue.close_date.default = datetime.utcnow()
-db.venue.rate_open_date.label = 'Rating opening date'
+db.venue.rate_open_date.label = 'Reviewing start date'
 db.venue.rate_open_date.default = datetime.utcnow()
-db.venue.rate_close_date.label = 'Rating deadline'
+db.venue.rate_close_date.label = 'Reviewing deadline'
 db.venue.rate_close_date.default = datetime.utcnow()
 db.venue.max_number_outstanding_reviews.requires = IS_INT_IN_RANGE(1, 100,
     error_message=T('Enter a number between 0 and 100.'))
@@ -93,6 +95,7 @@ db.define_table('submission',
     Field('original_filename'),
     Field('identifier'), # Visible to all, unique.
     Field('content', 'upload'),
+    Field('link'),
     Field('quality', 'double'),
     Field('error', 'double'), # True rank of a submission is in the interval
                               # [current_rank - error, current_rank + error]
@@ -107,6 +110,9 @@ db.submission.venue_id.readable = db.submission.venue_id.writable = False
 db.submission.identifier.writable = False
 db.submission.quality.readable = db.submission.quality.writable = False
 db.submission.error.readable = db.submission.error.writable = False
+db.submission.link.readable = db.submission.link.writable = False
+db.submission.link.requires = IS_URL()
+db.submission.title.requires = IS_LENGTH(minsize=2)
 
 db.define_table('comment',
     Field('author', db.auth_user,  default=auth.user_id),

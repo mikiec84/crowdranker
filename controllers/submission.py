@@ -61,6 +61,8 @@ def submit():
         redirect(URL('my_submissions_index', args=[c.id]))
     # The author can access the title.
     db.submission.title.readable = db.submission.title.writable = True
+    # Check whether link submission is allowed.
+    db.submission.link.readable = db.submission.link.writable = c.allow_link_submission
     # Produces an identifier for the submission.
     db.submission.identifier.default = util.get_random_id()
     db.submission.email.default = auth.user.email
@@ -102,7 +104,11 @@ def view_submission():
 		      _class='btn',
 	              _href=URL('download_reviewer', args=[t.id, subm.content]))
     venue_link = A(cont.name, _href=URL('venues', 'view_venue', args=[cont.id]))
-    return dict(title=t.submission_name, download_link=download_link, venue_link=venue_link)
+    subm_link = None
+    if cont.allow_link_submission:
+	subm_link = A(subm.link, _href=URL(subm.link))
+    return dict(title=t.submission_name, download_link=download_link,
+		venue_link=venue_link, subm_link=subm_link)
 
    
 @auth.requires_login()
@@ -117,6 +123,9 @@ def view_own_submission():
     c = db.venue(subm.venue_id) or redirect(URL('default', 'index'))
     t = datetime.utcnow()
     download_link = None
+    subm_link = None
+    if c.allow_link_submission:
+	subm_link = A(subm.link, _href=URL(subm.link))
     if (c.is_active and c.open_date <= t and c.close_date >= t):
         form = SQLFORM(db.submission, subm, upload=URL('download_author', args=[subm.id]))
         if request.vars.content != None and request.vars.content != '':
@@ -130,7 +139,7 @@ def view_own_submission():
 		       upload=URL('download_author', args=[subm.id]), buttons=[])
 	download_link = A(T('download'), _class='btn',
 			  _href=URL('download_author', args=[subm.id, subm.content]))
-    return dict(form=form, subm=subm, download_link=download_link)
+    return dict(form=form, subm=subm, download_link=download_link, subm_link=subm_link)
 
 
 def validate_task(t_id, user_id):

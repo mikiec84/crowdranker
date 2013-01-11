@@ -57,6 +57,8 @@ def view_feedback():
     db.submission.quality.readable = True
     db.submission.identifier.readable = True
     db.submission.error.readable = True
+    if c.allow_link_submission:
+	db.submission.link.readable = True
     db.comment.content.label = T('Comments')
     q = (db.comment.submission_id == subm.id)
     grid = SQLFORM.grid(q,

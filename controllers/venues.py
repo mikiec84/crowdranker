@@ -234,8 +234,15 @@ def add_help_for_venue(bogus):
     db.venue.is_active.comment = 'Uncheck to prevent all access to this venue.'
     db.venue.managers.comment = 'Email addresses of venue managers.'
     db.venue.name.comment = 'Name of the venue'
+    db.venue.open_date.comment = 'In UTC.'
+    db.venue.close_date.comment = 'In UTC.'
+    db.venue.rate_open_date.comment = 'In UTC.'
+    db.venue.rate_close_date.comment = 'In UTC.'
     db.venue.allow_multiple_submissions.comment = (
         'Allow users to submit multiple independent pieces of work to this venue.')
+    db.venue.allow_link_submission.comment = (
+	'Allow the submissions of links.  WARNING: CrowdRanker does not ensure '
+	'that the content of the link is unchanged.')
     db.venue.feedback_accessible_immediately.comment = (
         'The feedback can be accessible immediately, or once '
         'the venue closes.')

@@ -19,6 +19,8 @@ def view_venue():
     db.submission.quality.readable = True
     db.submission.error.readable = True
     db.submission.content.readable = False
+    if c.allow_link_submission:
+	db.submission.link.readable = True
     grid = SQLFORM.grid(q,
 	field_id=db.submission.id,
 	csv=True,

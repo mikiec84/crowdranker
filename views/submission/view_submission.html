@@ -7,6 +7,10 @@
   <td><div>{{=venue_link}}</div></td><td></td></tr>
   <tr><td style="font-weight:bold;vertical-align:middle">Submission</td><td style="vertical-align:middle">:</td>
   <td style="vertical-align:middle"><div>{{=title}}</div></td><td style="vertical-align:middle">{{=download_link}}</td></tr>
+{{if subm_link:}}
+  <tr><td style="font-weight:bold">Submitted link</td><td>:</td>
+  <td><div>{{=subm_link}}</div></td><td></td></tr>
+{{pass}}  
 </table></div>
 
 {{if request.is_local:}}
