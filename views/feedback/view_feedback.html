@@ -13,10 +13,19 @@
   <td><div>{{=subm.quality}}</div></td><td></td></tr>
   <tr><td style="font-weight:bold">Error</td><td>:</td>
   <td><div>{{=subm.error}}</div></td><td></td></tr>
+{{if subm_link:}}
+  <tr><td style="font-weight:bold">Submitted link</td><td>:</td>
+  <td><div>{{=subm_link}}</div></td><td></td></tr>
+{{pass}}
+{{if subm.content:}}
   <tr><td style="font-weight:bold">Download</td><td>:</td>
   <td><div>{{=download_link}}</div></td><td></td></tr>
+{{pass}}
 </table></div>
 
+<br>
+
+<h3>Comments received</h3>
 {{=grid}}
 
 {{if request.is_local:}}

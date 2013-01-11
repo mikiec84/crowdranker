@@ -25,7 +25,7 @@ def index():
             dict(header=T('Submission'), body = lambda r: 
                 A(r.title, _href=URL('submission', 'view_own_submission', args=[r.id]))),
             dict(header=T('Feedback'), body = lambda r:
-                A(T('view'), _href=URL('feedback', 'view_feedback', args=[r.id]))),
+                A(T('View'), _class='btn', _href=URL('feedback', 'view_feedback', args=[r.id]))),
             ],
         )
     return dict(grid=grid)
@@ -57,8 +57,9 @@ def view_feedback():
     db.submission.quality.readable = True
     db.submission.identifier.readable = True
     db.submission.error.readable = True
+    subm_link = None
     if c.allow_link_submission:
-	db.submission.link.readable = True
+	subm_link = A(subm.link, _href=subm.link)
     db.comment.content.label = T('Comments')
     q = (db.comment.submission_id == subm.id)
     grid = SQLFORM.grid(q,
@@ -67,5 +68,5 @@ def view_feedback():
 	user_signature=False,
         args=request.args[:1],
         )
-    return dict(subm=subm, download_link=download_link,
+    return dict(subm=subm, download_link=download_link, subm_link=subm_link,
 		venue_link=venue_link, grid=grid)
