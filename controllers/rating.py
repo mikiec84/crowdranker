@@ -3,6 +3,8 @@
 import util
 import ranker
 import gluon.contrib.simplejson as simplejson
+from datetime import datetime
+import datetime as dates
 
 
 @auth.requires_login()
@@ -93,10 +95,19 @@ def accept_review():
         # should keep track of these things.
         previous_ratings = db((db.comparison.author == auth.user_id) 
             & (db.comparison.contest_id == c.id)).select(orderby=~db.comparison.date).first()
+        # To get list of old items we need to check previous ratings
+        # and current open tasks.
         if previous_ratings == None:
             old_items = []
         else:
             old_items = util.get_list(previous_ratings.ordering)
+        # Now checking open tasks for the user.
+        active_items_rows = db((db.task.contest_id == c.id) &
+                               (db.task.user_id == auth.user_id) &
+                               (db.task.completed_date == datetime(dates.MAXYEAR, 12, 1))
+                               ).select(db.task.submission_id)
+        active_items = [x.submission_id for x in active_items_rows]
+        old_items.extend(active_items)
         new_item = ranker.get_item(db, c.id, auth.user_id, old_items)
         if new_item == None:
             session.flash = T('There are no items to review so far.')
