@@ -25,7 +25,7 @@ def my_submissions_index():
         deletable = False,
         links = [
             dict(header = T('Venue'), body = lambda r:
-                A(T('venue'), _href=URL('venues', 'view_venue', args=[r.venue_id]))),
+                A(T('Venue'), _href=URL('venues', 'view_venue', args=[r.venue_id]))),
             dict(header = T('Submission'), body = lambda r:
                 A(T(r.title), _href=URL('view_own_submission', args=[r.id]))),
             dict(header = T('Feedback'), body = lambda r:
