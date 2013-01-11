@@ -50,7 +50,7 @@ def get_item(db, contest_id, user_id, old_items):
     # Find submission that is authored by the user.
     users_submission_id = db((db.submission.contest_id == contest_id) &
                             (db.submission.author == user_id)).select(db.submission.id).first()
-    return rankobj.sample_item(old_items, users_submission_id)
+    return rankobj.sample_item(old_items, users_submission_id=None)
 
 def process_comparison(db, contest_id, user_id, sorted_items, new_item):
     """ Function updates quality distributions and rank of submissions (items).
