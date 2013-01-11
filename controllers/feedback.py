@@ -4,24 +4,24 @@ import util
 
 @auth.requires_login()
 def index():
-    """Produces a list of the feedback obtained for a given contest,
-    or for all contests."""
-    contest_id = request.args(0)
-    if contest_id == 'all':
+    """Produces a list of the feedback obtained for a given venue,
+    or for all venues."""
+    venue_id = request.args(0)
+    if venue_id == 'all':
         q = (db.submission.author == auth.user_id)
     else:
         q = ((db.submission.author == auth.user_id) 
-            & (db.submission.contest_id == contest_id))
-    db.submission.contest_id.readable = False # prevents use in form
+            & (db.submission.venue_id == venue_id))
+    db.submission.venue_id.readable = False # prevents use in form
     db.submission.title.readable = False
     grid = SQLFORM.grid(q,
-        fields=[db.submission.id, db.submission.title, db.submission.date, db.submission.contest_id],
+        fields=[db.submission.id, db.submission.title, db.submission.date, db.submission.venue_id],
         csv=False, details=False, create=False, editable=False, deletable=False,
         args=request.args[:1],
         user_signature=False,
         links=[
-            dict(header=T('Contest'), body = lambda r: 
-                A(get_contest_name(r.contest_id), _href=URL('contests', 'view_contest', args=[r.contest_id]))),
+            dict(header=T('Venue'), body = lambda r: 
+                A(get_venue_name(r.venue_id), _href=URL('venues', 'view_venue', args=[r.venue_id]))),
             dict(header=T('Submission'), body = lambda r: 
                 A(r.title, _href=URL('submission', 'view_own_submission', args=[r.id]))),
             dict(header=T('Feedback'), body = lambda r:
@@ -30,8 +30,8 @@ def index():
         )
     return dict(grid=grid)
 
-def get_contest_name(contest_id):
-    n = db(db.contest.id == contest_id).select(db.contest.name).first()
+def get_venue_name(venue_id):
+    n = db(db.venue.id == venue_id).select(db.venue.name).first()
     if n == None:
         return ''
     return n.name
@@ -46,12 +46,12 @@ def view_feedback():
         session.flash = T('This is not your submission.')
         redirect(URL('feedback', 'index', args=['all']))
     # Checks whether we have the permission to show the feedback already.
-    c = db.contest(subm.contest_id) or redirect(URL('default', 'index'))
+    c = db.venue(subm.venue_id) or redirect(URL('default', 'index'))
     if not ((datetime.utcnow() > c.rate_close_date) or c.feedback_accessible_immediately):
-        session.flash = T('The contest is still open to submissions.')
+        session.flash = T('The venue is still open to submissions.')
         redirect(URL('feedback', 'index', args=['all']))
-    c = db.contest(subm.contest_id) or redirect(URL('default', 'index'))
-    contest_link = A(c.name, _href=URL('contests', 'view_contest', args=[c.id]))
+    c = db.venue(subm.venue_id) or redirect(URL('default', 'index'))
+    venue_link = A(c.name, _href=URL('venues', 'view_venue', args=[c.id]))
     # Makes a grid of comments.
     db.comment.id.readable = False
     db.submission.quality.readable = True
@@ -66,4 +66,4 @@ def view_feedback():
         args=request.args[:1],
         )
     return dict(subm=subm, download_link=download_link,
-		contest_link=contest_link, grid=grid)
+		venue_link=venue_link, grid=grid)

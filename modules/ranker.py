@@ -7,20 +7,20 @@ NUM_BINS = 2001
 AVRG = NUM_BINS / 2
 STDEV = NUM_BINS / 8
 
-def get_all_items_and_qdistr_param(db, contest_id):
+def get_all_items_and_qdistr_param(db, venue_id):
     """ Returns a tuple (items, qdistr_param) where:
         - itmes is a list of submissions id.
         - qdistr_param[2*i] and qdistr_param[2*i + 1] are mean and standard
         deviation for a submission items[i].
     """
-    # List of all submissions id for given contest.
+    # List of all submissions id for given venue.
     items = []
-    sub = db(db.submission.contest_id == contest_id).select(db.submission.id)
+    sub = db(db.submission.venue_id == venue_id).select(db.submission.id)
     # Fetching quality distributions parametes for each submission.
     qdistr_param = []
     for x in sub:
         items.append(x.id)
-        quality = db((db.quality.contest_id == contest_id) &
+        quality = db((db.quality.venue_id == venue_id) &
                   (db.quality.submission_id == x.id)).select(db.quality.average,
                   db.quality.stdev).first()
         if quality == None:
@@ -36,11 +36,11 @@ def get_init_average_stdev():
     """
     return AVRG, STDEV
 
-def get_item(db, contest_id, user_id, old_items):
+def get_item(db, venue_id, user_id, old_items):
     """
     If a user did not have items to rank then old_items is None or empty string.
     """
-    items, qdistr_param = get_all_items_and_qdistr_param(db, contest_id)
+    items, qdistr_param = get_all_items_and_qdistr_param(db, venue_id)
     # If items is None then some submission does not have qualities yet,
     # we need to know qualities of for all submission to correctly choose an
     # item.
@@ -48,13 +48,13 @@ def get_item(db, contest_id, user_id, old_items):
         return None
     rankobj = Rank.from_qdistr_param(items, qdistr_param)
     # Find submission that is authored by the user.
-    users_submission_id = db((db.submission.contest_id == contest_id) &
+    users_submission_id = db((db.submission.venue_id == venue_id) &
                             (db.submission.author == user_id)).select(db.submission.id).first()
-    # TODO(michael): make nest line smarter using db.contest.can_run_own_submis
+    # TODO(michael): make nest line smarter using db.venue.can_run_own_submis
     users_submission_id = None
     return rankobj.sample_item(old_items, users_submission_id)
 
-def process_comparison(db, contest_id, user_id, sorted_items, new_item):
+def process_comparison(db, venue_id, user_id, sorted_items, new_item):
     """ Function updates quality distributions and rank of submissions (items).
 
     Arguments:
@@ -69,7 +69,7 @@ def process_comparison(db, contest_id, user_id, sorted_items, new_item):
         return None
     # TODO(mshavlov): discuss concurrency issue
     # as an example (db(query).select(..., for_update=True))
-    items, qdistr_param = get_all_items_and_qdistr_param(db, contest_id)
+    items, qdistr_param = get_all_items_and_qdistr_param(db, venue_id)
     # If items is None then some submission does not have qualities yet,
     # therefore we cannot process comparison.
     if items == None:
@@ -80,12 +80,10 @@ def process_comparison(db, contest_id, user_id, sorted_items, new_item):
     # Updating the DB.
     for x in items:
         perc, avrg, stdev = result[x]
-        db((db.quality.contest_id == contest_id) &
-           (db.quality.submission_id == x)).update(average=avrg,
-                                                     stdev=stdev,
-                                                percentile=perc)
+        db((db.quality.venue_id == venue_id) &
+           (db.quality.submission_id == x)).update(average=avrg, stdev=stdev, percentile=perc)
         # Updating submission table with its quality and error.
         db((db.submission.id == x) &
-           (db.submission.contest_id == contest_id)).update(quality=avrg,
-                                                              error=rank_error)
+           (db.submission.venue_id == venue_id)).update(quality=avrg,
+							error=rank_error)
 

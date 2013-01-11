@@ -23,15 +23,15 @@ response.google_analytics_id = None
 
 response.menu = [
     (T('CrowdLab Ranking System'), False, URL('default', 'index'), []),
-    (T('Contests'), False, None, [
-        (T('Contests I manage'), False, URL('contests', 'managed_index'), []),
-        (T('Contests open for submission'), False, URL('contests', 'subopen_index'), []),
-        (T('Contests open for review'), False, URL('contests', 'rateopen_index'), []),
-        (T('Contests where I submitted'), False, URL('contests', 'submitted_index'), []),
+    (T('Venues'), False, None, [
+        (T('Venues I manage'), False, URL('venues', 'managed_index'), []),
+        (T('Venues open for submission'), False, URL('venues', 'subopen_index'), []),
+        (T('Venues open for review'), False, URL('venues', 'rateopen_index'), []),
+        (T('Venues where I submitted'), False, URL('venues', 'submitted_index'), []),
         ]),
     (T('User lists'), False, URL('user_lists', 'index'), []),
     (T('Reviews'), False, None, [
-        (T('Reviewing duties to accept'), False, URL('contests', 'reviewing_duties'), []),
+        (T('Reviewing duties to accept'), False, URL('venues', 'reviewing_duties'), []),
         (T('Reviews to submit'), False, URL('rating', 'task_index', args=['open']), []),
         (T('Reviews completed'), False, URL('rating', 'task_index', args=['completed']), []),
         ]),

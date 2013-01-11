@@ -7,7 +7,7 @@
 {{=P(TAG['']('Submission: ', A(subm.original_filename, _class='btn', _href=download_link)))}}
 {{pass}}
 
-<p>{{=A(T('View contest'), _href=URL('contests', 'view_contest', args=[subm.contest_id]))}}</p>
+<p>{{=A(T('View venue'), _href=URL('venues', 'view_venue', args=[subm.venue_id]))}}</p>
 <p>{{=A(T('View feedback'), _href=URL('feedback', 'view_feedback', args=[subm.id]))}}</p>
 
 {{if request.is_local:}}
