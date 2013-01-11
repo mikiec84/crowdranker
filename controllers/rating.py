@@ -266,11 +266,10 @@ def verify_rating_form(subm_id):
 			# This must correspond to a previously done task.
 			mt = db((db.task.submission_id == i) &
 				(db.task.user_id == auth.user_id)).select().first()
-			if mt == None or mt.completed_date < datetime.utcnow():
+			if mt == None or mt.completed_date > datetime.utcnow():
 			    form.errors.comments = T('Corruputed data received')
 			    session.flash = T('Corrupted data received')
 			    break
-		logger.debug("decoded_order: " + str(decoded_order))
 		form.vars.order = decoded_order
 	    except ValueError:
 		form.errors.comments = T('Error in the received ranking')
