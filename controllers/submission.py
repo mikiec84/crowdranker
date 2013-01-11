@@ -14,7 +14,7 @@ def my_submissions_index():
     db.submission.contest_id.readable = False
     db.submission.title.readable = False
     grid = SQLFORM.grid(q,
-        args=request.args[1:],
+        args=request.args[:1],
         field_id = db.submission.id,
         fields = [db.submission.id, db.submission.title, db.submission.contest_id],
         create = False,
@@ -161,8 +161,6 @@ def download_author():
     if subm.author != auth.user_id:
         session.flash = T('Not authorized.')
         redirect(URL('default', 'index'))
-    # TODO(luca): The next line should be useless.
-    # request.args = request.args[1:]
     return response.download(request, db)
 	
 

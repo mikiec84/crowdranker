@@ -142,7 +142,7 @@ def task_index():
         q = (db.task.id == mode)
     db.task.submission_name.readable = False
     grid = SQLFORM.grid(q,
-        args=request.args[1:],
+        args=request.args[:1],
         field_id=db.task.id,
 	user_signature=False,
         create=False, editable=False, deletable=False, csv=False,

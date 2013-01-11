@@ -17,7 +17,7 @@ def index():
     grid = SQLFORM.grid(q,
         fields=[db.submission.id, db.submission.title, db.submission.date, db.submission.contest_id],
         csv=False, details=False, create=False, editable=False, deletable=False,
-        args=request.args[1:],
+        args=request.args[:1],
         user_signature=False,
         links=[
             dict(header=T('Contest'), body = lambda r: 
@@ -63,7 +63,7 @@ def view_feedback():
 	details=True, 
         csv=False, create=False, editable=False, deletable=False, searchable=False,
 	user_signature=False,
-        args=request.args[1:],
+        args=request.args[:1],
         )
     return dict(subm=subm, download_link=download_link,
 		contest_link=contest_link, grid=grid)

@@ -16,13 +16,17 @@ def view_contest():
 	redirect(URL('default', 'index'))
     # Prepares the query for the grid.
     q = (db.submission.contest_id == c.id)
+    db.submission.quality.readable = True
+    db.submission.error.readable = True
     grid = SQLFORM.grid(q,
 	field_id=db.submission.id,
 	csv=True,
+	args=request.args[:1],
+	user_signature=False,
 	details=False, create=False, editable=False, deletable=False,
 	fields=[db.submission.title, db.submission.email, db.submission.quality,
 		db.submission.error],
 	)
     # TODO(luca): Add a link to download the submission.
-    title = A(c.title, _href=URL('contests', 'view_contest', args=[c.id]))
+    title = A(c.name, _href=URL('contests', 'view_contest', args=[c.id]))
     return dict(title=title, grid=grid)
