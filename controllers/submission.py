@@ -106,7 +106,7 @@ def view_submission():
     venue_link = A(cont.name, _href=URL('venues', 'view_venue', args=[cont.id]))
     subm_link = None
     if cont.allow_link_submission:
-	subm_link = A(subm.link, _href=URL(subm.link))
+	subm_link = A(subm.link, _href=subm.link)
     return dict(title=t.submission_name, download_link=download_link,
 		venue_link=venue_link, subm_link=subm_link)
 
@@ -125,7 +125,7 @@ def view_own_submission():
     download_link = None
     subm_link = None
     if c.allow_link_submission:
-	subm_link = A(subm.link, _href=URL(subm.link))
+	subm_link = A(subm.link, _href=subm.link)
     if (c.is_active and c.open_date <= t and c.close_date >= t):
         form = SQLFORM(db.submission, subm, upload=URL('download_author', args=[subm.id]))
         if request.vars.content != None and request.vars.content != '':

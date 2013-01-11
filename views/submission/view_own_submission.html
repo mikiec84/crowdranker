@@ -10,8 +10,10 @@
 {{=P(TAG['']('Submitted link: ', subm_link))}}
 {{pass}}
 
-<p>{{=A(T('View venue'), _href=URL('venues', 'view_venue', args=[subm.venue_id]))}}</p>
-<p>{{=A(T('View feedback'), _href=URL('feedback', 'view_feedback', args=[subm.id]))}}</p>
+<ul>
+  <li class="btn">{{=A(T('View venue'), _href=URL('venues', 'view_venue', args=[subm.venue_id]))}}</li>
+  <li class="btn">{{=A(T('View feedback'), _href=URL('feedback', 'view_feedback', args=[subm.id]))}}</li>
+</ul>
 
 {{if request.is_local:}}
 {{=response.toolbar()}}
