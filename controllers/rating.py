@@ -164,30 +164,9 @@ def review_link(r):
         return T('Completed on ') + str(r.completed_date)
 
 
-
 @auth.requires_login()        
 def review():
     """Enters the review, and comparisons, for a particular task."""
-
-    def decode_order_json(form):
-	try:
-	    decoded_order = simplejson.loads(request.vars.order)
-	    form.vars.order = decoded_order
-	    # Validates the fact that submissions correspond only tasks that are completed in the past,
-	    # or the current one.
-	    for i in decoded_order:
-		if i != t.submission_id:
-		    # This must correspond to a previously done task.
-		    mt = db((db.task.submission_id == i) &
-			  (db.task.user_id == auth.user_id)).select().first()
-		    if mt == None or mt.completed_date < datetime.utcnow():
-			form.errors.order = T('Corruputed data received')
-			session.flash = T('Corrupted data received')
-			break
-	except ValueError:
-	    form.errors.order = T('Error in the received ranking')
-	    session.flash = T('Error in the received ranking')
-	    form.vars.order = []
 
     # Here is where the comparisons are entered.
     t = db.task(request.args(0)) or redirect(URL('default', 'index'))
@@ -241,18 +220,15 @@ def review():
 
     form = SQLFORM.factory(
         Field('comments', 'text', default=previous_comment_text),
-        hidden=dict(order=simplejson.dumps(current_list))
+        hidden=dict(order="")
         )
 
-    if form.process(onvalidation=decode_order_json).accepted:
+    if form.process(onvalidation=verify_rating_form(t.submission_id)).accepted:
         # Creates a new comparison in the db.
-        comparison_id = db.comparison.insert(
-            contest_id = t.contest_id,
-            ordering = simplejson.loads(request.vars.order)) 
-
+	ordering = form.vars.order
+        comparison_id = db.comparison.insert(contest_id=t.contest_id, ordering=ordering) 
         # Marks the task as done.
         t.update_record(completed_date=datetime.utcnow())
-
         # Adds the comment to the comments for the submission, over-writing any previous
         # comments.
         if previous_comments == None:
@@ -264,8 +240,6 @@ def review():
         # TODO(luca): put it in a queue of things that need processing.
         # All updates done.
         # Calling ranker.py directly.
-        comparison = db(db.comparison.id == comparison_id).select().first()
-        ordering = util.get_list(comparison.ordering)
         ranker.process_comparison(db, t.contest_id, auth.user_id,
                                   ordering[::-1], t.submission_id)
         db.commit()
@@ -278,4 +252,27 @@ def review():
         new_comparison_item = new_comparison_item,
         )
         
-        
+def verify_rating_form(subm_id):        
+    def decode_order(form):
+	logger.debug("request.vars.order: " + request.vars.order)
+	if request.vars.order == None:
+	    form.errors.comments = T('Error in the received ranking')
+	    session.flash = T('Error in the received ranking')
+	else:
+	    try:
+		decoded_order = [int(x) for x in request.vars.order.split()]
+		for i in decoded_order:
+		    if i != subm_id:
+			# This must correspond to a previously done task.
+			mt = db((db.task.submission_id == i) &
+				(db.task.user_id == auth.user_id)).select().first()
+			if mt == None or mt.completed_date < datetime.utcnow():
+			    form.errors.comments = T('Corruputed data received')
+			    session.flash = T('Corrupted data received')
+			    break
+		logger.debug("decoded_order: " + str(decoded_order))
+		form.vars.order = decoded_order
+	    except ValueError:
+		form.errors.comments = T('Error in the received ranking')
+		session.flash = T('Error in the received ranking')
+    return decode_order
