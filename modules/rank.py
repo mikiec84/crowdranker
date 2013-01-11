@@ -74,7 +74,7 @@ class Rank:
             self.qdistr = np.zeros((num_items ,num_bins)) + 1./num_bins
         elif init_dist_type == 'gauss':
             # Does a Gaussian distribution centered in the center.
-            print num_items, num_bins
+            #print num_items, num_bins
             x, y = np.mgrid[0:num_items, 0:num_bins]
             self.qdistr = np.zeros((self.num_items, self.num_bins))
             for i in xrange(self.num_items):
