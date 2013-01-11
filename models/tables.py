@@ -1,5 +1,4 @@
 # coding: utf8
-from gluon.custom_import import track_changes; track_changes(True) # for reloading modules
 from datetime import datetime
 import datetime as dates # Ah, what a mess these python names
 
@@ -56,6 +55,7 @@ db.define_table('contest',
     Field('feedback_is_anonymous', 'boolean', default=True),
     Field('submissions_are_anonymized', 'boolean', default=True),
     Field('max_number_outstanding_reviews', 'integer', default=1),
+    Field('can_rank_own_submissions', 'boolean', default=False),
     )
     
 db.contest.name.required = True

@@ -251,6 +251,9 @@ def add_help_for_contest(bogus):
 	'How many outstanding reviews for this contest can a user have at any given time. '
         'Enter a number between 1 and 100.  The lower, the more accurate the rankings are, '
 	'since choosing later which submissions need additional reviews improves accuracy.')
+    db.contest.can_rank_own_submissions.comment = (
+	'Allow authors to rank their own submissions.  This is used mainly to facilitate '
+	'demos and debugging.')
 
     
 def validate_contest(form):

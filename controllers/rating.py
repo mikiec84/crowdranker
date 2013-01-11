@@ -79,9 +79,8 @@ def accept_review():
 	session.flash = T('You have too many reviews outstanding for this contest. '
 			  'Complete some of them before accepting additional reviewing tasks.')
 	redirect(URL('rating', 'task_index', args=['open']))
-	# This contest_form is used to display the contest.
+    # This contest_form is used to display the contest.
     contest_form = SQLFORM(db.contest, record=c, readonly=True)
-    # Gets any previous ratings for the contest.
     confirmation_form = FORM.confirm(T('Accept'),
         {T('Decline'): URL('default', 'index')})
     if confirmation_form.accepted:

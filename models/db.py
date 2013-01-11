@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from gluon.custom_import import track_changes; track_changes(True) # for reloading modules
+
 #########################################################################
 ## This scaffolding model makes your app work on Google App Engine too
 ## File is released under public domain and you can use without limitations
@@ -170,3 +172,4 @@ def get_configured_logger(name):
 
 # Assign application logger to a global var  
 logger = get_configured_logger(request.application)
+
