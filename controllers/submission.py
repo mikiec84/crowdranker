@@ -179,12 +179,12 @@ def download_viewer():
 	session.flash(T('Not authorized.'))
 	redirect(URL('default', 'index'))
     # Creates an appropriate file name for the submission.
-    original_ext = s.original_filename.split('.')[-1]
+    original_ext = subm.original_filename.split('.')[-1]
     filename = subm.email or 'anonymous'
-    if s.title != None and len(s.title) > 0:
-	filename += '_' + s.title
+    if subm.title != None and len(subm.title) > 0:
+	filename += '_' + subm.title
     else:
-	filename += '_' + s.identifier
+	filename += '_' + subm.identifier
     filename += '.' + original_ext
     # Allows the download.
     # TODO(luca): The next line should be useless.

@@ -18,6 +18,7 @@ def view_contest():
     q = (db.submission.contest_id == c.id)
     db.submission.quality.readable = True
     db.submission.error.readable = True
+    db.submission.content.readable = False
     grid = SQLFORM.grid(q,
 	field_id=db.submission.id,
 	csv=True,
@@ -25,7 +26,13 @@ def view_contest():
 	user_signature=False,
 	details=False, create=False, editable=False, deletable=False,
 	fields=[db.submission.title, db.submission.email, db.submission.quality,
-		db.submission.error],
+		db.submission.error, db.submission.content],
+	links=[
+	    dict(header=T('Download'),
+		 body = lambda r: A(T('Download'), _class='btn',
+				    _href=URL('submission', 'download_viewer',
+					      args=[r.id, r.content]))),
+	    ],
 	)
     # TODO(luca): Add a link to download the submission.
     title = A(c.name, _href=URL('contests', 'view_contest', args=[c.id]))
