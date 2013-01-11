@@ -377,9 +377,10 @@ class Rank:
                 items.remove(i if random.random() < 0.5 else j)
                 return list(items)
 
-    def sample_item(self, old_items, black_item):
+    def sample_item(self, old_items, black_item, sample_one=True ):
         """ Method samples an item given items the user receivd before.
-        If old_items is None then method returns 2 items to compare.
+        If sample_one is true then if old_items is None or empty then method
+        returns one item, otherwise it returns two itmes.
         black_item is the item which should not be sampled.
         If it is impossible to sample an item then None is returned.
         """
@@ -388,9 +389,25 @@ class Rank:
                 l = self.sample()
             else:
                 l = self.sample(self.orig_items_id.index(black_item))
-            if l == None:
+            # If we need two elements.
+            if not sample_one:
+                if l == None:
+                    return None
+                return [self.orig_items_id[x] for x in l]
+            # We need only one element.
+            if not l is None:
+                return self.orig_items_id[l[0]] if random.random() < 0.5 else\
+                            self.orig_items_id[l[1]]
+            # We cannot sample two items, try to sample only one.
+            if black_item == None:
+                if len(self.orig_items_id) == 0:
+                    return None
+                return self.orig_items_id[0]
+            # There is a black item.
+            if len(self.orig_items_id) <= 1:
                 return None
-            return [self.orig_items_id[x] for x in l]
+            return self.orig_items_id[0] if self.orig_items_id[0]!=black_item\
+                                else self.orig_items_id[1]
 
         taken_ids = [idx for idx in range(self.num_items) if \
                         self.orig_items_id[idx] in old_items]

@@ -44,8 +44,10 @@ def submit():
     props = db(db.user_properties.email == auth.user.email).select().first()
     if props == None: 
         contest_ids = []
+        contests_has_submitted = []
     else:
         contest_ids = util.get_list(props.contests_can_submit)
+        contests_has_submitted = util.get_list(props.contests_has_submitted)
     # Is the contest open for submission?
     if not (c.submit_constraint == None or c.id in contest_ids):
         redirect('closed', args=['permission'])
@@ -71,9 +73,12 @@ def submit():
         # Adds the contest to the list of contests where the user submitted.
         # TODO(luca): Enable users to delete submissions.  But this is complicated; we need to 
         # delete also their quality information etc.  For the moment, no deletion.
-        submitted_ids = util.id_list(util.get_list(props.contests_has_submitted))
+        submitted_ids = util.id_list(contests_has_submitted)
         submitted_ids = util.list_append_unique(submitted_ids, c.id)
-        props.update_record(contests_has_submitted = submitted_ids)
+        if props == None:
+            db(db.user_properties.email == auth.user.email).update(contests_has_submitted = submitted_ids)
+        else:
+            props.update_record(contests_has_submitted = submitted_ids)
         # Assigns the initial distribution to the submission.
         avg, stdev = ranker.get_init_average_stdev()
         db.quality.insert(contest_id=c.id, submission_id=form.vars.id, user_id=auth.user_id, average=avg, stdev=stdev)

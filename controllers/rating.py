@@ -3,6 +3,8 @@
 import util
 import ranker
 import gluon.contrib.simplejson as simplejson
+from datetime import datetime
+import datetime as dates
 
 
 @auth.requires_login()
@@ -93,12 +95,20 @@ def accept_review():
         # should keep track of these things.
         previous_ratings = db((db.comparison.author == auth.user_id) 
             & (db.comparison.contest_id == c.id)).select(orderby=~db.comparison.date).first()
+        # To get list of old items we need to check previous ratings
+        # and current open tasks.
         if previous_ratings == None:
             old_items = []
-            new_item = fake_get_item(db, c.id, auth.user_id, [])
         else:
-            old_items = util.get_list(previous_ratings.ratings)
-            new_item = fake_get_item(db, c.id, auth.user_id, old_items)
+            old_items = util.get_list(previous_ratings.ordering)
+        # Now checking open tasks for the user.
+        active_items_rows = db((db.task.contest_id == c.id) &
+                               (db.task.user_id == auth.user_id) &
+                               (db.task.completed_date == datetime(dates.MAXYEAR, 12, 1))
+                               ).select(db.task.submission_id)
+        active_items = [x.submission_id for x in active_items_rows]
+        old_items.extend(active_items)
+        new_item = ranker.get_item(db, c.id, auth.user_id, old_items)
         if new_item == None:
             session.flash = T('There are no items to review so far.')
             redirect(URL('contests', 'rateopen_index'))
@@ -111,15 +121,6 @@ def accept_review():
         session.flash = T('A review has been added to your review assignments.')
         redirect(URL('task_index', args=[new_item]))
     return dict(contest_form=contest_form, confirmation_form=confirmation_form)
-
-            
-def fake_get_item(db, c_id, user_id, oldlist):
-    """Fake, for testing."""
-    s = db(db.submission.contest_id == c_id).select(db.submission.id).first()
-    if s == None:
-        return None
-    else:
-        return s.id
 
             
 @auth.requires_login()
@@ -179,7 +180,7 @@ def review():
 		if i != t.submission_id:
 		    # This must correspond to a previously done task.
 		    mt = db((db.task.submission_id == i) &
-			  (db.task.user_id == auth.user_id)).select.first()
+			  (db.task.user_id == auth.user_id)).select().first()
 		    if mt == None or mt.completed_date < datetime.utcnow():
 			form.errors.order = T('Corruputed data received')
 			session.flash = T('Corrupted data received')
@@ -263,6 +264,11 @@ def review():
 
         # TODO(luca): put it in a queue of things that need processing.
         # All updates done.
+        # Calling ranker.py directly.
+        comparison = db(db.comparison.id == comparison_id).select().first()
+        ordering = util.get_list(comparison.ordering)
+        ranker.process_comparison(db, t.contest_id, auth.user_id,
+                                  ordering[::-1], t.submission_id)
         db.commit()
 	session.flash = T('The review has been submitted.')
 	redirect(URL('rating', 'task_index', args=['open']))
