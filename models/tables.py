@@ -38,6 +38,7 @@ db.user_properties.email.required = True
 
 db.define_table('venue',
     Field('name'),
+    Field('description', 'text'),
     Field('creation_date', 'datetime', default=datetime.utcnow()),
     Field('managers', 'list:string'),
     Field('submit_constraint', db.user_list),
@@ -50,6 +51,7 @@ db.define_table('venue',
     Field('submission_title_is_file_name', 'boolean', default=False),
     Field('allow_link_submission', 'boolean', default=False),
     Field('is_active', 'boolean', required=True, default=True),
+    Field('is_approved', 'boolean', required=True, default=False),
     Field('feedback_accessible_immediately', 'boolean', default=False),
     Field('rating_available_to_all', 'boolean', default=False),
     Field('feedback_available_to_all', 'boolean', default=False),
@@ -61,6 +63,7 @@ db.define_table('venue',
     
 db.venue.name.required = True
 db.venue.name.requires = IS_LENGTH(minsize=8)
+db.venue.is_approved.writable = False
 db.venue.creation_date.writable = db.venue.creation_date.readable = False
 db.venue.id.readable = db.venue.id.writable = False
 db.venue.is_active.label = 'Active'

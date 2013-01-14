@@ -96,8 +96,12 @@ use_janrain(auth, filename='private/janrain.key')
 
 #####################
 # Admin settings
-admin_emails = ['luca@ucsc.edu', 'luca.de.alfaro@gmail.com']
-def is_user_admin(auth):
+admin_emails = ['luca@ucsc.edu', 'luca.de.alfaro@gmail.com', 'luca@dealfaro.com', 'luca@dealfaro.org',
+		'mshavlov@ucsc.edu', 'mshavlovsky@gmail.com']
+# These are the people that can create submission venues.
+creator_emails = admin_emails
+
+def is_user_admin():
     return auth.user and auth.user.email in admin_emails
 
 ######################

@@ -11,8 +11,7 @@ def index():
     Main index.
     """
 
-    user_is_admin = is_user_admin(auth)
-    return dict(user_is_admin=user_is_admin)
+    return dict(user_is_admin=is_user_admin())
 
                                                 
 def user():

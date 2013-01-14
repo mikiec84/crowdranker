@@ -48,6 +48,7 @@ def subopen_index():
     t = datetime.utcnow()
     q_all = ((db.venue.close_date > t) &
              (db.venue.is_active == True) &
+             (db.venue.is_approved == True) &
              (db.venue.submit_constraint == None)
              )
     c_all = db(q_all).select(db.venue.id, db.venue.open_date)
@@ -92,6 +93,7 @@ def rateopen_index():
     t = datetime.utcnow()
     q_all = ((db.venue.rate_close_date > datetime.utcnow()) &
              (db.venue.is_active == True) &
+             (db.venue.is_approved == True) &
              (db.venue.rate_constraint == None)
              )
     c_all = db(q_all).select(db.venue.id, db.venue.open_date)
@@ -215,11 +217,17 @@ def managed_index():
         # Adds some editing help
         add_help_for_venue('bogus')
     db.venue.name.readable = False
+    if is_user_admin():
+	db.venue.is_approved.writable = True
+	fields = [db.venue.name, db.venue.is_approved, db.venue.is_active]
+    else:
+	fields = [db.venue.name, db.venue.is_active]	
     grid = SQLFORM.grid(q,
         field_id=db.venue.id,
-        fields=[db.venue.name, db.venue.is_active],
-        csv=False, details=False, create=True,
-        deletable=False, # Disabled; cannot delete venues with submissions.
+        fields=fields,
+        csv=False, details=False,
+	create=True,
+        deletable=is_user_admin(), # Disabled for general users; cannot delete venues with submissions.
         onvalidation=validate_venue,
         oncreate=create_venue,
         onupdate=update_venue(old_managers, old_submit_constraint, old_rate_constraint),
@@ -231,6 +239,7 @@ def managed_index():
     
 def add_help_for_venue(bogus):
     # Let's add a bit of help for editing
+    db.venue.is_approved.comment = 'A venue must be approved by site admins before others can access it.'
     db.venue.is_active.comment = 'Uncheck to prevent all access to this venue.'
     db.venue.managers.comment = 'Email addresses of venue managers.'
     db.venue.name.comment = 'Name of the venue'
