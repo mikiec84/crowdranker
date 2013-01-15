@@ -50,6 +50,8 @@ def assign_reviewers():
         db.commit()
         session.flash = T('The reviewing duties have been assigned.')
         redirect(URL('venues', 'managed_index'))
+    venue_form = SQLFORM(db.venue, record=c, readonly=True)
+    return dict(venue=c, form=form, vform=venue_form)
                 
 
 @auth.requires_login()
