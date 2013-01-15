@@ -29,7 +29,7 @@ def my_submissions_index():
             dict(header = T('Submission'), body = lambda r:
                 A(T(r.title), _href=URL('view_own_submission', args=[r.id]))),
             dict(header = T('Feedback'), body = lambda r:
-                A(T('feedback'), _href=URL('feedback', 'submission', args=[r.id]))),
+                A(T('feedback'), _href=URL('feedback', 'view_feedback', args=[r.id]))),
             ]
         )
     # TODO(luca): check can_add to see if we can include a link to submit, below.
@@ -183,7 +183,8 @@ def download_viewer():
     # TODO(luca): factor this in a permission module.
     props = db(db.user_properties.email == auth.user.email).select().first()
     can_manage = c.id in util.get_list(props.venues_can_manage)
-    can_view_ratings = can_manage or c.rating_available_to_all
+    can_observe = c.id in util.get_list(props.venues_can_observe)
+    can_view_ratings = can_manage or c.rating_available_to_all or can_observe
     if not can_view_ratings:
 	session.flash(T('Not authorized.'))
 	redirect(URL('default', 'index'))

@@ -10,7 +10,8 @@ def view_venue():
     c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
     props = db(db.user_properties.email == auth.user.email).select().first()
     can_manage = c.id in util.get_list(props.venues_can_manage)
-    can_view_ratings = can_manage or c.rating_available_to_all
+    can_observe = c.id in util.get_list(props.venues_can_observe)
+    can_view_ratings = can_manage or c.rating_available_to_all or can_observe
     if not can_view_ratings:
 	session.flash = T('You do not have access to the ranking of this venue.')
 	redirect(URL('default', 'index'))

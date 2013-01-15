@@ -12,16 +12,18 @@ def view_venue():
         has_submitted = False
         has_rated = False
         can_manage = False
+	can_observe = False
     else:
         can_submit = c.id in util.get_list(props.venues_can_submit) or util.is_none(c.submit_constraint)
         can_rate = c.id in util.get_list(props.venues_can_rate) or util.is_none(c.rate_constraint)
         has_submitted = c.id in util.get_list(props.venues_has_submitted)
         has_rated = c.id in util.get_list(props.venues_has_rated)
         can_manage = c.id in util.get_list(props.venues_can_manage)
+        can_observe = c.id in util.get_list(props.venues_can_observe)
 	# MAYDO(luca): Add option to allow only raters, or only submitters, to view
 	# all ratings.
 	# TODO(luca): put this access control in its own module to ensure consistency.
-	can_view_ratings = can_manage or c.rating_available_to_all
+	can_view_ratings = can_manage or c.rating_available_to_all or can_observe
     venue_form = SQLFORM(db.venue, record=c, readonly=True)
     link_list = []
     if can_submit:
@@ -172,6 +174,30 @@ def link_feedback(venue):
     else:
         return T('Not yet available')
 
+
+@auth.requires_login()
+def observed_index():
+    props = db(db.user_properties.email == auth.user.email).select(db.user_properties.venues_can_observe).first()
+    if props == None: 
+        l = []
+    else:
+        l = util.id_list(util.get_list(props.venues_can_observe))
+    if len(l) > 0:
+	q = (db.venue.id.belongs(l))
+    else:
+	q = (db.venue.id == -1)
+    db.venue.name.readable = False
+    grid = SQLFORM.grid(q,
+        field_id=db.venue.id,
+        fields=[db.venue.name, db.venue.close_date, db.venue.rate_close_date],
+        csv=False, details=False, create=False, editable=False, deletable=False,
+        links=[
+	    dict(header=T('Venue'),
+		 body = lambda r: A(r.name, _href=URL('view_venue', args=[r.id]))),
+            ],
+        )
+    return dict(grid=grid)
+
                 
 @auth.requires_login()
 def reviewing_duties():
@@ -224,14 +250,16 @@ def managed_index():
         db(list_q), 'user_list.id', '%(name)s', zero=T('-- Everybody --')))
     db.venue.rate_constraint.requires = IS_EMPTY_OR(IS_IN_DB(
         db(list_q), 'user_list.id', '%(name)s', zero=T('-- Everybody --')))
-    # Keeps track of old managers, if this is an update.
+    # Keeps track of old managers and observers, if this is an update.
     if len(request.args) > 2 and request.args[-3] == 'edit':
         c = db.venue[request.args[-1]]
         old_managers = c.managers
+	old_observers = c.observers
         old_submit_constraint = c.submit_constraint
         old_rate_constraint = c.rate_constraint
     else:
         old_managers = []
+	old_observers = []
         old_submit_constraint = None
         old_rate_constraint = None
     if len(request.args) > 0 and (request.args[0] == 'edit' or request.args[0] == 'new'):
@@ -253,7 +281,7 @@ def managed_index():
         deletable=is_user_admin(), # Disabled for general users; cannot delete venues with submissions.
         onvalidation=validate_venue,
         oncreate=create_venue,
-        onupdate=update_venue(old_managers, old_submit_constraint, old_rate_constraint),
+        onupdate=update_venue(old_managers, old_observers, old_submit_constraint, old_rate_constraint),
         links_in_grid=True,
         links=[dict(header=T('Venue'), body = lambda r:
             A(r.name, _href=URL('view_venue', args=[r.id]))),]
@@ -265,6 +293,7 @@ def add_help_for_venue(bogus):
     db.venue.is_approved.comment = 'A venue must be approved by site admins before others can access it.'
     db.venue.is_active.comment = 'Uncheck to prevent all access to this venue.'
     db.venue.managers.comment = 'Email addresses of venue managers.'
+    db.venue.observers.comment = 'Email addresses of venue observers.'
     db.venue.name.comment = 'Name of the venue'
     db.venue.open_date.comment = 'In UTC.'
     db.venue.close_date.comment = 'In UTC.'
@@ -298,6 +327,7 @@ def add_help_for_venue(bogus):
 def validate_venue(form):
     """Validates the form venue, splitting managers listed on the same line."""
     form.vars.managers = util.normalize_email_list(form.vars.managers)
+    form.vars.observers = util.normalize_email_list(form.vars.observers)
     if auth.user.email not in form.vars.managers:
         form.vars.managers = [auth.user.email] + form.vars.managers
     
@@ -314,6 +344,20 @@ def add_venue_to_user_managers(id, user_list):
             l = u.venues_can_manage
         l = util.list_append_unique(l, id)
         db(db.user_properties.email == m).update(venues_can_manage = l)
+    db.commit()
+        
+def add_venue_to_user_observers(id, user_list):
+    for m in user_list:
+        u = db(db.user_properties.email == m).select(db.user_properties.venues_can_observe).first()
+        if u == None:
+            # We never heard of this user, but we still create the permission.
+            db.user_properties.insert(email=m)
+            db.commit()
+            l = []
+        else:
+            l = u.venues_can_observe
+        l = util.list_append_unique(l, id)
+        db(db.user_properties.email == m).update(venues_can_observe = l)
     db.commit()
         
 def add_venue_to_user_submit(id, user_list):
@@ -344,12 +388,20 @@ def add_venue_to_user_rate(id, user_list):
         db(db.user_properties.email == m).update(venues_can_rate = l)
     db.commit()
 
-def delete_venue_from_managers(id, managers):
-    for m in managers:
+def delete_venue_from_managers(id, user_list):
+    for m in user_list:
         u = db(db.user_properties.email == m).select(db.user_properties.venues_can_manage).first()
         if u != None:
             l = util.list_remove(u.venues_can_manage, id)
             db(db.user_properties.email == m).update(venues_can_manage = l)
+    db.commit()
+       
+def delete_venue_from_observers(id, user_list):
+    for m in user_list:
+        u = db(db.user_properties.email == m).select(db.user_properties.venues_can_observe).first()
+        if u != None:
+            l = util.list_remove(u.venues_can_observe, id)
+            db(db.user_properties.email == m).update(venues_can_observe = l)
     db.commit()
        
 def delete_venue_from_submitters(id, user_list):
@@ -372,6 +424,7 @@ def create_venue(form):
     """Processes the creation of a context, propagating the effects."""
     # First, we need to add the context for the new managers.
     add_venue_to_user_managers(form.vars.id, form.vars.managers)
+    add_venue_to_user_observers(form.vars.id, form.vars.observers)
     # If there is a submit constraint, we need to allow all the users
     # in the list to submit.
     if not util.is_none(form.vars.submit_constraint):
@@ -384,13 +437,16 @@ def create_venue(form):
         user_list = db.user_list[form.vars.rate_constraint].email_list
         add_venue_to_user_rate(form.vars.id, user_list)
                 
-def update_venue(old_managers, old_submit_constraint, old_rate_constraint):
+def update_venue(old_managers, old_observers, old_submit_constraint, old_rate_constraint):
     """A venue is being updated.  We need to return a callback for the form,
     that will produce the proper update, taking into account the change in permissions."""
     def f(form):
         # Managers.
         add_venue_to_user_managers(form.vars.id, util.list_diff(form.vars.managers, old_managers))
         delete_venue_from_managers(form.vars.id, util.list_diff(old_managers, form.vars.managers))
+	# Observers.
+        add_venue_to_user_observers(form.vars.id, util.list_diff(form.vars.observers, old_observers))
+        delete_venue_from_observers(form.vars.id, util.list_diff(old_observers, form.vars.observers))
         # Submitters.
         if old_submit_constraint != form.vars.submit_constraint:
             # We need to update.
@@ -414,6 +470,7 @@ def update_venue(old_managers, old_submit_constraint, old_rate_constraint):
 def delete_venue(table, id):
     c = db.venue[id]
     delete_venue_from_managers(id, c.managers)
+    delete_venue_from_observers(id, c.observers)
     if c.submit_constraint != None:
         user_list = db.user_list[c.submit_constraint]
         delete_venue_from_submitters(id, user_list)
