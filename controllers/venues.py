@@ -188,7 +188,7 @@ def managed_index():
     else:
         managed_venue_list = util.get_list(props.venues_can_manage)
         managed_user_lists = util.get_list(props.managed_user_lists)
-    q = (db.venue.id.belongs(managed_venue_list))    
+    q  = (db.venue.id.belongs(managed_venue_list))
     # Deals with search parameter.
     if request.vars.cid and request.vars.cid != '':
         try:

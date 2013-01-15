@@ -129,6 +129,13 @@ db.comment.date.readable = False
 db.comment.author.readable = False
 db.comment.submission_id.readable = False
         
+db.define_table('user_accuracy',
+    Field('user_id', db.auth_user),
+    Field('venue_id', db.venue),
+    Field('accuracy', 'double'),
+    Field('n_ratings', 'integer'),
+    )
+
 db.define_table('comparison', # An ordering of submissions, from worst to best.
     Field('author', db.auth_user,  default=auth.user_id),
     Field('date', 'datetime', default=datetime.utcnow()),
