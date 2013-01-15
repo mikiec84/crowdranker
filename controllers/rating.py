@@ -115,10 +115,10 @@ def accept_review():
         # To name it, counts how many tasks the user has already for this venue.
         num_tasks = db((db.task.venue_id == c.id) & (db.task.user_id == auth.user_id)).count()
         task_name = (c.name + ' ' + T('Submission') + ' ' + str(num_tasks + 1))[:STRING_FIELD_LENGTH]
-        db.task.insert(submission_id = new_item, venue_id = c.id, submission_name = task_name)
+        task_id = db.task.insert(submission_id = new_item, venue_id = c.id, submission_name = task_name)
         db.commit()
         session.flash = T('A review has been added to your review assignments.')
-        redirect(URL('task_index', args=[new_item]))
+        redirect(URL('task_index', args=[task_id]))
     return dict(venue_form=venue_form, confirmation_form=confirmation_form)
 
             

@@ -152,18 +152,18 @@ def get_configured_logger(name):
         if request.env.web2py_runtime_gae:
             # Create GAEHandler
             handler = GAEHandler()
+	    handler.setLevel(logging.WARNING)
+	    logger.addHandler(handler)
+	    logger.setLevel(logging.WARNING)
         else:
             # Create RotatingFileHandler
             import os
             formatter="%(asctime)s %(levelname)s %(process)s %(thread)s %(funcName)s():%(lineno)d %(message)s"
             handler = logging.handlers.RotatingFileHandler(os.path.join(request.folder,'private/app.log'),maxBytes=1024,backupCount=2)
             handler.setFormatter(logging.Formatter(formatter))
-
-        handler.setLevel(logging.DEBUG)
-        
-
-        logger.addHandler(handler)
-        logger.setLevel(logging.DEBUG)
+	    handler.setLevel(logging.DEBUG)
+	    logger.addHandler(handler)
+	    logger.setLevel(logging.DEBUG)
 
         # Test entry:
         # logger.debug(name + ' logger created')
