@@ -107,8 +107,8 @@ def accept_review():
                                ).select(db.task.submission_id)
         active_items = [x.submission_id for x in active_items_rows]
         old_items.extend(active_items)
-        can_rank_own_submissions = db(db.venue.id == c.id).select(db.venue.can_rank_own_submissions).first().can_rank_own_submissions
-        new_item = ranker.get_item(db, c.id, auth.user_id, old_items, can_rank_own_submissions)
+        new_item = ranker.get_item(db, c.id, auth.user_id, old_items,
+				   can_rank_own_submissions=c.can_rank_own_submissions)
         if new_item == None:
             session.flash = T('There are no items to review so far.')
             redirect(URL('venues', 'rateopen_index'))
