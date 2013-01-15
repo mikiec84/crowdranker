@@ -207,6 +207,9 @@ def managed_index():
 	q = (db.venue.id.belongs(managed_venue_list))
     else:
 	q = (db.venue.id == -1)
+    # Admins can see all venues.
+    if is_user_admin():
+	q = (db.venue.id > 0)
     # Deals with search parameter.
     if request.vars.cid and request.vars.cid != '':
         try:
@@ -237,7 +240,9 @@ def managed_index():
     db.venue.name.readable = False
     if is_user_admin():
 	db.venue.is_approved.writable = True
-	fields = [db.venue.name, db.venue.is_approved, db.venue.is_active]
+	db.venue.created_by.readable = True
+	db.venue.creation_date.readable = True
+	fields = [db.venue.name, db.venue.created_by, db.venue.creation_date, db.venue.is_approved, db.venue.is_active]
     else:
 	fields = [db.venue.name, db.venue.is_active]	
     grid = SQLFORM.grid(q,

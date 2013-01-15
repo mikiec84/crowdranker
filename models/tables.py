@@ -40,6 +40,7 @@ db.define_table('venue',
     Field('name'),
     Field('description', 'text'),
     Field('creation_date', 'datetime', default=datetime.utcnow()),
+    Field('created_by', db.auth_user,  default=auth.user_id),
     Field('managers', 'list:string'),
     Field('submit_constraint', db.user_list),
     Field('rate_constraint', db.user_list),
@@ -60,7 +61,8 @@ db.define_table('venue',
     Field('max_number_outstanding_reviews', 'integer', default=1),
     Field('can_rank_own_submissions', 'boolean', default=False),
     )
-    
+
+db.venue.created_by.readable = db.venue.created_by.writable = False
 db.venue.name.required = True
 db.venue.name.requires = IS_LENGTH(minsize=8)
 db.venue.is_approved.writable = False
