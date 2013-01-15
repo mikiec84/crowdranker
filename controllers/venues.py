@@ -66,7 +66,10 @@ def subopen_index():
         for c in c_user:
             if c.open_date < t and c.id not in c_all_open:
                 c_all_open.append(c.id)
-    q = (db.venue.id.belongs(c_all_open))
+    if len(c_all_open) > 0:
+	q = (db.venue.id.belongs(c_all_open))
+    else:
+	q = (db.venue.id == -1)
     db.venue.name.readable = False
     grid = SQLFORM.grid(q,
         field_id=db.venue.id,
@@ -109,8 +112,11 @@ def rateopen_index():
         c_user = db(q_user).select(db.venue.id, db.venue.open_date)
         for c in c_user:
             if c.open_date < t and c.id not in c_all_open:
-                c_all_open.append(c.id)        
-    q = (db.venue.id.belongs(c_all_open))
+                c_all_open.append(c.id)
+    if len(c_all_open) > 0:
+	q = (db.venue.id.belongs(c_all_open))
+    else:
+	q = (db.venue.id == -1)
     db.venue.rate_close_date.label = T('Review deadline')
     db.venue.name.readable = False
     grid = SQLFORM.grid(q,
@@ -135,7 +141,10 @@ def submitted_index():
         l = []
     else:
         l = util.id_list(util.get_list(props.venues_has_submitted))
-    q = (db.venue.id.belongs(l))
+    if len(l) > 0:
+	q = (db.venue.id.belongs(l))
+    else:
+	q = (db.venue.id == -1)
     db.venue.feedback_accessible_immediately.readable = False
     db.venue.rate_open_date.readable = False
     db.venue.rate_close_date.readable = False
@@ -177,8 +186,14 @@ def reviewing_duties():
             ],
         )
     return dict(grid=grid)
+
+
+@auth.requires_login()
+def simple_index():
+    q = (db.venue.id.belongs([1]))
+    return dict(list=db(q).select())
         
-        
+
 @auth.requires_login()
 def managed_index():
     props = db(db.user_properties.email == auth.user.email).select().first()
@@ -188,7 +203,10 @@ def managed_index():
     else:
         managed_venue_list = util.get_list(props.venues_can_manage)
         managed_user_lists = util.get_list(props.managed_user_lists)
-    q  = (db.venue.id.belongs(managed_venue_list))
+    if len(managed_venue_list) > 0:
+	q = (db.venue.id.belongs(managed_venue_list))
+    else:
+	q = (db.venue.id == -1)
     # Deals with search parameter.
     if request.vars.cid and request.vars.cid != '':
         try:
