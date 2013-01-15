@@ -67,8 +67,6 @@ def process_comparison(db, venue_id, user_id, sorted_items, new_item):
     """
     if len(sorted_items) <= 1:
         return None
-    # TODO(mshavlov): discuss concurrency issue
-    # as an example (db(query).select(..., for_update=True))
     items, qdistr_param = get_all_items_and_qdistr_param(db, venue_id)
     # If items is None then some submission does not have qualities yet,
     # therefore we cannot process comparison.
@@ -76,7 +74,6 @@ def process_comparison(db, venue_id, user_id, sorted_items, new_item):
         return None
     rankobj = Rank.from_qdistr_param(items, qdistr_param)
     result = rankobj.update(sorted_items, new_item)
-    rank_error = rankobj.get_ranking_error_inthe_end_of_round(len(sorted_items))
     # Updating the DB.
     for x in items:
         perc, avrg, stdev = result[x]
@@ -84,6 +81,4 @@ def process_comparison(db, venue_id, user_id, sorted_items, new_item):
            (db.quality.submission_id == x)).update(average=avrg, stdev=stdev, percentile=perc)
         # Updating submission table with its quality and error.
         db((db.submission.id == x) &
-           (db.submission.venue_id == venue_id)).update(quality=avrg,
-							error=rank_error)
-
+           (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev)

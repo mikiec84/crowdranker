@@ -210,7 +210,12 @@ class Rank:
         return result
 
     def get_ranking_error_inthe_end_of_round(self, num_items_to_compare):
-        """ Method returns ranking error in the end of contest round.
+        """
+        TODO(michael): As for now this method is not in use.
+                       Write method to return error which is
+                       interpretable in terms of ranking.
+
+        Method returns ranking error in the end of contest round.
         Each contest consists of rounds. On the first round users compare 2
         submissions, on the second round users compare 3 submsissions, etc.
 
