@@ -61,6 +61,7 @@ def get_item(db, venue_id, user_id, old_items, can_rank_own_submissions=False):
     if items == None or len(items) == 0:
         return None
     rankobj = Rank.from_qdistr_param(items, qdistr_param)
+    # TODO(michael): in general, a user can have multiple submissions to a contest.
     if not can_rank_own_submissions:
         # Find submission that is authored by the user.
         users_submission_id = db((db.submission.venue_id == venue_id) &

@@ -50,10 +50,12 @@ def submit():
         venues_has_submitted = util.get_list(props.venues_has_submitted)
     # Is the venue open for submission?
     if not (c.submit_constraint == None or c.id in venue_ids):
-        redirect('closed', args=['permission'])
+	session.flash = T('You cannot submit to this venue.')
+        redirect(URL('venues', 'view_venue', args=[c.id]))
     t = datetime.utcnow()
     if not (c.is_active and c.open_date <= t and c.close_date >= t):
-        redirect('closed', args=['deadline'])
+	session.flash = T('The submission deadline has passed; submissions are closed.')
+        redirect(URL('venues', 'view_venue', args=[c.id]))
     # Ok, the user can submit.  Looks for previous submissions.
     sub = db((db.submission.author == auth.user_id) & (db.submission.venue_id == c.id)).select().first()
     if sub != None and not c.allow_multiple_submissions:
