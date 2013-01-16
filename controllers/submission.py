@@ -87,7 +87,7 @@ def submit():
         db.commit()
         session.flash = T('Your submission has been accepted.')
         redirect(URL('feedback', 'index', args=['all']))
-    return dict(form=form)
+    return dict(form=form, venue=c)
          
 
 @auth.requires_login()
