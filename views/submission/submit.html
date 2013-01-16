@@ -5,7 +5,7 @@
 {{=form}}
 <br>
 <ul>
-  <li class="btn">{{=A(T('Venue') + ' ' + venue.name, _href=URL('venues', 'index', args=[venue.id]))}}</li>
+  <li class="btn">{{=A(T('Venue') + ' ' + venue.name, _href=URL('venues', 'view_venue', args=[venue.id]))}}</li>
 </ul>
 
 {{if request.is_local:}}
