@@ -24,17 +24,15 @@ def my_submissions_index():
         editable = False,
         deletable = False,
         links = [
-            dict(header = T('Venue'), body = lambda r:
-                A(T('Venue'), _href=URL('venues', 'view_venue', args=[r.venue_id]))),
             dict(header = T('Submission'), body = lambda r:
                 A(T(r.title), _href=URL('view_own_submission', args=[r.id]))),
             dict(header = T('Feedback'), body = lambda r:
-                A(T('feedback'), _href=URL('feedback', 'view_feedback', args=[r.id]))),
+                A(T('View Feedback'), _class='btn', _href=URL('feedback', 'view_feedback', args=[r.id]))),
             ]
         )
     # TODO(luca): check can_add to see if we can include a link to submit, below.
     return dict(grid=grid, venue=c)
-        
+
 
 @auth.requires_login()
 def submit():
