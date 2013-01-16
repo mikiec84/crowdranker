@@ -286,6 +286,7 @@ def managed_index():
         links=[dict(header=T('Venue'), body = lambda r:
             A(r.name, _href=URL('view_venue', args=[r.id]))),]
         )
+    db.commit()
     return dict(grid=grid)
     
 def add_help_for_venue(bogus):
@@ -337,56 +338,44 @@ def add_venue_to_user_managers(id, user_list):
         u = db(db.user_properties.email == m).select(db.user_properties.venues_can_manage).first()
         if u == None:
             # We never heard of this user, but we still create the permission.
-            db.user_properties.insert(email=m)
-            db.commit()
-            l = []
+            db.user_properties.insert(email=m, venues_can_manage = [id])
         else:
             l = u.venues_can_manage
-        l = util.list_append_unique(l, id)
-        db(db.user_properties.email == m).update(venues_can_manage = l)
-    db.commit()
+	    l = util.list_append_unique(l, id)
+	    db(db.user_properties.email == m).update(venues_can_manage = l)
         
 def add_venue_to_user_observers(id, user_list):
     for m in user_list:
         u = db(db.user_properties.email == m).select(db.user_properties.venues_can_observe).first()
         if u == None:
             # We never heard of this user, but we still create the permission.
-            db.user_properties.insert(email=m)
-            db.commit()
-            l = []
+            db.user_properties.insert(email=m, venues_can_observe = [id])
         else:
             l = u.venues_can_observe
-        l = util.list_append_unique(l, id)
-        db(db.user_properties.email == m).update(venues_can_observe = l)
-    db.commit()
+	    l = util.list_append_unique(l, id)
+	    db(db.user_properties.email == m).update(venues_can_observe = l)
         
 def add_venue_to_user_submit(id, user_list):
-    for m in user_list.email_list:
+    for m in user_list:
         u = db(db.user_properties.email == m).select(db.user_properties.venues_can_submit).first()
         if u == None:
             # We never heard of this user, but we still create the permission.
-            db.user_properties.insert(email=m)
-            db.commit()
-            l = []
+            db.user_properties.insert(email=m, venues_can_submit = [id])
         else:
             l = u.venues_can_submit
-        l = util.list_append_unique(l, id)
-        db(db.user_properties.email == m).update(venues_can_submit = l)
-    db.commit()
+	    l = util.list_append_unique(l, id)
+	    db(db.user_properties.email == m).update(venues_can_submit = l)
         
 def add_venue_to_user_rate(id, user_list):
-    for m in user_list.email_list:
+    for m in user_list:
         u = db(db.user_properties.email == m).select(db.user_properties.venues_can_rate).first()
         if u == None:
             # We never heard of this user, but we still create the permission.
-            db.user_properties.insert(email=m)
-            db.commit()
-            l = []
+            db.user_properties.insert(email=m, venues_can_rate = [id])
         else:
             l = u.venues_can_rate
-        l = util.list_append_unique(l, id)
-        db(db.user_properties.email == m).update(venues_can_rate = l)
-    db.commit()
+	    l = util.list_append_unique(l, id)
+	    db(db.user_properties.email == m).update(venues_can_rate = l)
 
 def delete_venue_from_managers(id, user_list):
     for m in user_list:
@@ -394,7 +383,6 @@ def delete_venue_from_managers(id, user_list):
         if u != None:
             l = util.list_remove(u.venues_can_manage, id)
             db(db.user_properties.email == m).update(venues_can_manage = l)
-    db.commit()
        
 def delete_venue_from_observers(id, user_list):
     for m in user_list:
@@ -402,23 +390,20 @@ def delete_venue_from_observers(id, user_list):
         if u != None:
             l = util.list_remove(u.venues_can_observe, id)
             db(db.user_properties.email == m).update(venues_can_observe = l)
-    db.commit()
        
 def delete_venue_from_submitters(id, user_list):
-    for m in user_list.email_list:
+    for m in user_list:
         u = db(db.user_properties.email == m).select(db.user_properties.venues_can_submit).first()
         if u != None:
             l = util.list_remove(u.venues_can_submit, id)
             db(db.user_properties.email == m).update(venues_can_submit = l)
-    db.commit()
        
 def delete_venue_from_raters(id, user_list):
-    for m in user_list.email_list:
+    for m in user_list:
         u = db(db.user_properties.email == m).select(db.user_properties.venues_can_rate).first()
         if u != None:
             l = util.list_remove(u.venues_can_rate, id)
             db(db.user_properties.email == m).update(venues_can_rate = l)
-    db.commit()
                         
 def create_venue(form):
     """Processes the creation of a context, propagating the effects."""
@@ -451,19 +436,19 @@ def update_venue(old_managers, old_observers, old_submit_constraint, old_rate_co
         if old_submit_constraint != form.vars.submit_constraint:
             # We need to update.
 	    if old_submit_constraint != None:
-                user_list = db.user_list[old_submit_constraint]
+                user_list = db.user_list[old_submit_constraint].email_list
                 delete_venue_from_submitters(form.vars.id, user_list)
             if not util.is_none(form.vars.submit_constraint):
-                user_list = db.user_list[form.vars.submit_constraint]
+                user_list = db.user_list[form.vars.submit_constraint].email_list
                 add_venue_to_user_submit(form.vars.id, user_list)
         # Raters.
         if old_rate_constraint != form.vars.rate_constraint:
             # We need to update.
 	    if old_rate_constraint != None:
-                user_list = db.user_list[old_rate_constraint]
+                user_list = db.user_list[old_rate_constraint].email_list
                 delete_venue_from_raters(form.vars.id, user_list)
             if not util.is_none(form.vars.rate_constraint):
-                user_list = db.user_list[form.vars.rate_constraint]
+                user_list = db.user_list[form.vars.rate_constraint].email_list
                 add_venue_to_user_rate(form.vars.id, user_list)
     return f
                 
