@@ -69,7 +69,7 @@ def accept_review():
 	session.flash = T('You cannot rate this venue.')
         redirect(URL('venues', 'rateopen_index'))
     t = datetime.utcnow()
-    if not (c.is_active and c.rate_open_date <= t and c.rate_close_date >= t):
+    if not (c.is_active and c.is_approved and c.rate_open_date <= t and c.rate_close_date >= t):
         session.flash = T('This venue is not open for rating.')
         redirect(URL('venues', 'rateopen_index'))
     # The user can rate the venue.

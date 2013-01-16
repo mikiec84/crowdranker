@@ -51,7 +51,7 @@ def submit():
 	session.flash = T('You cannot submit to this venue.')
         redirect(URL('venues', 'view_venue', args=[c.id]))
     t = datetime.utcnow()
-    if not (c.is_active and c.open_date <= t and c.close_date >= t):
+    if not (c.is_active and c.is_approved and c.open_date <= t and c.close_date >= t):
 	session.flash = T('The submission deadline has passed; submissions are closed.')
         redirect(URL('venues', 'view_venue', args=[c.id]))
     # Ok, the user can submit.  Looks for previous submissions.
@@ -126,7 +126,7 @@ def view_own_submission():
     subm_link = None
     if c.allow_link_submission:
 	subm_link = A(subm.link, _href=subm.link)
-    if (c.is_active and c.open_date <= t and c.close_date >= t):
+    if (c.is_active and c.is_approved and c.open_date <= t and c.close_date >= t):
         form = SQLFORM(db.submission, subm, upload=URL('download_author', args=[subm.id]))
         if request.vars.content != None and request.vars.content != '':
             form.vars.original_filename = request.vars.content.filename
