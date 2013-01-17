@@ -433,7 +433,7 @@ def update_venue(old_managers, old_observers, old_submit_constraint, old_rate_co
         add_venue_to_user_observers(form.vars.id, util.list_diff(form.vars.observers, old_observers))
         delete_venue_from_observers(form.vars.id, util.list_diff(old_observers, form.vars.observers))
         # Submitters.
-        if old_submit_constraint != form.vars.submit_constraint:
+        if str(old_submit_constraint) != str(form.vars.submit_constraint):
             # We need to update.
 	    if old_submit_constraint != None:
                 user_list = db.user_list[old_submit_constraint].email_list
@@ -442,7 +442,7 @@ def update_venue(old_managers, old_observers, old_submit_constraint, old_rate_co
                 user_list = db.user_list[form.vars.submit_constraint].email_list
                 add_venue_to_user_submit(form.vars.id, user_list)
         # Raters.
-        if old_rate_constraint != form.vars.rate_constraint:
+        if str(old_rate_constraint) != str(form.vars.rate_constraint):
             # We need to update.
 	    if old_rate_constraint != None:
                 user_list = db.user_list[old_rate_constraint].email_list
