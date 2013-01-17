@@ -52,7 +52,6 @@ def validate_user_list(form):
     form.vars.managers = util.normalize_email_list(form.vars.managers)
     if auth.user.email not in form.vars.managers:
         form.vars.managers = [auth.user.email] + form.vars.managers
-    logger.debug("At the end of validation: email_list: " + str(form.vars.email_list) + "; managers: " + str(form.vars.managers))
     
 
 def update_user_list(old_managers, old_members):

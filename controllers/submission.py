@@ -2,6 +2,8 @@
 
 import util
 import ranker
+import re
+from contenttype import contenttype
 
 @auth.requires_login()
 def my_submissions_index():
@@ -170,7 +172,7 @@ def download_author():
     if subm.author != auth.user_id:
         session.flash = T('Not authorized.')
         redirect(URL('default', 'index'))
-    return response.download(request, db)
+    return my_download(request, db, subm.original_filename)
 	
 
 @auth.requires_login()
@@ -199,7 +201,7 @@ def download_viewer():
     # Allows the download.
     # TODO(luca): The next line should be useless.
     request.args = request.args[1:]
-    return response.download(request, db, download_filename=filename)
+    return my_download(request, db, filename)
 
 
 @auth.requires_login()
@@ -224,4 +226,31 @@ def download_reviewer():
             file_alias = s.original_filename
     # TODO(luca): The next line should be useless.
     request.args = request.args[1:]
-    return response.download(request, db, download_filename=file_alias)
+    return my_download(request, db, file_alias)
+
+
+DEFAULT_CHUNK_SIZE = 64 * 1024
+
+def my_download(request, db, download_filename):
+    """This implements my download procedure that can rename files."""
+    if not request.args:
+	raise HTTP(404)
+    name = request.args[-1]
+    items = re.compile('(?P<table>.*?)\.(?P<field>.*?)\..*')\
+	.match(name)
+    if not items:
+	raise HTTP(404)
+    (t, f) = (items.group('table'), items.group('field'))
+    try:
+	field = db[t][f]
+    except AttributeError:
+	raise HTTP(404)
+    try:
+	(filename, stream) = field.retrieve(name)
+    except IOError:
+	raise HTTP(404)
+    headers = response.headers
+    headers['Content-Type'] = contenttype(name)
+    headers['Content-Disposition'] = \
+	'attachment; filename="%s"' % download_filename.replace('"','\"')
+    return response.stream(stream, chunk_size=DEFAULT_CHUNK_SIZE)

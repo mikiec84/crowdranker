@@ -69,7 +69,6 @@ def subopen_index():
         for c in c_user:
             if c.open_date < t and c.id not in c_all_open:
                 c_all_open.append(c.id)
-    logger.warning('c_all_open: ' + str(c_all_open))
     if len(c_all_open) > 0:
 	q = (db.venue.id.belongs(c_all_open))
     else:
