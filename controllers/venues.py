@@ -13,6 +13,7 @@ def view_venue():
         has_rated = False
         can_manage = False
 	can_observe = False
+        can_view_ratings = False
     else:
         can_submit = c.id in util.get_list(props.venues_can_submit) or util.is_none(c.submit_constraint)
         can_rate = c.id in util.get_list(props.venues_can_rate) or util.is_none(c.rate_constraint)
