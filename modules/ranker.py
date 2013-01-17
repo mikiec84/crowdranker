@@ -61,14 +61,14 @@ def get_item(db, venue_id, user_id, old_items, can_rank_own_submissions=False):
     if items == None or len(items) == 0:
         return None
     rankobj = Rank.from_qdistr_param(items, qdistr_param)
-    # TODO(michael): in general, a user can have multiple submissions to a contest.
     if not can_rank_own_submissions:
         # Find submission that is authored by the user.
-        users_submission_id = db((db.submission.venue_id == venue_id) &
-                                (db.submission.author == user_id)).select(db.submission.id).first().id
+        submission_ids = db((db.submission.venue_id == venue_id) &
+                                (db.submission.author == user_id)).select(db.submission.id)
+        users_submission_ids = [x.id for x in submission_ids]
     else:
-        users_submission_id = None
-    return rankobj.sample_item(old_items, users_submission_id)
+        users_submission_ids = None
+    return rankobj.sample_item(old_items, users_submission_ids)
 
 def process_comparison(db, venue_id, user_id, sorted_items, new_item):
     """ Function updates quality distributions and rank of submissions (items).
