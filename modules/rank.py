@@ -331,16 +331,15 @@ class Rank:
         # Update id2rank and rank2id vectors.
         self.rank2id, self.id2rank = self.compute_ranks(self.qdistr)
 
-    def sample(self, black_item=None):
+    def sample(self, black_items=None):
         """ Returns two items to compare. If there is no two items to sample
         from then None is returned.
-        Sampling by loss-driven comparison
-        algorithm.
-        black_item cannot be sampled.
+        Sampling by loss-driven comparison algorithm.
+        black_items cannot be sampled.
         """
         indices = range(self.num_items)
-        if not black_item == None:
-            del indices[black_item]
+        if (not black_items == None) and (not len(black_items) == 0):
+            indices = [x for x in indices if not x in black_items]
         if len(indices) < 2:
             return None
         # l is len(indices)^2 array; l[idx] is expected loss of for items with ids
@@ -382,18 +381,21 @@ class Rank:
                 items.remove(i if random.random() < 0.5 else j)
                 return list(items)
 
-    def sample_item(self, old_items, black_item, sample_one=True ):
+    def sample_item(self, old_items, black_items, sample_one=True ):
         """ Method samples an item given items the user receivd before.
         If sample_one is true then if old_items is None or empty then method
         returns one item, otherwise it returns two itmes.
-        black_item is the item which should not be sampled.
+        black_items is a list with items which should not be sampled.
         If it is impossible to sample an item then None is returned.
         """
+        if black_items == None:
+            black_items = []
         if old_items == None or len(old_items) == 0:
-            if black_item == None:
+            if len(black_items) == 0:
                 l = self.sample()
             else:
-                l = self.sample(self.orig_items_id.index(black_item))
+                ids = [self.orig_items_id.index(x) for x in black_items]
+                l = self.sample(ids)
             # If we need two elements.
             if not sample_one:
                 if l == None:
@@ -404,21 +406,18 @@ class Rank:
                 return self.orig_items_id[l[0]] if random.random() < 0.5 else\
                             self.orig_items_id[l[1]]
             # We cannot sample two items, try to sample only one.
-            if black_item == None:
-                if len(self.orig_items_id) == 0:
-                    return None
-                return self.orig_items_id[0]
-            # There is a black item.
-            if len(self.orig_items_id) <= 1:
+            if len(black_items) == len(self.orig_items_id):
                 return None
-            return self.orig_items_id[0] if self.orig_items_id[0]!=black_item\
-                                else self.orig_items_id[1]
+            if len(self.orig_items_id) == 0:
+                return None
+            item = [x for x in self.orig_items_id if not x in black_items]
+            return item[0]
 
         taken_ids = [idx for idx in range(self.num_items) if \
                         self.orig_items_id[idx] in old_items]
         free_ids = [idx for idx in range(self.num_items) if \
                         (not self.orig_items_id[idx] in old_items and
-                         not self.orig_items_id[idx] == black_item)]
+                         not self.orig_items_id[idx] in black_items)]
         # If there are no items to pick from then return None.
         if len(free_ids) == 0:
             return None
