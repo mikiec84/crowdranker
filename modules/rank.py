@@ -9,8 +9,9 @@ import math
 class Cost:
     """ Class contains cost function.
     """
-    def __init__(self, cost_type='top-k'):
+    def __init__(self, cost_type='top-k', rank_cost_coefficient=-1):
         self.cost_type = cost_type
+        self.rank_cost_coefficient = rank_cost_coefficient
 
     def calculate(self, i, k, id2rank):
         # ranking starts from 0, so first k rank are 0, 1, ..., k - 1
@@ -21,6 +22,10 @@ class Cost:
                 return 0
         elif self.cost_type == 'one_over_rank':
             return  1./( 1 + id2rank[i])
+        elif self.cost_type == 'rank_power_alpha':
+            if self.rank_cost_coefficient == 0:
+                raise Exception("If coefficient is zero then cost object should be None!")
+            return (1 + id2rank[i]) ** self.rank_cost_coefficient
         elif self.cost_type == 'two_steps':
             if id2rank[i] < k:
                 return 1
@@ -46,7 +51,7 @@ class Rank:
     """ Class contains methods for ranking items based on items comparison.
     """
     def __init__(self, items, alpha=0.9, num_bins=2001,
-                 cost_obj=None, init_dist_type='gauss'):
+                 cost_obj=None, k=None, init_dist_type='gauss'):
         """
         Arguments:
             - items is a list of original items id.
@@ -67,6 +72,8 @@ class Rank:
         self.num_bins = num_bins
         self.cost_obj = cost_obj
         self.alpha = alpha
+        # Constant k is for top-k problems.
+        self.k = k
         # qdistr is numpy two dimensional array which represents quality
         # distribution, i-th row is a distribution for an item with id equals i.
         # qdistr is initialized as uniform distribution.
@@ -111,7 +118,8 @@ class Rank:
         is a list with mean and stdev for each item such that qdistr_param[2*i]
         and qdistr[2*i + 1] are mean and stdev for items[i].
         """
-        result = cls(items, alpha, num_bins, cost_obj, init_dist_type='gauss')
+        result = cls(items, alpha, num_bins, cost_obj,
+                     k=None, init_dist_type='gauss')
         result.restore_qdistr_from_parameters(qdistr_param)
         return result
 
@@ -467,8 +475,8 @@ class Rank:
         #return abs(c_i + c_j - c_i * c_j) * self.get_missrank_prob(i, j)
         return abs(c_i - c_j) * self.get_missrank_prob(i, j)
 
-    def get_cost(self, i, j, id2rank):
-        return self.cost_obj.calculate(i, j, id2rank)
+    def get_cost(self, i, k, id2rank):
+        return self.cost_obj.calculate(i, k, id2rank)
 
     def get_missrank_prob(self, i, k):
         """ Method returns probability that r(i) > r(k) where r(i) is a rank
