@@ -2,6 +2,7 @@
 # coding: utf8
 from gluon import *
 from rank import Rank
+from rank import Cost
 
 NUM_BINS = 2001
 AVRG = NUM_BINS / 2
@@ -50,9 +51,14 @@ def get_init_average_stdev():
     """
     return AVRG, STDEV
 
-def get_item(db, venue_id, user_id, old_items, can_rank_own_submissions=False):
+def get_item(db, venue_id, user_id, old_items,
+             can_rank_own_submissions=False,
+             rank_cost_coefficient=0):
     """
     If a user did not have items to rank then old_items is None or empty string.
+
+    If rank_cost_coefficient is equal zero then no cost function is used which
+    corresponds to treating each submission equally.
     """
     items, qdistr_param = get_all_items_and_qdistr_param(db, venue_id)
     # If items is None then some submission does not have qualities yet,
@@ -60,7 +66,12 @@ def get_item(db, venue_id, user_id, old_items, can_rank_own_submissions=False):
     # item.
     if items == None or len(items) == 0:
         return None
-    rankobj = Rank.from_qdistr_param(items, qdistr_param)
+    # Specifying cost object which has cost function.
+    cost_obj = Cost(cost_type='rank_power_alpha',
+                   rank_cost_coefficient=rank_cost_coefficient)
+    if rank_cost_coefficient == 0:
+        cost_obj = None
+    rankobj = Rank.from_qdistr_param(items, qdistr_param, cost_obj=cost_obj)
     if not can_rank_own_submissions:
         # Find submission that is authored by the user.
         submission_ids = db((db.submission.venue_id == venue_id) &
