@@ -3,6 +3,7 @@
 from gluon import *
 from rank import Rank
 from rank import Cost
+import util
 
 NUM_BINS = 2001
 AVRG = NUM_BINS / 2
@@ -109,3 +110,19 @@ def process_comparison(db, venue_id, user_id, sorted_items, new_item):
         # Updating submission table with its quality and error.
         db((db.submission.id == x) &
            (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev)
+
+def evaluate_users(db, venue_id, list_of_users):
+    # Obtaining list of submissions.
+    items, qdistr_param = get_all_items_and_qdistr_param(db, venue_id)
+    if items == None or len(items) == 0:
+        return None
+    rankobj = Rank.from_qdistr_param(items, qdistr_param, cost_obj=None)
+    for user_id in list_of_users:
+        last_comparison = db((db.comparison.author == user_id)
+            & (db.comparison.venue_id == venue_id)).select(orderby=~db.comparison.date).first()
+        if last_comparison == None:
+            continue;
+        ordering = util.get_list(last_comparison.ordering)
+        ordering = ordering[::-1]
+        val = rankobj.evaluate_ordering(ordering)
+        # TODO(michael): write val to the db.
