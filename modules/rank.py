@@ -543,8 +543,7 @@ class Rank:
         n = len(ordering)
         if n == 0:
             return None
-        val = 0
-        normalization = 0
+        val, normalization = 0, 0
         for i in xrange(n):
             for j in xrange(i + 1, n, 1):
                 val += self.get_missrank_prob(self.orig_items_id.index(i),
