@@ -240,10 +240,16 @@ def download_manager_as_author():
     # The user must be the owner of the submission.
     subm = db.submission(request.args(0))
     if (subm  == None):
-        redirect(URL('default', 'index' ) )
-    if subm.author != auth.user_id:
+        redirect(URL('default', 'index' ))
+    # Gets the venue.
+    c = db.venue(subm.venue_id)
+    if c is None:
         session.flash = T('Not authorized.')
         redirect(URL('default', 'index'))
+    managers = util.get_list(c.managers)
+    if auth.user.email not in managers:
+        session.flash = T('Not authorized.')
+        redirect(URL('default', 'index'))	
     return my_download(request, db, subm.original_filename)
 	
 
