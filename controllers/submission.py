@@ -110,7 +110,7 @@ def manager_submit():
     db.submission.email.label = T('Author')
     # Produces an identifier for the submission.
     db.submission.identifier.default = util.get_random_id()
-    form = SQLFORM(db.submission, upload=URL('download_manager_as_author', args=[None]))
+    form = SQLFORM(db.submission, upload=URL('download_manager', args=[None]))
     form.vars.venue_id = c.id
     if request.vars.content != None and request.vars.content != '':
         form.vars.original_filename = request.vars.content.filename
@@ -204,6 +204,31 @@ def view_own_submission():
     return dict(form=form, subm=subm, download_link=download_link, subm_link=subm_link)
 
 
+@auth.requires_login()
+def view_submission_by_manager():
+    """Allows viewing a submission by a contest manager.
+    The argument is the submission id."""
+    subm = db.submission(request.args(0)) or redirect(URL('default', 'index'))
+    if subm.author != auth.user_id:
+        session.flash = T('You cannot view this submission.')
+        redirect(URL('default', 'index'))
+    c = db.venue(subm.venue_id) or redirect(URL('default', 'index'))
+    managers = util.get_list(c.managers)
+    if auth.user.email not in managers:
+        session.flash = T('Not authorized.')
+        redirect(URL('default', 'index'))	    
+    download_link = None
+    subm_link = None
+    if c.allow_link_submission:
+	subm_link = A(subm.link, _href=subm.link)
+    db.submission.content.readable = False
+    form = SQLFORM(db.submission, subm, readonly=True,
+		   upload=URL('download_manager', args=[subm.id]), buttons=[])
+    download_link = A(T('download'), _class='btn',
+		      _href=URL('download_author', args=[subm.id, subm.content]))
+    return dict(form=form, subm=subm, download_link=download_link, subm_link=subm_link)
+
+
 def validate_task(t_id, user_id):
     """Validates that user_id can do the reviewing task t."""
     t = db.task(request.args(0))
@@ -236,8 +261,8 @@ def download_author():
 	
 
 @auth.requires_login()
-def download_manager_as_author():
-    # The user must be the owner of the submission.
+def download_manager():
+    # The user must be the manager of the venue where the submission occurred.
     subm = db.submission(request.args(0))
     if (subm  == None):
         redirect(URL('default', 'index' ))

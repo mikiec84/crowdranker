@@ -40,11 +40,15 @@ def get_venue_name(venue_id):
 def view_feedback():
     """Shows detailed information and feedback for a given submission."""
     subm = db.submission(request.args(0)) or redirect(URL('default', 'index'))
-    download_link = A(T('Download'), _class='btn', 
-		      _href=URL('submission', 'download_author', args=[subm.id, subm.content]))
     # Checks whether the user is a manager for the venue.
-    c = db.venue(subm.venue_id) or redirect(URL('default', 'index')
-    is_manager = (auth.user.email in managers)
+    c = db.venue(subm.venue_id) or redirect(URL('default', 'index'))
+    is_manager = (auth.user.email in util.get_list(c.managers))
+    if is_manager:
+        download_link = A(T('Download'), _class='btn', 
+		      _href=URL('submission', 'download_manager', args=[subm.id, subm.content]))
+    else:
+        download_link = A(T('Download'), _class='btn', 
+		      _href=URL('submission', 'download_author', args=[subm.id, subm.content]))
     if (not is_manager) and subm.author != auth.user_id:
         session.flash = T('Not authorized.')
         redirect(URL('default', 'index'))

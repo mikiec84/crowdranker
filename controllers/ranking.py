@@ -22,6 +22,14 @@ def view_venue():
     db.submission.content.readable = False
     if c.allow_link_submission:
 	db.submission.link.readable = True
+    links = [
+	dict(header=T('Download'), body = lambda r:
+	     A(T('Download'), _class='btn',
+	       _href=URL('submission', 'download_viewer', args=[r.id, r.content])))]
+    if can_manage or can_observe:
+	links.append(dict(header=T('Feedback'), body = lambda r:
+			  A(T('Feedback'), _class='btn',
+			    _href=URL('feedback', 'view_feedback', args=[r.id]))))
     grid = SQLFORM.grid(q,
 	field_id=db.submission.id,
 	csv=True,
@@ -30,12 +38,7 @@ def view_venue():
 	details=False, create=False, editable=False, deletable=False,
 	fields=[db.submission.title, db.submission.email, db.submission.quality,
 		db.submission.error, db.submission.content],
-	links=[
-	    dict(header=T('Download'),
-		 body = lambda r: A(T('Download'), _class='btn',
-				    _href=URL('submission', 'download_viewer',
-					      args=[r.id, r.content]))),
-	    ],
+	links=links,
 	)
     # TODO(luca): Add a link to download the submission.
     title = A(c.name, _href=URL('venues', 'view_venue', args=[c.id]))
