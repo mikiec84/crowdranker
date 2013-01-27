@@ -90,7 +90,67 @@ def submit():
         session.flash = T('Your submission has been accepted.')
         redirect(URL('feedback', 'index', args=['all']))
     return dict(form=form, venue=c)
+
          
+@auth.requires_login()
+def manager_submit():
+    """This function is used by venue managers to do submissions on behalf of others.  It can be used
+    even when the submission deadline is past."""
+    # Gets the information on the venue.
+    c = db.venue(request.args[0]) or redirect(URL('default', 'index'))
+    # Checks that the user is a manager for the venue.
+    manager_props = db(db.user_properties.email == auth.user.email).select().first()
+    can_manage = c.id in util.get_list(manager_props.venues_can_manage)
+    if not can_manage:
+	session.flash = T('Not authorized!')
+	redirect(URL('default', 'index'))
+    # Prepares the submission.
+    db.submission.email.writable = db.submission.email.readable = True
+    db.submission.author.readable = db.submission.author.writable = False
+    db.submission.email.label = T('Author')
+    # Produces an identifier for the submission.
+    db.submission.identifier.default = util.get_random_id()
+    form = SQLFORM(db.submission, upload=URL('download_manager_as_author', args=[None]))
+    form.vars.venue_id = c.id
+    if request.vars.content != None and request.vars.content != '':
+        form.vars.original_filename = request.vars.content.filename
+    if form.process(onvalidation=manager_submit_validation).accepted:
+        # Adds the venue to the list of venues where the user submitted.
+        # TODO(luca): Enable users to delete submissions.  But this is complicated; we need to 
+        # delete also their quality information etc.  For the moment, no deletion.
+	props = db(db.user_properties.email == form.vars.email).select().first()
+	if props == None: 
+	    venues_has_submitted = []
+	else:
+	    venues_has_submitted = util.get_list(props.venues_has_submitted)
+        submitted_ids = util.id_list(venues_has_submitted)
+        submitted_ids = util.list_append_unique(submitted_ids, c.id)
+        if props == None:
+            db(db.user_properties.email == form.vars.email).update(venues_has_submitted = submitted_ids)
+        else:
+            props.update_record(venues_has_submitted = submitted_ids)
+        # Assigns the initial distribution to the submission.
+        avg, stdev = ranker.get_init_average_stdev()
+        db.quality.insert(venue_id=c.id, submission_id=form.vars.id, user_id=form.vars.author,
+			  average=avg, stdev=stdev)
+        db.commit()
+        session.flash = T('The submission has been accepted.')
+        redirect(URL('ranking', 'view_venue', args=[c.id]))
+    return dict(form=form, venue=c)
+         
+
+def manager_submit_validation(form):
+    """Validates a manager-entered submission.  The main validation is
+    that the user account must already exist for that user.
+    TODO(luca): we could lift this restriction, but at the price of
+    having to move to email as the general user identifier.
+    Shall we do this?"""
+    user_info = db(db.auth_user.email == form.vars.email).select().first()
+    if user_info is None:
+	form.errors.email = T('User does not exist.')
+    else:
+	form.vars.author = user_info.id
+
 
 @auth.requires_login()
 def view_submission():
@@ -165,6 +225,18 @@ def validate_task(t_id, user_id):
 	
 @auth.requires_login()
 def download_author():
+    # The user must be the owner of the submission.
+    subm = db.submission(request.args(0))
+    if (subm  == None):
+        redirect(URL('default', 'index' ) )
+    if subm.author != auth.user_id:
+        session.flash = T('Not authorized.')
+        redirect(URL('default', 'index'))
+    return my_download(request, db, subm.original_filename)
+	
+
+@auth.requires_login()
+def download_manager_as_author():
     # The user must be the owner of the submission.
     subm = db.submission(request.args(0))
     if (subm  == None):

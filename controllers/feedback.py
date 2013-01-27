@@ -48,7 +48,7 @@ def view_feedback():
     # Checks whether we have the permission to show the feedback already.
     c = db.venue(subm.venue_id) or redirect(URL('default', 'index'))
     if not ((datetime.utcnow() > c.rate_close_date) or c.feedback_accessible_immediately):
-        session.flash = T('The venue is still open to submissions.')
+        session.flash = T('The ratings are not yet available.')
         redirect(URL('feedback', 'index', args=['all']))
     c = db.venue(subm.venue_id) or redirect(URL('default', 'index'))
     venue_link = A(c.name, _href=URL('venues', 'view_venue', args=[c.id]))
