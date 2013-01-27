@@ -536,6 +536,22 @@ class Rank:
         # Normalization.
         #self.qdistr = self.qdistr / np.sum(self.qdistr, 1) [:, np.newaxis]
 
+    def evaluate_ordering(self, ordering):
+        """ rank(oredring[i]) > rank(ordering[j]) for i > j
+        Function, returns average probability of error.
+        """
+        n = len(ordering)
+        if n == 0:
+            return None
+        val, normalization = 0, 0
+        for i in xrange(n):
+            for j in xrange(i + 1, n, 1):
+                val += self.get_missrank_prob(self.orig_items_id.index(i),
+                                              self.orig_items_id.index(j))
+                normalization += 1
+         val = val / float(normalization)
+         return val
+
 
     def sort_items_truthfully(self, items):
         """ Method is for testing purposes.
