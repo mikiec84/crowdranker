@@ -42,15 +42,17 @@ def view_feedback():
     subm = db.submission(request.args(0)) or redirect(URL('default', 'index'))
     download_link = A(T('Download'), _class='btn', 
 		      _href=URL('submission', 'download_author', args=[subm.id, subm.content]))
-    if subm.author != auth.user_id:
-        session.flash = T('This is not your submission.')
-        redirect(URL('feedback', 'index', args=['all']))
+    # Checks whether the user is a manager for the venue.
+    c = db.venue(subm.venue_id) or redirect(URL('default', 'index')
+    is_manager = (auth.user.email in managers)
+    if (not is_manager) and subm.author != auth.user_id:
+        session.flash = T('Not authorized.')
+        redirect(URL('default', 'index'))
     # Checks whether we have the permission to show the feedback already.
     c = db.venue(subm.venue_id) or redirect(URL('default', 'index'))
-    if not ((datetime.utcnow() > c.rate_close_date) or c.feedback_accessible_immediately):
+    if (not is_manager) and (not ((datetime.utcnow() > c.rate_close_date) or c.feedback_accessible_immediately)):
         session.flash = T('The ratings are not yet available.')
         redirect(URL('feedback', 'index', args=['all']))
-    c = db.venue(subm.venue_id) or redirect(URL('default', 'index'))
     venue_link = A(c.name, _href=URL('venues', 'view_venue', args=[c.id]))
     # Makes a grid of comments.
     db.comment.id.readable = False
