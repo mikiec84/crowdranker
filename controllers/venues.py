@@ -1,5 +1,6 @@
 # coding: utf8
 
+import access
 import util
 
 @auth.requires_login()
@@ -23,8 +24,7 @@ def view_venue():
         can_observe = c.id in util.get_list(props.venues_can_observe)
 	# MAYDO(luca): Add option to allow only raters, or only submitters, to view
 	# all ratings.
-	# TODO(luca): put this access control in its own module to ensure consistency.
-	can_view_ratings = can_manage or c.rating_available_to_all or can_observe
+	can_view_ratings = access.can_view_ratings(c, props)
     venue_form = SQLFORM(db.venue, record=c, readonly=True)
     link_list = []
     if can_submit:
@@ -37,8 +37,10 @@ def view_venue():
         link_list.append(A(T('Edit'), _href=URL('managed_index', vars=dict(cid=c.id))))
 	link_list.append(A(T('Add submission'), _href=URL('submission', 'manager_submit', args=[c.id])))
 	link_list.append(A(T('Assign reviewers'), _href=URL('rating', 'assign_reviewers', args=[c.id])))
-    if can_view_ratings:
-        link_list.append(A(T('View ranking'), _href=URL('ranking', 'view_venue', args=[c.id])))
+    if access.can_view_submissions(c, props):
+        link_list.append(A(T('View submissions'), _href=URL('ranking', 'view_venue', args=[c.id])))
+    if access.can_view_rating_contribution(c, props):
+        link_list.append(A(T('View reviewers'), _href=URL('ranking', 'view_raters', args=[c.id])))
     return dict(form=venue_form, link_list=link_list, venue=c, has_rated=has_rated)
         
 
@@ -200,6 +202,28 @@ def observed_index():
         )
     return dict(grid=grid)
 
+
+def public_index():
+    q = ((db.venue.submissions_visible_to_all == True) &
+	 ((db.venue.submissions_visible_immediately == True) | (
+	     db.venue.close_date > datetime.utcnow())))
+    db.venue.feedback_accessible_immediately.readable = False
+    db.venue.rate_open_date.readable = False
+    db.venue.rate_close_date.readable = False
+    db.venue.name.readable = False
+    grid = SQLFORM.grid(q,
+        field_id=db.venue.id,
+        fields=[db.venue.name, db.venue.description, db.venue.close_date],
+        csv=False, details=False, create=False, editable=False, deletable=False,
+        links=[
+	    dict(header=T('Details'),
+		 body = lambda r: A(T('Details'), _href=URL('view_venue', args=[r.id]))),
+	    dict(header=T('Submissions'),
+		 body = lambda r: A(T('Submissions'), _href=URL('ranking', 'view_venue', args=[r.id])))
+            ],
+        )
+    return dict(grid=grid)
+
                 
 @auth.requires_login()
 def reviewing_duties():
@@ -325,7 +349,13 @@ def add_help_for_venue(bogus):
     db.venue.can_rank_own_submissions.comment = (
 	'Allow authors to rank their own submissions.  This is used mainly to facilitate '
 	'demos and debugging.')
-
+    db.venue.rater_contributions_visible_to_all.comment = (
+	'Allow everybody to see how much the reviewers contributed to the ranking.')
+    db.venue.submissions_visible_to_all.comment = (
+	'Submissions are visible to all.')
+    db.venue.submissions_visible_immediately = (
+	'Submissions are public immediately, even before the submission deadline.')
+    
     
 def validate_venue(form):
     """Validates the form venue, splitting managers listed on the same line."""

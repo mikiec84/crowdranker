@@ -24,6 +24,7 @@ response.google_analytics_id = None
 response.menu = [
     (T('CrowdLab Ranking System'), False, URL('default', 'index'), []),
     (T('Venues'), False, None, [
+        (T('Public Venues'), False, URL('venues', 'public_index'), []),
         (T('Venues I manage'), False, URL('venues', 'managed_index'), []),
         (T('Venues I can observe'), False, URL('venues', 'observed_index'), []),
         (T('Venues open for submission'), False, URL('venues', 'subopen_index'), []),
