@@ -125,4 +125,6 @@ def evaluate_users(db, venue_id, list_of_users):
         ordering = util.get_list(last_comparison.ordering)
         ordering = ordering[::-1]
         val = rankobj.evaluate_ordering(ordering)
-        # TODO(michael): write val to the db.
+        # Writting to the DB.
+        db((db.user_accuracy.venue_id == venue_id) &
+           (db.user_accuracy.user_id == user_id)).update(accuracy=val)
