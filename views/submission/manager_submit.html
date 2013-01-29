@@ -1,0 +1,13 @@
+{{extend 'layout.html'}}
+
+<h1>Submit to {{=venue.name}}</h1>
+
+{{=form}}
+<br>
+<ul>
+  <li class="btn">{{=A(T('Venue') + ' ' + venue.name, _href=URL('venues', 'view_venue', args=[venue.id]))}}</li>
+</ul>
+
+{{if request.is_local:}}
+{{=response.toolbar()}}
+{{pass}}

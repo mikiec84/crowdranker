@@ -90,7 +90,7 @@ def accept_review():
         duties = db((db.reviewing_duties.user_email == auth.user.email) &
             (db.reviewing_duties.venue_id == c.id)).select().first()
         if duties != None and duties.num_reviews > 0:
-            db.duties.update_record(num_reviews = num_reviews - 1)
+            duties.update_record(num_reviews = duties.num_reviews - 1)
         # Reads the most recent ratings given by the user.
         # TODO(luca): we should really poll the rating system for this; that's what
         # should keep track of these things.
