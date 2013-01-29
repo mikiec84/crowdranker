@@ -291,6 +291,8 @@ def managed_index():
     if len(request.args) > 0 and (request.args[0] == 'edit' or request.args[0] == 'new'):
         # Adds some editing help
         add_help_for_venue('bogus')
+	# Sets defaults for homeworks
+	set_homework_defaults('bogus')
     db.venue.name.readable = False
     if is_user_admin():
 	db.venue.is_approved.writable = True
@@ -355,7 +357,30 @@ def add_help_for_venue(bogus):
 	'Submissions are visible to all.')
     db.venue.submissions_visible_immediately = (
 	'Submissions are public immediately, even before the submission deadline.')
-    
+
+
+def set_homework_defaults(bogus):
+    """Sets defaults appropriate for most homeworks."""
+    db.allow_multiple_submissions.default = False
+    db.allow_multiple_submissions.readable = db.allow_multiple_submissions.writable = False
+    db.submission_title_is_file_name.default = False
+    db.submission_title_is_file_name.readable = db.submission_title_is_file_name.writable = False
+    db.can_rank_own_submissions.default = False
+    db.can_rank_own_submissions.readable = db.can_rank_own_submissions..writable = False
+    db.max_number_outstanding_reviews.default = 1
+    db.max_number_outstanding_reviews.readable = db.max_number_outstanding_reviews.writable = False
+    db.feedback_is_anonymous.default = True
+    db.feedback_is_anonymous.readable = db.feedback_is_anonymous.writable = False
+    db.submissions_visible_immediately.default = False
+    db.submissions_visible_immediately.readable = db.submissions_visible_immediately.writable = False
+    db.feedback_available_to_all.default = False
+    db.feedback_available_to_all.readable = db.feedback_available_to_all.writable = False
+    db.rating_available_to_all.default = False
+    db.rating_available_to_all.readable = db.rating_available_to_all.writable = False
+    db.rater_contributions_visible_to_all.default = False
+    db.rater_contributions_visible_to_all.readable = db.rater_contributions_visible_to_all.writable = False
+
+
     
 def validate_venue(form):
     """Validates the form venue, splitting managers listed on the same line."""
