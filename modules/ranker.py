@@ -82,7 +82,8 @@ def get_item(db, venue_id, user_id, old_items,
         users_submission_ids = None
     return rankobj.sample_item(old_items, users_submission_ids)
 
-def process_comparison(db, venue_id, user_id, sorted_items, new_item):
+def process_comparison(db, venue_id, user_id, sorted_items, new_item,
+                       alpha_annealing=0.6):
     """ Function updates quality distributions and rank of submissions (items).
 
     Arguments:
@@ -100,7 +101,8 @@ def process_comparison(db, venue_id, user_id, sorted_items, new_item):
     # therefore we cannot process comparison.
     if qdistr_param == None:
         return None
-    rankobj = Rank.from_qdistr_param(sorted_items, qdistr_param)
+    rankobj = Rank.from_qdistr_param(sorted_items, qdistr_param,
+                                     alpha=alpha_annealing)
     result = rankobj.update(sorted_items, new_item)
     # Updating the DB.
     for x in sorted_items:
@@ -128,3 +130,49 @@ def evaluate_users(db, venue_id, list_of_users):
         # Writting to the DB.
         db((db.user_accuracy.venue_id == venue_id) &
            (db.user_accuracy.user_id == user_id)).update(accuracy=val)
+        # Copying to the db.submission table.
+        if ((not db.venue.submit_constraint is None) and
+            (not db.venue.rate_constraint is None) and
+            (db.venue.submit_constraint == db.venue.rate_constraint)):
+            # TODO(michael): Check that table db.submission has field user_accuracy
+            db((db.submission.venue_id == venue_id) &
+               (db.submission.author == user_id)).update(user_accuracy=val)
+
+def rerun_processing_comparisons(self, venue_id, list_of_users,
+                                 alpha_annealing=0.6):
+    # Obtaining list of submissions.
+    comparisons = []
+    for user_id in list_of_users:
+        comp_rows = db((db.comparison.author == user_id)
+            & (db.comparison.venue_id == venue_id)).select(db.comparison.ordering, db.comparison.date)
+        comp = [(x.ordering, x.date) for x in comp_rows]
+        comparisons.extend(comp)
+    comparisons = sorted(comparisons, key=lambda x : x[1])
+    # Reversing order in comparisons.
+    comparisons = (x[0][::-1] for x in comparisons)
+    # Okay, we have comparisons in increasing order.
+    # TODO(michael): check that we can use date object as key in sorting (it should be OK)
+    # Fetching a lit of items.
+    sub = db(db.submission.venue_id == venue_id).select(db.submission.id)
+    items = []
+    qdistr_param = []
+    for x in sub:
+        items.append(x.id)
+        qdist_param.append(AVRG)
+        qdist_param.append(STDEV)
+    rankobj = Rank.from_qdistr_param(items, qdistr_param,
+                                     alpha=alpha_annealing)
+    # Updating.
+    for sorted_items in comparisons:
+        # TODO(michael): for now a new_item is just the first item
+        # in a comparison because we don't use it now,
+        # but fix it if we use new_item.
+        result = rankobj.update(sorted_items, new_item=sorted_items[0])
+    # Updating the DB.
+    for x in items:
+        perc, avrg, stdev = result[x]
+        db((db.quality.venue_id == venue_id) &
+           (db.quality.submission_id == x)).update(average=avrg, stdev=stdev, percentile=perc)
+        # Updating submission table with its quality and error.
+        db((db.submission.id == x) &
+           (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev)

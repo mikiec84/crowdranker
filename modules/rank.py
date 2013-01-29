@@ -110,7 +110,7 @@ class Rank:
         self.quality_true = self.num_items - self.id2rank_true
 
     @classmethod
-    def from_qdistr_param(cls, items, qdistr_param, alpha=0.9,
+    def from_qdistr_param(cls, items, qdistr_param, alpha=0.6,
                          num_bins=2001, cost_obj=None):
         """ Alternative constructor for creating rank object
         from quality distributions parameters.
