@@ -106,6 +106,7 @@ db.define_table('submission',
     Field('quality', 'double'),
     Field('error', 'double'), # True rank of a submission is in the interval
                               # [current_rank - error, current_rank + error]
+    Field('user_accuracy', 'double'),
     )
     
 db.submission.id.readable = db.submission.id.writable = False

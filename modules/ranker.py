@@ -134,7 +134,6 @@ def evaluate_users(db, venue_id, list_of_users):
         if ((not db.venue.submit_constraint is None) and
             (not db.venue.rate_constraint is None) and
             (db.venue.submit_constraint == db.venue.rate_constraint)):
-            # TODO(michael): Check that table db.submission has field user_accuracy
             db((db.submission.venue_id == venue_id) &
                (db.submission.author == user_id)).update(user_accuracy=val)
 
