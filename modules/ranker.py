@@ -22,13 +22,16 @@ def get_all_items_and_qdistr_param(db, venue_id):
     qdistr_param = []
     for x in sub:
         items.append(x.id)
-        quality = db((db.quality.venue_id == venue_id) &
-                  (db.quality.submission_id == x.id)).select(db.quality.average,
-                  db.quality.stdev).first()
-        if quality == None:
+        quality_row = db((db.submission.venue_id == venue_id) &
+                  (db.submission.id == x.id)).select(db.submission.quality,
+                  db.submission.error).first()
+        #quality = db((db.quality.venue_id == venue_id) &
+        #          (db.quality.submission_id == x.id)).select(db.quality.average,
+        #          db.quality.stdev).first()
+        if quality_row == None:
             return None, None
-        qdistr_param.append(quality.average)
-        qdistr_param.append(quality.stdev)
+        qdistr_param.append(quality_row.quality)
+        qdistr_param.append(quality_row.error)
     # Ok, items and qdistr_param are filled.
     return items, qdistr_param
 
@@ -37,13 +40,16 @@ def get_qdistr_param(db, venue_id, items_id):
         return None
     qdistr_param = []
     for x in items_id:
-        quality = db((db.quality.venue_id == venue_id) &
-                  (db.quality.submission_id == x)).select(db.quality.average,
-                  db.quality.stdev).first()
-        if quality == None:
+        quality_row = db((db.submission.venue_id == venue_id) &
+                  (db.submission.id == x.id)).select(db.submission.quality,
+                  db.submission.error).first()
+        #quality = db((db.quality.venue_id == venue_id) &
+        #          (db.quality.submission_id == x)).select(db.quality.average,
+        #          db.quality.stdev).first()
+        if quality_row == None:
             return None
-        qdistr_param.append(quality.average)
-        qdistr_param.append(quality.stdev)
+        qdistr_param.append(quality_row.quality)
+        qdistr_param.append(quality_row.error)
     return qdistr_param
 
 def get_init_average_stdev():
@@ -107,8 +113,8 @@ def process_comparison(db, venue_id, user_id, sorted_items, new_item,
     # Updating the DB.
     for x in sorted_items:
         perc, avrg, stdev = result[x]
-        db((db.quality.venue_id == venue_id) &
-           (db.quality.submission_id == x)).update(average=avrg, stdev=stdev, percentile=perc)
+        #db((db.quality.venue_id == venue_id) &
+        #   (db.quality.submission_id == x)).update(average=avrg, stdev=stdev, percentile=perc)
         # Updating submission table with its quality and error.
         db((db.submission.id == x) &
            (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev)
@@ -130,12 +136,6 @@ def evaluate_users(db, venue_id, list_of_users):
         # Writting to the DB.
         db((db.user_accuracy.venue_id == venue_id) &
            (db.user_accuracy.user_id == user_id)).update(accuracy=val)
-        # Copying to the db.submission table.
-        if ((not db.venue.submit_constraint is None) and
-            (not db.venue.rate_constraint is None) and
-            (db.venue.submit_constraint == db.venue.rate_constraint)):
-            db((db.submission.venue_id == venue_id) &
-               (db.submission.author == user_id)).update(user_accuracy=val)
 
 def rerun_processing_comparisons(self, venue_id, list_of_users,
                                  alpha_annealing=0.6):
@@ -170,8 +170,8 @@ def rerun_processing_comparisons(self, venue_id, list_of_users,
     # Updating the DB.
     for x in items:
         perc, avrg, stdev = result[x]
-        db((db.quality.venue_id == venue_id) &
-           (db.quality.submission_id == x)).update(average=avrg, stdev=stdev, percentile=perc)
+        #db((db.quality.venue_id == venue_id) &
+        #   (db.quality.submission_id == x)).update(average=avrg, stdev=stdev, percentile=perc)
         # Updating submission table with its quality and error.
         db((db.submission.id == x) &
            (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev)
