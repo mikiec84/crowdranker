@@ -119,7 +119,7 @@ def process_comparison(db, venue_id, user_id, sorted_items, new_item,
         db((db.submission.id == x) &
            (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev)
 
-def evaluate_users(db, venue_id, list_of_users):
+def evaluate_contributors(db, venue_id, list_of_users):
     # Obtaining list of submissions.
     items, qdistr_param = get_all_items_and_qdistr_param(db, venue_id)
     if items == None or len(items) == 0:
@@ -137,7 +137,7 @@ def evaluate_users(db, venue_id, list_of_users):
         db((db.user_accuracy.venue_id == venue_id) &
            (db.user_accuracy.user_id == user_id)).update(accuracy=val)
 
-def rerun_processing_comparisons(venue_id, list_of_users,
+def rerun_processing_comparisons(db, venue_id, list_of_users,
                                  alpha_annealing=0.6):
     # Obtaining list of submissions.
     comparisons = []
