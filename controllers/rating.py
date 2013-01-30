@@ -326,7 +326,7 @@ def recompute_ranks():
         # Obtaining list of users who can rate the venue.
         list_of_user = db(db.user_list.id == c.rate_constraint).select(db.user_list.email_list).first()
         # Rerun ranking algorithm.
-        ranker.rerun_processing_comparisons(c.id, list_of_user,
+        ranker.rerun_processing_comparisons(db, c.id, list_of_user,
                                             alpha_annealing=0.6)
         db.commit()
         session.flash = T('Recomputing ranks has started.')
