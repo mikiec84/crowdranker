@@ -137,13 +137,16 @@ def evaluate_users(db, venue_id, list_of_users):
         db((db.user_accuracy.venue_id == venue_id) &
            (db.user_accuracy.user_id == user_id)).update(accuracy=val)
 
-def rerun_processing_comparisons(self, venue_id, list_of_users,
+def rerun_processing_comparisons(venue_id, list_of_users,
                                  alpha_annealing=0.6):
     # Obtaining list of submissions.
     comparisons = []
     for user_id in list_of_users:
         comp_rows = db((db.comparison.author == user_id)
             & (db.comparison.venue_id == venue_id)).select(db.comparison.ordering, db.comparison.date)
+        if comp_rows is None or len(comp_rows) == 0:
+            # The user did not make any comparisons, so skip it.
+            continue
         comp = [(x.ordering, x.date) for x in comp_rows]
         comparisons.extend(comp)
     comparisons = sorted(comparisons, key=lambda x : x[1])

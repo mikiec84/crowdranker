@@ -37,6 +37,7 @@ def view_venue():
         link_list.append(A(T('Edit'), _href=URL('managed_index', vars=dict(cid=c.id))))
 	link_list.append(A(T('Add submission'), _href=URL('submission', 'manager_submit', args=[c.id])))
 	link_list.append(A(T('Assign reviewers'), _href=URL('rating', 'assign_reviewers', args=[c.id])))
+        link_list.append(A(T('Recompute ranks'), _href=URL('rating', 'recompute_ranks', args=[c.id])))
     if can_view_ratings:
         link_list.append(A(T('View ranking'), _href=URL('ranking', 'view_venue', args=[c.id])))
     return dict(form=venue_form, link_list=link_list, venue=c, has_rated=has_rated)

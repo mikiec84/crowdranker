@@ -304,3 +304,30 @@ def verify_rating_form(subm_id):
 		form.errors.comments = T('Error in the received ranking')
 		session.flash = T('Error in the received ranking')
     return decode_order
+
+def recompute_ranks():
+    # Gets the information on the venue.
+    c = db.venue(request.args[0]) or redirect(URL('default', 'index'))
+    # Gets information on the user.
+    props = db(db.user_properties.email == auth.user.email).select().first()
+    if props == None:
+        session.flash = T('You cannot recompute ranks for this venue.')
+        redirect(URL('default', 'index'))
+    managed_venues_list = util.get_list(props.venues_can_manage)
+    if c.id not in managed_venues_list:
+        session.flash = T('You cannot recompute ranks for this venue.')
+        redirect(URL('default', 'index'))
+    # This venue_form is used to display the venue.
+    venue_form = SQLFORM(db.venue, record=c, readonly=True)
+    confirmation_form = FORM.confirm(T('Recompute'),
+        {T('Cancel'): URL('venues', 'view_venue', args=[c.id])})
+    if confirmation_form.accepted:
+        # Obtaining list of users who can rate the venue.
+        list_of_user = db(db.user_list.id == c.rate_constraint).select(db.user_list.email_list).first()
+        # Rerun ranking algorithm.
+        ranker.rerun_processing_comparisons(c.id, list_of_user,
+                                            alpha_annealing=0.6)
+        db.commit()
+        session.flash = T('Recomputing ranks has started.')
+        redirect(URL('venues', 'view_venue', args=[c.id]))
+    return dict(venue_form=venue_form, confirmation_form=confirmation_form)
