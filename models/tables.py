@@ -109,6 +109,7 @@ db.define_table('submission',
     Field('quality', 'double'),
     Field('error', 'double'), # True rank of a submission is in the interval
                               # [current_rank - error, current_rank + error]
+    Field('n_reviews', 'integer'),
     )
     
 db.submission.id.readable = db.submission.id.writable = False
@@ -125,6 +126,9 @@ db.submission.error.readable = db.submission.error.writable = False
 db.submission.link.readable = db.submission.link.writable = False
 db.submission.link.requires = IS_URL()
 db.submission.title.requires = IS_LENGTH(minsize=2)
+db.submission.n_reviews.default = 0
+db.submission.n_reviews.writable = False
+
 
 db.define_table('comment',
     Field('author', db.auth_user,  default=auth.user_id),
