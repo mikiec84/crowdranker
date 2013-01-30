@@ -4,6 +4,7 @@ from gluon import *
 from rank import Rank
 from rank import Cost
 import util
+import logwriter as lw
 
 NUM_BINS = 2001
 AVRG = NUM_BINS / 2
@@ -155,8 +156,10 @@ def rerun_processing_comparisons(db, venue_id, list_of_users,
             continue
         comp = [(util.get_list(x.ordering), x.date) for x in comp_rows]
         comparisons.extend(comp)
+        lw.write('user id is %s'%user_id)
     comparisons = sorted(comparisons, key=lambda x : x[1])
     # Reversing order in comparisons.
+    lw.write(comparisons)
     comparisons = [x[0][::-1] for x in comparisons]
     # Okay, we have comparisons in increasing order.
     # TODO(michael): check that we can use date object as key in sorting (it should be OK)
@@ -177,6 +180,7 @@ def rerun_processing_comparisons(db, venue_id, list_of_users,
         # but fix it if we use new_item.
         if len(sorted_items) < 2:
             continue
+        lw.write(sorted_items)
         result = rankobj.update(sorted_items, new_item=sorted_items[0])
     # Updating the DB.
     for x in items:
