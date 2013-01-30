@@ -552,8 +552,11 @@ class Rank:
         # entity e.
         val = 0
         for i in xrange(1, n, 1):
-            l1 = [self.get_missrank_prob(ordering[j], ordering[i]) for j in xrange(i + 1, n, 1)]
-            l2 = [self.get_missrank_prob(ordering[i], ordering[j]) for j in xrange(0, i, 1)]
+            ii = self.orig_items_id.index(ordering[i])
+            l1 = [self.get_missrank_prob(self.orig_items_id.index(ordering[j]),
+                                               ii) for j in xrange(i + 1, n, 1)]
+            l2 = [self.get_missrank_prob(ii,
+                   self.orig_items_id.index(ordering[j])) for j in xrange(0, i, 1)]
             pr_error = 0
             if len(l1) != 0:
                 pr_error = max(l1)

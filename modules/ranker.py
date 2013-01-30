@@ -28,10 +28,13 @@ def get_all_items_and_qdistr_param(db, venue_id):
         #quality = db((db.quality.venue_id == venue_id) &
         #          (db.quality.submission_id == x.id)).select(db.quality.average,
         #          db.quality.stdev).first()
-        if quality_row == None:
-            return None, None
-        qdistr_param.append(quality_row.quality)
-        qdistr_param.append(quality_row.error)
+        if (quality_row is None or quality_row.quality is None or
+           quality_row.error is None):
+            qdistr_param.append(AVRG)
+            qdistr_param.append(STDEV)
+        else:
+            qdistr_param.append(quality_row.quality)
+            qdistr_param.append(quality_row.error)
     # Ok, items and qdistr_param are filled.
     return items, qdistr_param
 
@@ -41,15 +44,18 @@ def get_qdistr_param(db, venue_id, items_id):
     qdistr_param = []
     for x in items_id:
         quality_row = db((db.submission.venue_id == venue_id) &
-                  (db.submission.id == x.id)).select(db.submission.quality,
+                  (db.submission.id == x)).select(db.submission.quality,
                   db.submission.error).first()
         #quality = db((db.quality.venue_id == venue_id) &
         #          (db.quality.submission_id == x)).select(db.quality.average,
         #          db.quality.stdev).first()
-        if quality_row == None:
-            return None
-        qdistr_param.append(quality_row.quality)
-        qdistr_param.append(quality_row.error)
+        if (quality_row is None or quality_row.quality is None or
+           quality_row.error is None):
+            qdistr_param.append(AVRG)
+            qdistr_param.append(STDEV)
+        else:
+            qdistr_param.append(quality_row.quality)
+            qdistr_param.append(quality_row.error)
     return qdistr_param
 
 def get_init_average_stdev():
@@ -147,11 +153,11 @@ def rerun_processing_comparisons(db, venue_id, list_of_users,
         if comp_rows is None or len(comp_rows) == 0:
             # The user did not make any comparisons, so skip it.
             continue
-        comp = [(x.ordering, x.date) for x in comp_rows]
+        comp = [(util.get_list(x.ordering), x.date) for x in comp_rows]
         comparisons.extend(comp)
     comparisons = sorted(comparisons, key=lambda x : x[1])
     # Reversing order in comparisons.
-    comparisons = (x[0][::-1] for x in comparisons)
+    comparisons = [x[0][::-1] for x in comparisons]
     # Okay, we have comparisons in increasing order.
     # TODO(michael): check that we can use date object as key in sorting (it should be OK)
     # Fetching a lit of items.
@@ -160,8 +166,8 @@ def rerun_processing_comparisons(db, venue_id, list_of_users,
     qdistr_param = []
     for x in sub:
         items.append(x.id)
-        qdist_param.append(AVRG)
-        qdist_param.append(STDEV)
+        qdistr_param.append(AVRG)
+        qdistr_param.append(STDEV)
     rankobj = Rank.from_qdistr_param(items, qdistr_param,
                                      alpha=alpha_annealing)
     # Updating.
@@ -169,6 +175,8 @@ def rerun_processing_comparisons(db, venue_id, list_of_users,
         # TODO(michael): for now a new_item is just the first item
         # in a comparison because we don't use it now,
         # but fix it if we use new_item.
+        if len(sorted_items) < 2:
+            continue
         result = rankobj.update(sorted_items, new_item=sorted_items[0])
     # Updating the DB.
     for x in items:

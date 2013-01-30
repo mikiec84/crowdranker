@@ -325,6 +325,12 @@ def recompute_ranks():
     if confirmation_form.accepted:
         # Obtaining list of users who can rate the venue.
         list_of_user = db(db.user_list.id == c.rate_constraint).select(db.user_list.email_list).first()
+        if list_of_user is None:
+            # We don't have list of users, so create one base on who has made reviews
+            submission_rows = db(db.submission.venue_id == c.id).select(db.submission.author)
+            list_of_user = list(set([x.author for x in submission_rows]))
+        else:
+            list_of_user = util.get_list(list_of_user)
         # Rerun ranking algorithm.
         ranker.rerun_processing_comparisons(db, c.id, list_of_user,
                                             alpha_annealing=0.6)
@@ -353,6 +359,12 @@ def evaluate_contributors():
     if confirmation_form.accepted:
         # Obtaining list of users who can rate the venue.
         list_of_user = db(db.user_list.id == c.rate_constraint).select(db.user_list.email_list).first()
+        if list_of_user is None:
+            # We don't have list of users, so create one base on who has made reviews
+            submission_rows = db(db.submission.venue_id == c.id).select(db.submission.author)
+            list_of_user = list(set([x.author for x in submission_rows]))
+        else:
+            list_of_user = util.get_list(list_of_user)
         # Rerun ranking algorithm.
         ranker.evaluate_contributors(db, c.id, list_of_user)
         # TODO(michael): save evaluating date.
