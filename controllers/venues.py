@@ -39,7 +39,8 @@ def view_venue():
 	link_list.append(A(T('Assign reviewers'), _href=URL('rating', 'assign_reviewers', args=[c.id])))
     if access.can_view_submissions(c, props):
         link_list.append(A(T('View submissions'), _href=URL('ranking', 'view_venue', args=[c.id])))
-    if access.can_view_rating_contribution(c, props):
+
+    if access.can_view_rating_contributions(c, props):
         link_list.append(A(T('View reviewers'), _href=URL('ranking', 'view_raters', args=[c.id])))
     return dict(form=venue_form, link_list=link_list, venue=c, has_rated=has_rated)
         
