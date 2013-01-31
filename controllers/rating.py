@@ -310,70 +310,92 @@ def verify_rating_form(subm_id):
 		session.flash = T('Error in the received ranking')
     return decode_order
 
-@auth.requires_login()        
+def get_list_of_users(venue_id, constraint, users_are_raters=True):
+    """ Arguments
+        - users_are_raters
+            if True, then method returns a list of users who rated the venue
+            if False, then method returns a list of users who submitter to the venue.
+        - constraints is whether rate_constraints or submit_constraints
+    """
+    # Obtaining list of users who can rate the venue.
+    list_of_users = db(db.user_list.id == constraint).select(db.user_list.email_list).first()
+    if not list_of_users is None:
+        return list_of_users
+    # We don't have list of users, so create one base on reviews or submissions.
+    if users_are_raters:
+        rows = db(db.comparison.venue_id == venue_id).select(db.comparison.author)
+    else:
+        rows = db(db.submission.venue_id == venue_id).select(db.submission.author)
+    list_of_users = list(set([x.author for x in rows]))
+    return list_of_users
+
+def check_manager_eligibility(venue_id, user_id, reject_msg):
+    props = db(db.user_properties.email == user_id).select().first()
+    if props == None:
+        session.flash = T(reject_msg)
+        redirect(URL('default', 'index'))
+    managed_venues_list = util.get_list(props.venues_can_manage)
+    if venue_id not in managed_venues_list:
+        session.flash = T(regect_msg)
+        redirect(URL('default', 'index'))
+
+@auth.requires_login()
 def recompute_ranks():
     # Gets the information on the venue.
     c = db.venue(request.args[0]) or redirect(URL('default', 'index'))
-    # Gets information on the user.
-    props = db(db.user_properties.email == auth.user.email).select().first()
-    if props == None:
-        session.flash = T('You cannot recompute ranks for this venue.')
-        redirect(URL('default', 'index'))
-    managed_venues_list = util.get_list(props.venues_can_manage)
-    if c.id not in managed_venues_list:
-        session.flash = T('You cannot recompute ranks for this venue.')
-        redirect(URL('default', 'index'))
+    check_manager_eligibility(c.id, auth.user.email, 'You cannot recompute ranks for this venue')
     # This venue_form is used to display the venue.
     venue_form = SQLFORM(db.venue, record=c, readonly=True)
     confirmation_form = FORM.confirm(T('Recompute'),
         {T('Cancel'): URL('venues', 'view_venue', args=[c.id])})
     if confirmation_form.accepted:
         # Obtaining list of users who can rate the venue.
-        list_of_user = db(db.user_list.id == c.rate_constraint).select(db.user_list.email_list).first()
-        if list_of_user is None:
-            # We don't have list of users, so create one base on who has made reviews
-            comparison_rows = db(db.comparison.venue_id == c.id).select(db.comparison.author)
-            list_of_user = list(set([x.author for x in comparison_rows]))
-        else:
-            list_of_user = util.get_list(list_of_user)
+        list_of_users = get_list_of_users(c.id, c.rate_constraint)
         # Rerun ranking algorithm.
-        ranker.rerun_processing_comparisons(db, c.id, list_of_user,
+        ranker.rerun_processing_comparisons(db, c.id, list_of_users,
                                             alpha_annealing=0.6)
         db.commit()
         session.flash = T('Recomputing ranks has started.')
         redirect(URL('venues', 'view_venue', args=[c.id]))
     return dict(venue_form=venue_form, confirmation_form=confirmation_form)
 
-@auth.requires_login()        
+@auth.requires_login()
 def evaluate_contributors():
     # Gets the information on the venue.
     c = db.venue(request.args[0]) or redirect(URL('default', 'index'))
-    # Gets information on the user.
-    props = db(db.user_properties.email == auth.user.email).select().first()
-    if props == None:
-        session.flash = T('You cannot evaluate contributors for this venue.')
-        redirect(URL('default', 'index'))
-    managed_venues_list = util.get_list(props.venues_can_manage)
-    if c.id not in managed_venues_list:
-        session.flash = T('You cannot evaluate contributors for this venue.')
-        redirect(URL('default', 'index'))
+    check_manager_eligibility(c.id, auth.user.email, 'You cannot evaluate contributors for this venue')
     # This venue_form is used to display the venue.
     venue_form = SQLFORM(db.venue, record=c, readonly=True)
     confirmation_form = FORM.confirm(T('Evaluate'),
         {T('Cancel'): URL('venues', 'view_venue', args=[c.id])})
     if confirmation_form.accepted:
-        # Obtaining list of users who can rate the venue.
-        list_of_user = db(db.user_list.id == c.rate_constraint).select(db.user_list.email_list).first()
-        if list_of_user is None:
-            # We don't have list of users, so create one base on who has made reviews
-            comparison_rows = db(db.comparison.venue_id == c.id).select(db.comparison.author)
-            list_of_user = list(set([x.author for x in comparison_rows]))
-        else:
-            list_of_user = util.get_list(list_of_user)
+        list_of_users = get_list_of_users(c.id, c.rate_constraint)
         # Rerun ranking algorithm.
-        ranker.evaluate_contributors(db, c.id, list_of_user)
+        ranker.evaluate_contributors(db, c.id, list_of_users)
         # TODO(michael): save evaluating date.
         db.commit()
         session.flash = T('Evaluation has started.')
         redirect(URL('venues', 'view_venue', args=[c.id]))
     return dict(venue_form=venue_form, confirmation_form=confirmation_form)
+
+
+@auth.requires_login()
+def compute_final_grades():
+    # Gets the information on the venue.
+    c = db.venue(request.args[0]) or redirect(URL('default', 'index'))
+    check_manager_eligibility(c.id, auth.user.email, 'You cannot compute final grades for this venue')
+    # This venue_form is used to display the venue.
+    venue_form = SQLFORM(db.venue, record=c, readonly=True)
+    confirmation_form = FORM.confirm(T('Compute grades'),
+        {T('Cancel'): URL('venues', 'view_venue', args=[c.id])})
+    if confirmation_form.accepted:
+        list_of_users = get_list_of_users(c.id, c.submit_constraint,
+                                                users_are_raters=False)
+        # TODO(michael): implement computing final grades.
+        # ....
+        # TODO(michael): save evaluating date.
+        db.commit()
+        session.flash = T('Evaluation has started.')
+        redirect(URL('venues', 'view_venue', args=[c.id]))
+    return dict(venue_form=venue_form, confirmation_form=confirmation_form)
+
