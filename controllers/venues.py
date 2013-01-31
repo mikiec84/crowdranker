@@ -37,10 +37,15 @@ def view_venue():
         link_list.append(A(T('Edit'), _href=URL('managed_index', vars=dict(cid=c.id))))
 	link_list.append(A(T('Add submission'), _href=URL('submission', 'manager_submit', args=[c.id])))
 	link_list.append(A(T('Assign reviewers'), _href=URL('rating', 'assign_reviewers', args=[c.id])))
+        link_list.append(A(T('Recompute ranks'), _href=URL('rating', 'recompute_ranks', args=[c.id])))
+        link_list.append(A(T('Evaluate contributors'), _href=URL('rating', 'evaluate_contributors', args=[c.id])))
+        link_list.append(A(T('Compute final grades'), _href=URL('rating', 'compute_final_grades', args=[c.id])))
     if access.can_view_submissions(c, props):
         link_list.append(A(T('View submissions'), _href=URL('ranking', 'view_venue', args=[c.id])))
-    if access.can_view_rating_contribution(c, props):
+    if access.can_view_rating_contributions(c, props):
         link_list.append(A(T('View reviewers'), _href=URL('ranking', 'view_raters', args=[c.id])))
+    if can_view_ratings:
+        link_list.append(A(T('View ranking'), _href=URL('ranking', 'view_venue', args=[c.id])))
     return dict(form=venue_form, link_list=link_list, venue=c, has_rated=has_rated)
         
 
@@ -366,7 +371,7 @@ def set_homework_defaults(bogus):
     db.submission_title_is_file_name.default = False
     db.submission_title_is_file_name.readable = db.submission_title_is_file_name.writable = False
     db.can_rank_own_submissions.default = False
-    db.can_rank_own_submissions.readable = db.can_rank_own_submissions..writable = False
+    db.can_rank_own_submissions.readable = db.can_rank_own_submissions.writable = False
     db.max_number_outstanding_reviews.default = 1
     db.max_number_outstanding_reviews.readable = db.max_number_outstanding_reviews.writable = False
     db.feedback_is_anonymous.default = True
