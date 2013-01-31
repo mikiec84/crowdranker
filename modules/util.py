@@ -109,3 +109,12 @@ def get_random_id(n_sections=6, section_length=6):
             s += random.choice(consonants) + random.choice(vowels)
         sections.append(s)
     return '_'.join(sections)
+
+def shorten(s, max_length=32):
+    max_length = max(10, max_length)
+    if s is None:
+	return ""
+    if len(s) <= max_length:
+	return s
+    else:
+	return s[:max_length - 3] + "..."

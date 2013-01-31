@@ -128,19 +128,6 @@ db.submission.link.requires = IS_URL()
 db.submission.title.requires = IS_LENGTH(minsize=2)
 db.submission.n_reviews.default = 0
 db.submission.n_reviews.writable = False
-
-
-db.define_table('comment',
-    Field('author', db.auth_user,  default=auth.user_id),
-    Field('date', 'datetime', default=datetime.utcnow()),
-    Field('submission_id', db.submission),
-    Field('content', 'text'),
-    )
-
-# For generating automatic display of comments.
-db.comment.date.readable = False
-db.comment.author.readable = False
-db.comment.submission_id.readable = False
         
 db.define_table('user_accuracy',
     Field('user_id', db.auth_user),
@@ -163,6 +150,7 @@ db.define_table('task', # Tasks a user should complete for reviewing.
     Field('submission_name'), # Name of the submission from the point of view of the user.
     Field('assigned_date', 'datetime', default=datetime.utcnow()),
     Field('completed_date', 'datetime', default=datetime(dates.MAXYEAR, 12, 1)),
+    Field('comments', 'text'),
     )
 
 db.task.id.readable = db.task.id.writable = False

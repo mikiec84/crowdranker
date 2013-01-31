@@ -110,7 +110,7 @@ class Rank:
         self.quality_true = self.num_items - self.id2rank_true
 
     @classmethod
-    def from_qdistr_param(cls, items, qdistr_param, alpha=0.9,
+    def from_qdistr_param(cls, items, qdistr_param, alpha=0.6,
                          num_bins=2001, cost_obj=None):
         """ Alternative constructor for creating rank object
         from quality distributions parameters.
@@ -541,17 +541,29 @@ class Rank:
         Function, returns average probability of error.
         """
         n = len(ordering)
-        if n == 0:
-            return None
-        val, normalization = 0, 0
-        for i in xrange(n):
-            for j in xrange(i + 1, n, 1):
-                val += self.get_missrank_prob(self.orig_items_id.index(i),
-                                              self.orig_items_id.index(j))
-                normalization += 1
-         val = val / float(normalization)
-         return val
-
+        if n <= 1:
+            return 0
+        # Below ordering is evaluated using "incremental" way.
+        # Incremental type of ordering evaluation is when for each
+        # entity e in ordering (starting from 2nd one) we compute
+        # error_e = 1 - 2*max(Pr(error)) and total evaluation is
+        # a sum of all error_e.
+        # max(Pr(error)) is a maxmum error that the user made when comparing
+        # entity e.
+        val = 0
+        for i in xrange(1, n, 1):
+            ii = self.orig_items_id.index(ordering[i])
+            l1 = [self.get_missrank_prob(self.orig_items_id.index(ordering[j]),
+                                               ii) for j in xrange(i + 1, n, 1)]
+            l2 = [self.get_missrank_prob(ii,
+                   self.orig_items_id.index(ordering[j])) for j in xrange(0, i, 1)]
+            pr_error = 0
+            if len(l1) != 0:
+                pr_error = max(l1)
+            if len(l2) != 0:
+                pr_error = max([max(l2), pr_error])
+            val += 1 - 2 * pr_error
+        return val
 
     def sort_items_truthfully(self, items):
         """ Method is for testing purposes.

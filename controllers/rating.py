@@ -1,5 +1,6 @@
 # coding: utf8
 
+import access
 import util
 import ranker
 import gluon.contrib.simplejson as simplejson
@@ -195,7 +196,8 @@ def review_link(r):
 
 @auth.requires_login()        
 def review():
-    """Enters the review, and comparisons, for a particular task."""
+    """Enters the review, and comparisons, for a particular task.
+    This function is only used to enter NEW reviews."""
 
     # Here is where the comparisons are entered.
     t = db.task(request.args(0)) or redirect(URL('default', 'index'))
@@ -223,32 +225,39 @@ def review():
 
     # Now we need to find the names of the submissions (for the user) that were 
     # used in this last ordering.
-    # We create a submission_id to name mapping, that will be passed in json to the view.
+    # We create a submission_id to line mapping, that will be passed in json to the view.
     submissions = {}
     for i in last_ordering:
 	# Finds the task.
 	st = db((db.task.submission_id == i) &
 		(db.task.user_id == auth.user_id)).select().first()
 	if st != None:
-	    # It should always be non-None, as we never delete tasks.
-	    submissions[i] = st.submission_name
+	    v = access.validate_task(db, st.id, auth.user_id)
+	    if v != None:
+		(_, subm, cont) = v
+		line = SPAN(A(st.submission_name, _href=URL('submission', 'view_submission', args=[i])),
+			    " (Comments: ", util.shorten(st.comments), ") ",
+			    A(T('Download'), _class='btn',
+			      _href=URL('download_reviewer', args=[st.id, subm.content])))
+		submissions[i] = line 
     # Adds also the last submission.
-    submissions[t.submission_id] = t.submission_name
+    v = access.validate_task(db, t.id, auth.user_id)
+    if v == None:
+	# Should not happen.
+	session.flash('You cannot view this submission.')
+	redirect(URL('default', 'index'))
+    (_, subm, cont) = v
+    line = SPAN(A(t.submission_name, _href=(URL('submission', 'view_submission', args=[t.id]))),
+		" ",
+		A(T('Download'), _class='btn', _href=URL('download_reviewer', args=[t.id, subm.content])))
+    submissions[t.submission_id] = line
 	    
     # Used to check each draggable item and determine which one we should
     # highlight (because its the current/new record).
     new_comparison_item = t.submission_id
 
-    # Reads any comments previously given by the user on this submission.
-    previous_comments = db((db.comment.author == auth.user_id) 
-        & (db.comment.submission_id == t.submission_id)).select(orderby=~db.comment.date).first()
-    if previous_comments == None:
-        previous_comment_text = ''
-    else:
-        previous_comment_text = previous_comments.content
-
     form = SQLFORM.factory(
-        Field('comments', 'text', default=previous_comment_text),
+        Field('comments', 'text'),
         hidden=dict(order="")
         )
 
@@ -257,14 +266,7 @@ def review():
 	ordering = form.vars.order
         comparison_id = db.comparison.insert(venue_id=t.venue_id, ordering=ordering) 
         # Marks the task as done.
-        t.update_record(completed_date=datetime.utcnow())
-        # Adds the comment to the comments for the submission, over-writing any previous
-        # comments.
-        if previous_comments == None:
-            db.comment.insert(submission_id = t.submission_id,
-                content = form.vars.comments)
-        else:
-            previous_comments.update_record(content = form.vars.comments)
+        t.update_record(completed_date=datetime.utcnow(), comments=form.vars.comments)
 
         # TODO(luca): put it in a queue of things that need processing.
         # All updates done.
@@ -276,10 +278,13 @@ def review():
 	redirect(URL('rating', 'task_index', args=['open']))
 
     return dict(form=form, task=t, 
-        submissions = submissions, 
+        submissions = submissions,
+	sub_title = t.submission_name,
+	venue = venue,
         current_list = current_list,
         new_comparison_item = new_comparison_item,
         )
+
         
 def verify_rating_form(subm_id):        
     def decode_order(form):
@@ -304,3 +309,71 @@ def verify_rating_form(subm_id):
 		form.errors.comments = T('Error in the received ranking')
 		session.flash = T('Error in the received ranking')
     return decode_order
+
+@auth.requires_login()        
+def recompute_ranks():
+    # Gets the information on the venue.
+    c = db.venue(request.args[0]) or redirect(URL('default', 'index'))
+    # Gets information on the user.
+    props = db(db.user_properties.email == auth.user.email).select().first()
+    if props == None:
+        session.flash = T('You cannot recompute ranks for this venue.')
+        redirect(URL('default', 'index'))
+    managed_venues_list = util.get_list(props.venues_can_manage)
+    if c.id not in managed_venues_list:
+        session.flash = T('You cannot recompute ranks for this venue.')
+        redirect(URL('default', 'index'))
+    # This venue_form is used to display the venue.
+    venue_form = SQLFORM(db.venue, record=c, readonly=True)
+    confirmation_form = FORM.confirm(T('Recompute'),
+        {T('Cancel'): URL('venues', 'view_venue', args=[c.id])})
+    if confirmation_form.accepted:
+        # Obtaining list of users who can rate the venue.
+        list_of_user = db(db.user_list.id == c.rate_constraint).select(db.user_list.email_list).first()
+        if list_of_user is None:
+            # We don't have list of users, so create one base on who has made reviews
+            comparison_rows = db(db.comparison.venue_id == c.id).select(db.comparison.author)
+            list_of_user = list(set([x.author for x in comparison_rows]))
+        else:
+            list_of_user = util.get_list(list_of_user)
+        # Rerun ranking algorithm.
+        ranker.rerun_processing_comparisons(db, c.id, list_of_user,
+                                            alpha_annealing=0.6)
+        db.commit()
+        session.flash = T('Recomputing ranks has started.')
+        redirect(URL('venues', 'view_venue', args=[c.id]))
+    return dict(venue_form=venue_form, confirmation_form=confirmation_form)
+
+@auth.requires_login()        
+def evaluate_contributors():
+    # Gets the information on the venue.
+    c = db.venue(request.args[0]) or redirect(URL('default', 'index'))
+    # Gets information on the user.
+    props = db(db.user_properties.email == auth.user.email).select().first()
+    if props == None:
+        session.flash = T('You cannot evaluate contributors for this venue.')
+        redirect(URL('default', 'index'))
+    managed_venues_list = util.get_list(props.venues_can_manage)
+    if c.id not in managed_venues_list:
+        session.flash = T('You cannot evaluate contributors for this venue.')
+        redirect(URL('default', 'index'))
+    # This venue_form is used to display the venue.
+    venue_form = SQLFORM(db.venue, record=c, readonly=True)
+    confirmation_form = FORM.confirm(T('Evaluate'),
+        {T('Cancel'): URL('venues', 'view_venue', args=[c.id])})
+    if confirmation_form.accepted:
+        # Obtaining list of users who can rate the venue.
+        list_of_user = db(db.user_list.id == c.rate_constraint).select(db.user_list.email_list).first()
+        if list_of_user is None:
+            # We don't have list of users, so create one base on who has made reviews
+            comparison_rows = db(db.comparison.venue_id == c.id).select(db.comparison.author)
+            list_of_user = list(set([x.author for x in comparison_rows]))
+        else:
+            list_of_user = util.get_list(list_of_user)
+        # Rerun ranking algorithm.
+        ranker.evaluate_contributors(db, c.id, list_of_user)
+        # TODO(michael): save evaluating date.
+        db.commit()
+        session.flash = T('Evaluation has started.')
+        redirect(URL('venues', 'view_venue', args=[c.id]))
+    return dict(venue_form=venue_form, confirmation_form=confirmation_form)

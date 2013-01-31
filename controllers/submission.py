@@ -1,5 +1,6 @@
 # coding: utf8
 
+import access
 import util
 import ranker
 import re
@@ -161,7 +162,7 @@ def view_submission():
     """Allows viewing a submission by someone who has the task to review it.
     This function is accessed by task id, not submission id, to check access
     and anonymize the submission."""
-    v = validate_task(request.args(0), auth.user_id)
+    v = access.validate_task(db, request.args(0), auth.user_id)
     if v == None:
         session.flash(T('Not authorized.'))
         redirect(URL('default', 'index'))
@@ -203,7 +204,7 @@ def view_own_submission():
         db.submission.content.readable = False
         form = SQLFORM(db.submission, subm, readonly=True,
 		       upload=URL('download_author', args=[subm.id]), buttons=[])
-	download_link = A(T('download'), _class='btn',
+	download_link = A(T('Download'), _class='btn',
 			  _href=URL('download_author', args=[subm.id, subm.content]))
     return dict(form=form, subm=subm, download_link=download_link, subm_link=subm_link)
 
@@ -233,25 +234,6 @@ def view_submission_by_manager():
     return dict(form=form, subm=subm, download_link=download_link, subm_link=subm_link)
 
 
-def validate_task(t_id, user_id):
-    """Validates that user_id can do the reviewing task t."""
-    t = db.task(request.args(0))
-    if t == None:
-        return None
-    if t.user_id != user_id:
-        return None
-    s = db.submission(t.submission_id)
-    if s == None:
-        return None
-    c = db.venue(s.venue_id)
-    if c == None:
-        return None
-    d = datetime.utcnow()
-    if c.rate_open_date > d or c.rate_close_date < d:
-        return None
-    return (t, s, c)
-
-	
 @auth.requires_login()
 def download_author():
     # The user must be the owner of the submission.
@@ -314,7 +296,7 @@ def download_viewer():
 @auth.requires_login()
 def download_reviewer():
     # Checks that the reviewer has access.
-    v = validate_task(request.args(0), auth.user_id)
+    v = access.validate_task(db, request.args(0), auth.user_id)
     if v == None:
         session.flash = T('Not authorized.')
         redirect(URL('default', 'index'))

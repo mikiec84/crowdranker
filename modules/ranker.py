@@ -22,13 +22,19 @@ def get_all_items_and_qdistr_param(db, venue_id):
     qdistr_param = []
     for x in sub:
         items.append(x.id)
-        quality = db((db.quality.venue_id == venue_id) &
-                  (db.quality.submission_id == x.id)).select(db.quality.average,
-                  db.quality.stdev).first()
-        if quality == None:
-            return None, None
-        qdistr_param.append(quality.average)
-        qdistr_param.append(quality.stdev)
+        quality_row = db((db.submission.venue_id == venue_id) &
+                  (db.submission.id == x.id)).select(db.submission.quality,
+                  db.submission.error).first()
+        #quality = db((db.quality.venue_id == venue_id) &
+        #          (db.quality.submission_id == x.id)).select(db.quality.average,
+        #          db.quality.stdev).first()
+        if (quality_row is None or quality_row.quality is None or
+           quality_row.error is None):
+            qdistr_param.append(AVRG)
+            qdistr_param.append(STDEV)
+        else:
+            qdistr_param.append(quality_row.quality)
+            qdistr_param.append(quality_row.error)
     # Ok, items and qdistr_param are filled.
     return items, qdistr_param
 
@@ -37,13 +43,19 @@ def get_qdistr_param(db, venue_id, items_id):
         return None
     qdistr_param = []
     for x in items_id:
-        quality = db((db.quality.venue_id == venue_id) &
-                  (db.quality.submission_id == x)).select(db.quality.average,
-                  db.quality.stdev).first()
-        if quality == None:
-            return None
-        qdistr_param.append(quality.average)
-        qdistr_param.append(quality.stdev)
+        quality_row = db((db.submission.venue_id == venue_id) &
+                  (db.submission.id == x)).select(db.submission.quality,
+                  db.submission.error).first()
+        #quality = db((db.quality.venue_id == venue_id) &
+        #          (db.quality.submission_id == x)).select(db.quality.average,
+        #          db.quality.stdev).first()
+        if (quality_row is None or quality_row.quality is None or
+           quality_row.error is None):
+            qdistr_param.append(AVRG)
+            qdistr_param.append(STDEV)
+        else:
+            qdistr_param.append(quality_row.quality)
+            qdistr_param.append(quality_row.error)
     return qdistr_param
 
 def get_init_average_stdev():
@@ -82,7 +94,8 @@ def get_item(db, venue_id, user_id, old_items,
         users_submission_ids = None
     return rankobj.sample_item(old_items, users_submission_ids)
 
-def process_comparison(db, venue_id, user_id, sorted_items, new_item):
+def process_comparison(db, venue_id, user_id, sorted_items, new_item,
+                       alpha_annealing=0.6):
     """ Function updates quality distributions and rank of submissions (items).
 
     Arguments:
@@ -100,18 +113,19 @@ def process_comparison(db, venue_id, user_id, sorted_items, new_item):
     # therefore we cannot process comparison.
     if qdistr_param == None:
         return None
-    rankobj = Rank.from_qdistr_param(sorted_items, qdistr_param)
+    rankobj = Rank.from_qdistr_param(sorted_items, qdistr_param,
+                                     alpha=alpha_annealing)
     result = rankobj.update(sorted_items, new_item)
     # Updating the DB.
     for x in sorted_items:
         perc, avrg, stdev = result[x]
-        db((db.quality.venue_id == venue_id) &
-           (db.quality.submission_id == x)).update(average=avrg, stdev=stdev, percentile=perc)
+        #db((db.quality.venue_id == venue_id) &
+        #   (db.quality.submission_id == x)).update(average=avrg, stdev=stdev, percentile=perc)
         # Updating submission table with its quality and error.
         db((db.submission.id == x) &
            (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev)
 
-def evaluate_users(db, venue_id, list_of_users):
+def evaluate_contributors(db, venue_id, list_of_users):
     # Obtaining list of submissions.
     items, qdistr_param = get_all_items_and_qdistr_param(db, venue_id)
     if items == None or len(items) == 0:
@@ -125,4 +139,50 @@ def evaluate_users(db, venue_id, list_of_users):
         ordering = util.get_list(last_comparison.ordering)
         ordering = ordering[::-1]
         val = rankobj.evaluate_ordering(ordering)
-        # TODO(michael): write val to the db.
+        # Writting to the DB.
+        db((db.user_accuracy.venue_id == venue_id) &
+           (db.user_accuracy.user_id == user_id)).update(accuracy=val)
+
+def rerun_processing_comparisons(db, venue_id, list_of_users,
+                                 alpha_annealing=0.6):
+    # Obtaining list of submissions.
+    comparisons = []
+    for user_id in list_of_users:
+        comp_rows = db((db.comparison.author == user_id)
+            & (db.comparison.venue_id == venue_id)).select(db.comparison.ordering, db.comparison.date)
+        if comp_rows is None or len(comp_rows) == 0:
+            # The user did not make any comparisons, so skip it.
+            continue
+        comp = [(util.get_list(x.ordering), x.date) for x in comp_rows]
+        comparisons.extend(comp)
+    comparisons = sorted(comparisons, key=lambda x : x[1])
+    # Reversing order in comparisons.
+    comparisons = [x[0][::-1] for x in comparisons]
+    # Okay, we have comparisons in increasing order.
+    # TODO(michael): check that we can use date object as key in sorting (it should be OK)
+    # Fetching a lit of items.
+    sub = db(db.submission.venue_id == venue_id).select(db.submission.id)
+    items = []
+    qdistr_param = []
+    for x in sub:
+        items.append(x.id)
+        qdistr_param.append(AVRG)
+        qdistr_param.append(STDEV)
+    rankobj = Rank.from_qdistr_param(items, qdistr_param,
+                                     alpha=alpha_annealing)
+    # Updating.
+    for sorted_items in comparisons:
+        # TODO(michael): for now a new_item is just the first item
+        # in a comparison because we don't use it now,
+        # but fix it if we use new_item.
+        if len(sorted_items) < 2:
+            continue
+        result = rankobj.update(sorted_items, new_item=sorted_items[0])
+    # Updating the DB.
+    for x in items:
+        perc, avrg, stdev = result[x]
+        #db((db.quality.venue_id == venue_id) &
+        #   (db.quality.submission_id == x)).update(average=avrg, stdev=stdev, percentile=perc)
+        # Updating submission table with its quality and error.
+        db((db.submission.id == x) &
+           (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev)

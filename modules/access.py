@@ -59,3 +59,22 @@ def can_view_submissions(venue, props):
 	return False
 
     
+def validate_task(db, t_id, user_id):
+    """Validates that user_id can do the reviewing task t."""
+    t = db.task(t_id)
+    if t == None:
+        return None
+    if t.user_id != user_id:
+        return None
+    s = db.submission(t.submission_id)
+    if s == None:
+        return None
+    c = db.venue(s.venue_id)
+    if c == None:
+        return None
+    d = datetime.utcnow()
+    if c.rate_open_date > d or c.rate_close_date < d:
+        return None
+    return (t, s, c)
+
+	
