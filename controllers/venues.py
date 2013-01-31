@@ -366,7 +366,7 @@ def set_homework_defaults(bogus):
     db.submission_title_is_file_name.default = False
     db.submission_title_is_file_name.readable = db.submission_title_is_file_name.writable = False
     db.can_rank_own_submissions.default = False
-    db.can_rank_own_submissions.readable = db.can_rank_own_submissions..writable = False
+    db.can_rank_own_submissions.readable = db.can_rank_own_submissions.writable = False
     db.max_number_outstanding_reviews.default = 1
     db.max_number_outstanding_reviews.readable = db.max_number_outstanding_reviews.writable = False
     db.feedback_is_anonymous.default = True
