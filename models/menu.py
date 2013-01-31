@@ -34,8 +34,8 @@ response.menu = [
     (T('User lists'), False, URL('user_lists', 'index'), []),
     (T('Reviews'), False, None, [
         (T('Reviewing duties to accept'), False, URL('venues', 'reviewing_duties'), []),
-        (T('Reviews to submit'), False, URL('rating', 'task_index', args=['open']), []),
-        (T('Reviews completed'), False, URL('rating', 'task_index', args=['completed']), []),
+        (T('Reviews to submit'), False, URL('rating', 'task_index'), []),
+        (T('Reviews completed'), False, URL('rating', 'my_reviews'), []),
         ]),
     (T('My submissions'), False, URL('feedback', 'index', args=['all']), []),
 ]

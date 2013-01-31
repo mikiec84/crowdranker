@@ -1,0 +1,9 @@
+{{extend 'layout.html'}}
+
+<h1>My Reviews</h1>
+
+{{=grid}}
+
+{{if request.is_local:}}
+{{=response.toolbar()}}
+{{pass}}

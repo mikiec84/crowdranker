@@ -81,7 +81,7 @@ def accept_review():
     if num_open_tasks > c.max_number_outstanding_reviews:
 	session.flash = T('You have too many reviews outstanding for this venue. '
 			  'Complete some of them before accepting additional reviewing tasks.')
-	redirect(URL('rating', 'task_index', args=['open']))
+	redirect(URL('rating', 'task_index'))
     # This venue_form is used to display the venue.
     venue_form = SQLFORM(db.venue, record=c, readonly=True)
     confirmation_form = FORM.confirm(T('Accept'),
@@ -128,30 +128,7 @@ def accept_review():
             
 @auth.requires_login()
 def task_index():
-    if not request.args(0):
-        redirect(URL('default', 'index'))
-    mode = request.args(0)
-    if mode == 'completed':
-        q = ((db.task.user_id == auth.user_id) & (db.task.completed_date < datetime.utcnow()))
-	title = T('Reviews completed')
-	db.task.completed_date.readable = False
-        links=[
-	    dict(header='Deadline',
-		 body = lambda r: db.venue(r.venue_id).rate_close_date),
-            dict(header='Venue', 
-                body = lambda r: A(db.venue(r.venue_id).name, _href=URL('venues', 'view_venue', args=[r.venue_id]))),
-            dict(header='Submission', 
-                body = lambda r: A(r.submission_name, _href=URL('submission', 'view_submission', args=[r.id]))),]
-    elif mode == 'all':
-        q = (db.task.user_id == auth.user_id)
-	title = T('All reviews')
-        links=[
-            dict(header='Venue', 
-                body = lambda r: A(db.venue(r.venue_id).name, _href=URL('venues', 'view_venue', args=[r.venue_id]))),
-            dict(header='Submission', 
-                body = lambda r: A(r.submission_name, _href=URL('submission', 'view_submission', args=[r.id]))),
-            dict(header='Review', body = review_link),]
-    elif mode == 'open':
+    if len(request.args) == 0:
         q = ((db.task.user_id == auth.user_id) & (db.task.completed_date > datetime.utcnow()))
 	db.task.completed_date.readable = False
 	title = T('Reviews to submit')
@@ -164,9 +141,10 @@ def task_index():
                 body = lambda r: A(r.submission_name, _href=URL('submission', 'view_submission', args=[r.id]))),
             dict(header='Review', body = review_link),]
     else:
+	t = db.task(request.args(0)) or redirect(URL('default', 'index'))
         # The mode if a specific item.
         title = T('')
-        q = (db.task.id == mode)
+        q = (db.task.id == t.id)
         links=[
 	    dict(header='Deadline',
 		 body = lambda r: db.venue(r.venue_id).rate_close_date),
@@ -267,6 +245,16 @@ def review():
         comparison_id = db.comparison.insert(venue_id=t.venue_id, ordering=ordering) 
         # Marks the task as done.
         t.update_record(completed_date=datetime.utcnow(), comments=form.vars.comments)
+	
+	# Marks that the user has reviewed for this venue.
+	props = db(db.user_properties.email == auth.user.email).select(db.user_properties.venues_has_rated).first()
+        if props == None:
+	    db.user_properties.insert(email = auth.user.email,
+				      venues_has_rated = [venue.id])
+        else:
+	    has_rated = util.get_list(props.venues_has_rated)
+	    has_rated = util.list_append_unique(has_rated, venue.id)
+            props.update_record(venues_has_rated = has_rated)
 
         # TODO(luca): put it in a queue of things that need processing.
         # All updates done.
@@ -275,7 +263,7 @@ def review():
                                   ordering[::-1], t.submission_id)
         db.commit()
 	session.flash = T('The review has been submitted.')
-	redirect(URL('rating', 'task_index', args=['open']))
+	redirect(URL('rating', 'task_index'))
 
     return dict(form=form, task=t, 
         submissions = submissions,
@@ -310,6 +298,28 @@ def verify_rating_form(subm_id):
 		session.flash = T('Error in the received ranking')
     return decode_order
 
+
+@auth.requires_login()
+def my_reviews():
+    props = db(db.user_properties.email == auth.user.email).select(db.user_properties.venues_has_rated).first()
+    venue_list = util.get_list(props.venues_has_rated)
+    q = (db.venue.id.belongs(venue_list))
+    db.venue.name.readable = False
+    grid = SQLFORM.grid(q,
+	field_id = db.venue.id,
+	fields = [db.venue.name],
+	create=False, details=False,
+	csv=False, editable=False, deletable=False,
+	links=[
+	    dict(header=T('Venue'),
+		 body = lambda r: A(r.name, _href=URL('venue', 'view_venue', args=[r.id]))),
+	    dict(header=T('My reviews'),
+		 body = lambda r: A(T('View/edit reviews'), _href=URL('rating', 'edit_reviews', args=[r.id]))),
+	    ],
+	)
+    return dict(grid=grid)
+
+
 def get_list_of_users(venue_id, constraint, users_are_raters=True):
     """ Arguments
         - users_are_raters
@@ -329,6 +339,7 @@ def get_list_of_users(venue_id, constraint, users_are_raters=True):
     list_of_users = list(set([x.author for x in rows]))
     return list_of_users
 
+
 def check_manager_eligibility(venue_id, user_id, reject_msg):
     props = db(db.user_properties.email == user_id).select().first()
     if props == None:
@@ -338,6 +349,7 @@ def check_manager_eligibility(venue_id, user_id, reject_msg):
     if venue_id not in managed_venues_list:
         session.flash = T(regect_msg)
         redirect(URL('default', 'index'))
+
 
 @auth.requires_login()
 def recompute_ranks():
@@ -358,6 +370,7 @@ def recompute_ranks():
         session.flash = T('Recomputing ranks has started.')
         redirect(URL('venues', 'view_venue', args=[c.id]))
     return dict(venue_form=venue_form, confirmation_form=confirmation_form)
+
 
 @auth.requires_login()
 def evaluate_contributors():

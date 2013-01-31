@@ -85,7 +85,8 @@ def submit():
         submitted_ids = util.id_list(venues_has_submitted)
         submitted_ids = util.list_append_unique(submitted_ids, c.id)
         if props == None:
-            db(db.user_properties.email == auth.user.email).update(venues_has_submitted = submitted_ids)
+	    db.user_properties.insert(email = auth.user.email,
+				      venues_has_submitted = submitted_ids)
         else:
             props.update_record(venues_has_submitted = submitted_ids)
         # Assigns the initial distribution to the submission.
