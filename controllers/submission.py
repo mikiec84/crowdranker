@@ -68,6 +68,10 @@ def submit():
     # Produces an identifier for the submission.
     db.submission.identifier.default = util.get_random_id()
     db.submission.email.default = auth.user.email
+    # Assigns default quality to the submission.
+    avg, stdev = ranker.get_init_average_stdev()
+    db.submission.quality.default = avg
+    db.submission.stdev.default = stdev
     # TODO(luca): check that it is fine to do the download link without parameters.
     form = SQLFORM(db.submission, upload=URL('download_auhor', args=[None]))
     form.vars.venue_id = c.id
@@ -84,7 +88,7 @@ def submit():
         else:
             props.update_record(venues_has_submitted = submitted_ids)
         # Assigns the initial distribution to the submission.
-        avg, stdev = ranker.get_init_average_stdev()
+	# TODO(michael): remove this line (but leave the db.commit). 
         db.quality.insert(venue_id=c.id, submission_id=form.vars.id, user_id=auth.user_id, average=avg, stdev=stdev)
         db.commit()
         session.flash = T('Your submission has been accepted.')

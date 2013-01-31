@@ -1,5 +1,6 @@
 # coding: utf8
 
+import access
 import util
 
 @auth.requires_login()
@@ -23,8 +24,7 @@ def view_venue():
         can_observe = c.id in util.get_list(props.venues_can_observe)
 	# MAYDO(luca): Add option to allow only raters, or only submitters, to view
 	# all ratings.
-	# TODO(luca): put this access control in its own module to ensure consistency.
-	can_view_ratings = can_manage or c.rating_available_to_all or can_observe
+	can_view_ratings = access.can_view_ratings(c, props)
     venue_form = SQLFORM(db.venue, record=c, readonly=True)
     link_list = []
     if can_submit:
@@ -37,11 +37,10 @@ def view_venue():
         link_list.append(A(T('Edit'), _href=URL('managed_index', vars=dict(cid=c.id))))
 	link_list.append(A(T('Add submission'), _href=URL('submission', 'manager_submit', args=[c.id])))
 	link_list.append(A(T('Assign reviewers'), _href=URL('rating', 'assign_reviewers', args=[c.id])))
-        link_list.append(A(T('Recompute ranks'), _href=URL('rating', 'recompute_ranks', args=[c.id])))
-        link_list.append(A(T('Evaluate contributors'), _href=URL('rating', 'evaluate_contributors', args=[c.id])))
-        link_list.append(A(T('Compute final grades'), _href=URL('rating', 'compute_final_grades', args=[c.id])))
-    if can_view_ratings:
-        link_list.append(A(T('View ranking'), _href=URL('ranking', 'view_venue', args=[c.id])))
+    if access.can_view_submissions(c, props):
+        link_list.append(A(T('View submissions'), _href=URL('ranking', 'view_venue', args=[c.id])))
+    if access.can_view_rating_contribution(c, props):
+        link_list.append(A(T('View reviewers'), _href=URL('ranking', 'view_raters', args=[c.id])))
     return dict(form=venue_form, link_list=link_list, venue=c, has_rated=has_rated)
         
 
@@ -203,6 +202,28 @@ def observed_index():
         )
     return dict(grid=grid)
 
+
+def public_index():
+    q = ((db.venue.submissions_visible_to_all == True) &
+	 ((db.venue.submissions_visible_immediately == True) | (
+	     db.venue.close_date > datetime.utcnow())))
+    db.venue.feedback_accessible_immediately.readable = False
+    db.venue.rate_open_date.readable = False
+    db.venue.rate_close_date.readable = False
+    db.venue.name.readable = False
+    grid = SQLFORM.grid(q,
+        field_id=db.venue.id,
+        fields=[db.venue.name, db.venue.description, db.venue.close_date],
+        csv=False, details=False, create=False, editable=False, deletable=False,
+        links=[
+	    dict(header=T('Details'),
+		 body = lambda r: A(T('Details'), _href=URL('view_venue', args=[r.id]))),
+	    dict(header=T('Submissions'),
+		 body = lambda r: A(T('Submissions'), _href=URL('ranking', 'view_venue', args=[r.id])))
+            ],
+        )
+    return dict(grid=grid)
+
                 
 @auth.requires_login()
 def reviewing_duties():
@@ -270,6 +291,8 @@ def managed_index():
     if len(request.args) > 0 and (request.args[0] == 'edit' or request.args[0] == 'new'):
         # Adds some editing help
         add_help_for_venue('bogus')
+	# Sets defaults for homeworks
+	set_homework_defaults('bogus')
     db.venue.name.readable = False
     if is_user_admin():
 	db.venue.is_approved.writable = True
@@ -328,6 +351,35 @@ def add_help_for_venue(bogus):
     db.venue.can_rank_own_submissions.comment = (
 	'Allow authors to rank their own submissions.  This is used mainly to facilitate '
 	'demos and debugging.')
+    db.venue.rater_contributions_visible_to_all.comment = (
+	'Allow everybody to see how much the reviewers contributed to the ranking.')
+    db.venue.submissions_visible_to_all.comment = (
+	'Submissions are visible to all.')
+    db.venue.submissions_visible_immediately = (
+	'Submissions are public immediately, even before the submission deadline.')
+
+
+def set_homework_defaults(bogus):
+    """Sets defaults appropriate for most homeworks."""
+    db.allow_multiple_submissions.default = False
+    db.allow_multiple_submissions.readable = db.allow_multiple_submissions.writable = False
+    db.submission_title_is_file_name.default = False
+    db.submission_title_is_file_name.readable = db.submission_title_is_file_name.writable = False
+    db.can_rank_own_submissions.default = False
+    db.can_rank_own_submissions.readable = db.can_rank_own_submissions..writable = False
+    db.max_number_outstanding_reviews.default = 1
+    db.max_number_outstanding_reviews.readable = db.max_number_outstanding_reviews.writable = False
+    db.feedback_is_anonymous.default = True
+    db.feedback_is_anonymous.readable = db.feedback_is_anonymous.writable = False
+    db.submissions_visible_immediately.default = False
+    db.submissions_visible_immediately.readable = db.submissions_visible_immediately.writable = False
+    db.feedback_available_to_all.default = False
+    db.feedback_available_to_all.readable = db.feedback_available_to_all.writable = False
+    db.rating_available_to_all.default = False
+    db.rating_available_to_all.readable = db.rating_available_to_all.writable = False
+    db.rater_contributions_visible_to_all.default = False
+    db.rater_contributions_visible_to_all.readable = db.rater_contributions_visible_to_all.writable = False
+
 
     
 def validate_venue(form):

@@ -55,13 +55,16 @@ db.define_table('venue',
     Field('allow_link_submission', 'boolean', default=False),
     Field('is_active', 'boolean', required=True, default=True),
     Field('is_approved', 'boolean', required=True, default=False),
-    Field('feedback_accessible_immediately', 'boolean', default=False),
-    Field('rating_available_to_all', 'boolean', default=False),
-    Field('feedback_available_to_all', 'boolean', default=False),
-    Field('feedback_is_anonymous', 'boolean', default=True),
     Field('submissions_are_anonymized', 'boolean', default=True),
-    Field('max_number_outstanding_reviews', 'integer', default=1),
     Field('can_rank_own_submissions', 'boolean', default=False),
+    Field('max_number_outstanding_reviews', 'integer', default=1),
+    Field('feedback_is_anonymous', 'boolean', default=True),
+    Field('submissions_visible_to_all', 'boolean', default=False),
+    Field('submissions_visible_immediately', 'boolean', default=False),
+    Field('feedback_accessible_immediately', 'boolean', default=False),
+    Field('feedback_available_to_all', 'boolean', default=False),
+    Field('rating_available_to_all', 'boolean', default=False),
+    Field('rater_contributions_visible_to_all', default=False),
     )
 
 db.venue.created_by.readable = db.venue.created_by.writable = False
@@ -106,7 +109,7 @@ db.define_table('submission',
     Field('quality', 'double'),
     Field('error', 'double'), # True rank of a submission is in the interval
                               # [current_rank - error, current_rank + error]
-    Field('user_accuracy', 'double'),
+    Field('n_reviews', 'integer'),
     )
     
 db.submission.id.readable = db.submission.id.writable = False
@@ -123,6 +126,9 @@ db.submission.error.readable = db.submission.error.writable = False
 db.submission.link.readable = db.submission.link.writable = False
 db.submission.link.requires = IS_URL()
 db.submission.title.requires = IS_LENGTH(minsize=2)
+db.submission.n_reviews.default = 0
+db.submission.n_reviews.writable = False
+
 
 db.define_table('comment',
     Field('author', db.auth_user,  default=auth.user_id),
