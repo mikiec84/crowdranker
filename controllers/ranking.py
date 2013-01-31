@@ -19,24 +19,34 @@ def view_venue():
     db.submission.quality.readable = can_view_ratings
     db.submission.error.readable = can_view_ratings
     db.submission.content.readable = False
+    db.submission.title.writable = False
+    db.submission.content.writable = False
     if c.allow_link_submission:
 	db.submission.link.readable = True
+    is_editable = False
+    fields=[db.submission.title, db.submission.email, db.submission.quality,
+	    db.submission.error, db.submission.content]
+    if access.can_enter_true_quality:
+	fields.append(db.submission.true_quality)
+	is_editable = True
+	db.submission.true_quality.readable = db.submission.true_quality.writable = True
     links = [
 	dict(header=T('Download'), body = lambda r:
 	     A(T('Download'), _class='btn',
 	       _href=URL('submission', 'download_viewer', args=[r.id, r.content])))]
     if access.can_view_feedback(c, props):
 	links.append(dict(header=T('Feedback'), body = lambda r:
-			  A(T('Feedback'), _class='btn',
+			  A(T('Read comments'), 
 			    _href=URL('feedback', 'view_feedback', args=[r.id]))))
     grid = SQLFORM.grid(q,
 	field_id=db.submission.id,
 	csv=True,
 	args=request.args[:1],
 	user_signature=False,
-	details=False, create=False, editable=False, deletable=False,
-	fields=[db.submission.title, db.submission.email, db.submission.quality,
-		db.submission.error, db.submission.content],
+	details=False, create=False,
+	editable=is_editable,
+	deletable=False,
+	fields=fields,
 	links=links,
 	)
     title = A(c.name, _href=URL('venues', 'view_venue', args=[c.id]))

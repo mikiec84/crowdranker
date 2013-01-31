@@ -31,6 +31,12 @@ def can_view_rating_contributions(venue, props):
 	return False
     
 
+def can_enter_true_quality(venue, props):
+    can_manage = venue.id in util.get_list(props.venues_can_manage)
+    can_observe = venue.id in util.get_list(props.venues_can_observe)
+    return (can_manage or can_observe)
+    
+
 def can_view_feedback(venue, props):
     can_manage = venue.id in util.get_list(props.venues_can_manage)
     can_observe = venue.id in util.get_list(props.venues_can_observe)
