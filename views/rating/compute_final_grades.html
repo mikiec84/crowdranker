@@ -1,0 +1,13 @@
+{{extend 'layout.html'}}
+
+<h1>Compute Final Grades.</h1>
+
+<p>Attention, by pressing "Compute grades" button old grades will be overridden! Do you want to compute grades?</p>
+{{=confirmation_form}}
+
+<h3>Venue information</h3>
+{{=venue_form}}
+
+{{if request.is_local:}}
+{{=response.toolbar()}}
+{{pass}}

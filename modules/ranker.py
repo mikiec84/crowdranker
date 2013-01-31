@@ -159,7 +159,6 @@ def rerun_processing_comparisons(db, venue_id, list_of_users,
     # Reversing order in comparisons.
     comparisons = [x[0][::-1] for x in comparisons]
     # Okay, we have comparisons in increasing order.
-    # TODO(michael): check that we can use date object as key in sorting (it should be OK)
     # Fetching a lit of items.
     sub = db(db.submission.venue_id == venue_id).select(db.submission.id)
     items = []
@@ -178,6 +177,13 @@ def rerun_processing_comparisons(db, venue_id, list_of_users,
         if len(sorted_items) < 2:
             continue
         result = rankobj.update(sorted_items, new_item=sorted_items[0])
+        ## Uncomment next lines if we want to load/reload qdist parameters.
+        ##qdist = []
+        ##for x in items:
+        ##    perc, avrg, stdev = result[x]
+        ##    qdist.append(avrg)
+        ##    qdist.append(stdev)
+        ##rankobj = Rank.from_qdistr_param(items, qdist, alpha=alpha_annealing)
     # Updating the DB.
     for x in items:
         perc, avrg, stdev = result[x]
