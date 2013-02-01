@@ -1,0 +1,13 @@
+{{extend 'layout.html'}}
+
+<h1>Evaluation of reviewers.</h1>
+
+<p>Attention, by pressing "Evaluate" button old evaluation will be overridden! Do you want to evaluate reviewers?</p>
+{{=confirmation_form}}
+
+<h3>Venue information</h3>
+{{=venue_form}}
+
+{{if request.is_local:}}
+{{=response.toolbar()}}
+{{pass}}

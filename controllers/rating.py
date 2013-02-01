@@ -373,7 +373,7 @@ def recompute_ranks():
 
 
 @auth.requires_login()
-def evaluate_contributors():
+def evaluate_reviewers():
     # Gets the information on the venue.
     c = db.venue(request.args[0]) or redirect(URL('default', 'index'))
     check_manager_eligibility(c.id, auth.user.email, 'You cannot evaluate contributors for this venue')

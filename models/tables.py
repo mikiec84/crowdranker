@@ -185,3 +185,12 @@ db.define_table('quality', # Quality of a submission in a context.
     Field('stdev', 'double'),
     Field('percentile', 'double'),
     )
+
+db.define_table('grades',
+    Field('email', required=True),
+    Field('venue_id', db.venue, required=True),
+    Field('author', db.auth_user),
+    Field('grade'),
+    )
+
+db.grades.author.writable = False

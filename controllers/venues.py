@@ -38,7 +38,7 @@ def view_venue():
 	link_list.append(A(T('Add submission'), _href=URL('submission', 'manager_submit', args=[c.id])))
 	link_list.append(A(T('Assign reviewers'), _href=URL('rating', 'assign_reviewers', args=[c.id])))
         link_list.append(A(T('Recompute ranks'), _href=URL('rating', 'recompute_ranks', args=[c.id])))
-        link_list.append(A(T('Evaluate contributors'), _href=URL('rating', 'evaluate_contributors', args=[c.id])))
+        link_list.append(A(T('Evaluate reviewers'), _href=URL('rating', 'evaluate_reviewers', args=[c.id])))
         link_list.append(A(T('Compute final grades'), _href=URL('rating', 'compute_final_grades', args=[c.id])))
     if access.can_view_submissions(c, props):
         link_list.append(A(T('View submissions'), _href=URL('ranking', 'view_venue', args=[c.id])))

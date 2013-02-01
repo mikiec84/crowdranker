@@ -140,8 +140,11 @@ def evaluate_contributors(db, venue_id, list_of_users):
         ordering = ordering[::-1]
         val = rankobj.evaluate_ordering(ordering)
         # Writting to the DB.
-        db((db.user_accuracy.venue_id == venue_id) &
+        counter = db((db.user_accuracy.venue_id == venue_id) &
            (db.user_accuracy.user_id == user_id)).update(accuracy=val)
+        if counter == 0:
+            db.user_accuracy.insert(venue_id = venue_id, user_id = user_id, accuracy=val)
+
 
 def rerun_processing_comparisons(db, venue_id, list_of_users,
                                  alpha_annealing=0.6):
