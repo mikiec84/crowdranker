@@ -87,8 +87,10 @@ def view_final_grades():
     final_grades_date = venue_row.latest_final_grades_evaluation_date
     reviewers_eval_date = venue_row.latest_reviewers_evaluation_date
     rank_update_date = venue_row.latest_rank_update_date
-    if (rank_update_date is None or reviewers_eval_date is None or
-        rank_update_date is None or reviewers_eval_date < rank_update_date or
+    if (rank_update_date is None or
+        reviewers_eval_date is None or
+        final_grades_date is None or
+        reviewers_eval_date < rank_update_date or
         final_grades_date < rank_update_date or
         final_grades_date < reviewers_eval_date):
         session.flash = T('Grades are not updated. Please recompute final grades')
