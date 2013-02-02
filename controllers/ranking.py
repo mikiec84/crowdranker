@@ -2,6 +2,7 @@
 
 import access
 import util
+from datetime import datetime
 
 @auth.requires_login()
 def view_venue():
@@ -67,6 +68,38 @@ def view_raters():
 	user_signature=False, details=True,
 	create=False, editable=False, deletable=False,
 	fields=[db.user_accuracy.user_id, db.user_accuracy.accuracy, db.user_accuracy.n_ratings],
+	)
+    title = A(c.name, _href=URL('venues', 'view_venue', args=[c.id]))
+    return dict(grid=grid, title=title)
+
+
+@auth.requires_login()
+def view_final_grades():
+    """This function shows the final grade of each user.
+    """
+    c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
+    props = db(db.user_properties.email == auth.user.email).select().first()
+    if not access.can_view_ratings(c, props):
+	session.flash = T('You do not have access to the final grades for this venue.')
+	redirect(URL('venues', 'view_venue', args=[c.id]))
+    # Checking that final grades are recent and don't need recomputation.
+    venue_row = db(db.venue.id == c.id).select().first()
+    final_grades_date = venue_row.latest_final_grades_evaluation_date
+    reviewers_eval_date = venue_row.latest_reviewers_evaluation_date
+    rank_update_date = venue_row.latest_rank_update_date
+    if (rank_update_date is None or reviewers_eval_date is None or
+        rank_update_date is None or reviewers_eval_date < rank_update_date or
+        final_grades_date < rank_update_date or
+        final_grades_date < reviewers_eval_date):
+        session.flash = T('Grades are not updated. Please recompute final grades')
+        redirect(URL('venues', 'view_venue', args=[c.id]))
+    # Okay, final grades are computed and are updated.
+    # Prepares the query for the grid.
+    q = (db.grades.venue_id == c.id)
+    grid = SQLFORM.grid(q,
+	user_signature=False, details=True,
+	create=False, editable=False, deletable=False,
+	fields=[db.grades.email, db.grades.author, db.grades.grade],
 	)
     title = A(c.name, _href=URL('venues', 'view_venue', args=[c.id]))
     return dict(grid=grid, title=title)

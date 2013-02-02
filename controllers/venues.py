@@ -46,6 +46,7 @@ def view_venue():
         link_list.append(A(T('View reviewers'), _href=URL('ranking', 'view_raters', args=[c.id])))
     if can_view_ratings:
         link_list.append(A(T('View ranking'), _href=URL('ranking', 'view_venue', args=[c.id])))
+        link_list.append(A(T('View final grades'), _href=URL('ranking', 'view_final_grades', args=[c.id])))
     return dict(form=venue_form, link_list=link_list, venue=c, has_rated=has_rated)
         
 

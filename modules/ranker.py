@@ -4,6 +4,7 @@ from gluon import *
 from rank import Rank
 from rank import Cost
 import util
+from datetime import datetime
 
 NUM_BINS = 2001
 AVRG = NUM_BINS / 2
@@ -124,6 +125,8 @@ def process_comparison(db, venue_id, user_id, sorted_items, new_item,
         # Updating submission table with its quality and error.
         db((db.submission.id == x) &
            (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev)
+        # Saving then latest rank update date.
+        db(db.venue.id == venue_id).update(latest_rank_update_date = datetime.utcnow())
 
 def evaluate_contributors(db, venue_id, list_of_users):
     # Obtaining list of submissions.
@@ -145,6 +148,8 @@ def evaluate_contributors(db, venue_id, list_of_users):
                                            venue_id = venue_id,
                                            user_id = user_id,
                                            accuracy = val)
+        # Saving the latest user evaluation date.
+        db(db.venue.id == venue_id).update(latest_reviewers_evaluation_date = datetime.utcnow())
 
 def rerun_processing_comparisons(db, venue_id, list_of_users,
                                  alpha_annealing=0.6):
@@ -195,3 +200,10 @@ def rerun_processing_comparisons(db, venue_id, list_of_users,
         # Updating submission table with its quality and error.
         db((db.submission.id == x) &
            (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev)
+        # Saving the latest rank update date.
+        db(db.venue.id == venue_id).update(latest_rank_update_date = datetime.utcnow())
+
+def compute_final_grades(db, venue_id, list_of_users):
+        # TODO(michael): implement the function.
+        # Saving the latest date when final grades were evaluated.
+        db(db.venue.id == venue_id).update(latest_final_grades_evaluation_date = datetime.utcnow())

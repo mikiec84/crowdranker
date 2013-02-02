@@ -320,9 +320,9 @@ def my_reviews():
     return dict(grid=grid)
 
 
-def get_list_of_users(venue_id, constraint, users_are_raters=True):
+def get_list_of_users(venue_id, constraint, users_are_reviewers=True):
     """ Arguments
-        - users_are_raters
+        - users_are_reviewers
             if True, then method returns a list of users who rated the venue
             if False, then method returns a list of users who submitter to the venue.
         - constraints is whether rate_constraints or submit_constraints
@@ -332,7 +332,7 @@ def get_list_of_users(venue_id, constraint, users_are_raters=True):
     if not list_of_users is None:
         return list_of_users
     # We don't have list of users, so create one base on reviews or submissions.
-    if users_are_raters:
+    if users_are_reviewers:
         rows = db(db.comparison.venue_id == venue_id).select(db.comparison.author)
     else:
         rows = db(db.submission.venue_id == venue_id).select(db.submission.author)
@@ -385,7 +385,6 @@ def evaluate_reviewers():
         list_of_users = get_list_of_users(c.id, c.rate_constraint)
         # Rerun ranking algorithm.
         ranker.evaluate_contributors(db, c.id, list_of_users)
-        # TODO(michael): save evaluating date.
         db.commit()
         session.flash = T('Evaluation has started.')
         redirect(URL('venues', 'view_venue', args=[c.id]))
@@ -399,16 +398,24 @@ def compute_final_grades():
     check_manager_eligibility(c.id, auth.user.email, 'You cannot compute final grades for this venue')
     # This venue_form is used to display the venue.
     venue_form = SQLFORM(db.venue, record=c, readonly=True)
+    # Checking that reviewers and ranking were computed.
+    venue_row = db(db.venue.id == c.id).select().first()
+    reviewers_eval_date = venue_row.latest_reviewers_evaluation_date
+    rank_update_date = venue_row.latest_rank_update_date
+    if rank_update_date is None:
+        session.flash = T('Final grades cannot be computed. Please compute ranking first')
+        redirect(URL('venues', 'view_venue', args=[c.id]))
+    if reviewers_eval_date is None or reviewers_eval_date < rank_update_date:
+        session.flash = T('Final grades cannot be computed. Please evaluate reviewers first')
+        redirect(URL('venues', 'view_venue', args=[c.id]))
+    # Okay, we can compute final grades.
     confirmation_form = FORM.confirm(T('Compute grades'),
         {T('Cancel'): URL('venues', 'view_venue', args=[c.id])})
     if confirmation_form.accepted:
         list_of_users = get_list_of_users(c.id, c.submit_constraint,
-                                                users_are_raters=False)
-        # TODO(michael): implement computing final grades.
-        # ....
-        # TODO(michael): save evaluating date.
+                                                users_are_reviewers=False)
+        ranker.compute_final_grades(db, c.id, list_of_users)
         db.commit()
         session.flash = T('Evaluation has started.')
         redirect(URL('venues', 'view_venue', args=[c.id]))
     return dict(venue_form=venue_form, confirmation_form=confirmation_form)
-

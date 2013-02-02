@@ -65,6 +65,9 @@ db.define_table('venue',
     Field('feedback_available_to_all', 'boolean', default=False),
     Field('rating_available_to_all', 'boolean', default=False),
     Field('rater_contributions_visible_to_all', default=False),
+    Field('latest_rank_update_date', 'datetime'),
+    Field('latest_reviewers_evaluation_date', 'datetime'),
+    Field('latest_final_grades_evaluation_date', 'datetime'),
     )
 
 db.venue.created_by.readable = db.venue.created_by.writable = False
@@ -107,8 +110,7 @@ db.define_table('submission',
     Field('content', 'upload'),
     Field('link'),
     Field('quality', 'double'),
-    Field('error', 'double'), # True rank of a submission is in the interval
-                              # [current_rank - error, current_rank + error]
+    Field('error', 'double'),
     Field('n_reviews', 'integer'),
     Field('true_quality', 'double'),
     )
