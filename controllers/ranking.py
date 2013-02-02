@@ -93,7 +93,7 @@ def view_final_grades():
         reviewers_eval_date < rank_update_date or
         final_grades_date < rank_update_date or
         final_grades_date < reviewers_eval_date):
-        session.flash = T('Grades are not updated. Please recompute final grades')
+        session.flash = T('Grades are not updated/computed. Please compute final grades')
         redirect(URL('venues', 'view_venue', args=[c.id]))
     # Okay, final grades are computed and are updated.
     # Prepares the query for the grid.

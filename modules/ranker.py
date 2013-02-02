@@ -166,6 +166,8 @@ def rerun_processing_comparisons(db, venue_id, list_of_users,
     comparisons = sorted(comparisons, key=lambda x : x[1])
     # Reversing order in comparisons.
     comparisons = [x[0][::-1] for x in comparisons]
+    if len(comparisons) == 0:
+        return
     # Okay, we have comparisons in increasing order.
     # Fetching a lit of items.
     sub = db(db.submission.venue_id == venue_id).select(db.submission.id)
