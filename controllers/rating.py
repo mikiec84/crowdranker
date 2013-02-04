@@ -247,7 +247,7 @@ def review():
         t.update_record(completed_date=datetime.utcnow(), comments=form.vars.comments)
 	
 	# Marks that the user has reviewed for this venue.
-	props = db(db.user_properties.email == auth.user.email).select(db.user_properties.venues_has_rated).first()
+	props = db(db.user_properties.email == auth.user.email).select(db.user_properties.id, db.user_properties.venues_has_rated).first()
         if props == None:
 	    db.user_properties.insert(email = auth.user.email,
 				      venues_has_rated = [venue.id])
