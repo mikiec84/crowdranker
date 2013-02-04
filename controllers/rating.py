@@ -22,8 +22,8 @@ def assign_reviewers():
         redirect(URL('default', 'index'))
     # Constrains the user lists to those managed by the user.
     list_q = (db.user_list.id.belongs(managed_user_lists))
-    form = SQLFORM.factory(Field('users', requires = IS_EMPTY_OR(IS_IN_DB(
-        db(list_q), 'user_list.id', '%(name)s', zero=T('-- Everybody --')))),
+    form = SQLFORM.factory(Field('users', requires = IS_IN_DB(
+        db(list_q), 'user_list.id', '%(name)s')),
         Field('number_of_reviews_per_user', 'integer'),
         Field('incremental', 'boolean'),
         )
