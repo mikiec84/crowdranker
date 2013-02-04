@@ -146,6 +146,7 @@ db.define_table('comparison', # An ordering of submissions, from worst to best.
     Field('date', 'datetime', default=datetime.utcnow()),
     Field('venue_id', db.venue),
     Field('ordering', 'list:reference submission'),
+    Field('valid', 'boolean', default=True),
     )
     
 db.define_table('task', # Tasks a user should complete for reviewing.

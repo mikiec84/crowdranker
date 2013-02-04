@@ -156,8 +156,9 @@ def rerun_processing_comparisons(db, venue_id, list_of_users,
     # Obtaining list of submissions.
     comparisons = []
     for user_id in list_of_users:
-        comp_rows = db((db.comparison.author == user_id)
-            & (db.comparison.venue_id == venue_id)).select(db.comparison.ordering, db.comparison.date)
+        comp_rows = db((db.comparison.author == user_id) &
+            (db.comparison.venue_id == venue_id) &
+            (db.comparison.valid == True)).select(db.comparison.ordering, db.comparison.date)
         if comp_rows is None or len(comp_rows) == 0:
             # The user did not make any comparisons, so skip it.
             continue
