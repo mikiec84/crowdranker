@@ -134,11 +134,15 @@ def evaluate_contributors(db, venue_id, list_of_users):
     if items == None or len(items) == 0:
         return None
     rankobj = Rank.from_qdistr_param(items, qdistr_param, cost_obj=None)
-    for user_id in list_of_users:
+    for user_email in list_of_users:
+        user_id_r = db(db.auth_user.email == user_email).select().first()
+        if user_id_r is None:
+            continue
+        user_id = user_id_r.id
         last_comparison = db((db.comparison.author == user_id)
             & (db.comparison.venue_id == venue_id)).select(orderby=~db.comparison.date).first()
         if last_comparison == None:
-            continue;
+            continue
         ordering = util.get_list(last_comparison.ordering)
         ordering = ordering[::-1]
         val = rankobj.evaluate_ordering(ordering)
