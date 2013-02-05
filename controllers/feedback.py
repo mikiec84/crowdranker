@@ -58,16 +58,18 @@ def view_feedback():
         session.flash = T('The ratings are not yet available.')
         redirect(URL('feedback', 'index', args=['all']))
     venue_link = A(c.name, _href=URL('venues', 'view_venue', args=[c.id]))
-    # Makes a grid of comments.
-    db.comment.id.readable = False
-    db.submission.quality.readable = True
-    db.submission.identifier.readable = True
-    db.submission.error.readable = True
     subm_link = None
     if c.allow_link_submission:
 	subm_link = A(subm.link, _href=subm.link)
-    db.comment.content.label = T('Comments')
-    q = (db.comment.submission_id == subm.id)
+    db.submission.quality.readable = True
+    db.submission.identifier.readable = True
+    db.submission.error.readable = True
+
+    # Makes a grid of comments.
+    db.task.assigned_date.readable = False
+    db.task.completed_date.readable = False
+    q = ((db.task.submission_id == subm.id) &
+         (db.task.comments != None))
     grid = SQLFORM.grid(q,
 	details=True, 
         csv=False, create=False, editable=False, deletable=False, searchable=False,
