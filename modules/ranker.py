@@ -124,7 +124,7 @@ def process_comparison(db, venue_id, user_id, sorted_items, new_item,
 def evaluate_contributors(db, venue_id, list_of_users):
     # READ(michael): write some comment on what this does.
     # Also, is the input parameter list_of_users useful?  Why don't you just compute it as a
-    # query for the users having some comparison? 
+    # query for the users having some comparison?
     
     # Obtaining list of submissions.
     items, qdistr_param = get_all_items_and_qdistr_param(db, venue_id)
@@ -154,40 +154,24 @@ def evaluate_contributors(db, venue_id, list_of_users):
                                            user_id = user_id,
                                            accuracy = val,
                                            n_ratings = len(ordering) )
-        # Saving the latest user evaluation date.
-	# READ(michael): this likely doesn't need to be done in the loop? 
-        db(db.venue.id == venue_id).update(latest_reviewers_evaluation_date = datetime.utcnow())
+    # Saving the latest user evaluation date.
+    db(db.venue.id == venue_id).update(latest_reviewers_evaluation_date = datetime.utcnow())
 
 
 def rerun_processing_comparisons(db, venue_id, list_of_users,
                                  alpha_annealing=0.6):
-
-    # READ(michael):
-    # Why you are not just running through all comparisons in chronological
-    # order, taking care of excluding the ones that are no longer valid?
-    
-    # Obtaining list of submissions.
-    comparisons = []
-    for user_email in list_of_users:
-        user_id_r = db(db.auth_user.email == user_email).select().first()
-        if user_id_r is None:
-            continue
-        user_id = user_id_r.id
-        # TODO(michael): take care of db.comparison.valid field
-        comp_rows = db((db.comparison.author == user_id) &
-            (db.comparison.venue_id == venue_id)).select(db.comparison.ordering, db.comparison.date)
-        if comp_rows is None or len(comp_rows) == 0:
-            # The user did not make any comparisons, so skip it.
-            continue
-        comp = [(util.get_list(x.ordering), x.date) for x in comp_rows]
-        comparisons.extend(comp)
-    comparisons = sorted(comparisons, key=lambda x : x[1])
-    # Reversing order in comparisons.
-    comparisons = [x[0][::-1] for x in comparisons]
-    if len(comparisons) == 0:
+    # Obtaining list of comparisons.
+    # TODO(michael): take care of db.comparison.valid field
+    comparisons_r = db(db.comparison.venue_id == venue_id).select(orderby=~db.comparison.date)
+    if comparisons_r is None:
         return
-    # Okay, we have the comparisons in increasing order.
-    # Fetching a list of items.
+    # Dont forget to reverse order in comparion.
+    comparisons = [util.get_list(x.ordering)[::-1] for x in comparisons_r]
+    # select with orderby returns items from newer to older, but we need to process them from older to newer.
+    comparisons = comparisons[::-1]
+
+    # Okay, we have comparisons in increasing order.
+    # Fetching a list of submissions.
     sub = db(db.submission.venue_id == venue_id).select(db.submission.id)
     items = []
     qdistr_param = []
@@ -217,9 +201,8 @@ def rerun_processing_comparisons(db, venue_id, list_of_users,
         perc, avrg, stdev = result[x]
         db((db.submission.id == x) &
            (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev)
-        # Saving the latest rank update date.
-	# READ(michael): why do you do this in the loop? 
-        db(db.venue.id == venue_id).update(latest_rank_update_date = datetime.utcnow())
+    # Saving the latest rank update date.
+    db(db.venue.id == venue_id).update(latest_rank_update_date = datetime.utcnow())
 
 def compute_final_grades(db, venue_id, list_of_users):
         # TODO(michael): implement the function.
