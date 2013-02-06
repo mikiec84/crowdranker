@@ -18,24 +18,20 @@ def get_all_items_qdistr_param_and_users(db, venue_id):
     """
     # List of all submissions id for given venue.
     items = []
-    sub = db(db.submission.venue_id == venue_id).select(db.submission.id, db.submission.author)
+    sub_records = db(db.submission.venue_id == venue_id).select()
     # Fetching quality distributions parametes for each submission.
     users_list = []
     qdistr_param = []
-    for x in sub:
-        users_list.append(x.author)
-        items.append(x.id)
-        quality_row = db((db.submission.venue_id == venue_id) &
-                  (db.submission.id == x.id)).select(db.submission.quality,
-                  db.submission.error).first()
-        if (quality_row is None or quality_row.quality is None or
-           quality_row.error is None):
+    for sub_row in sub_records:
+        users_list.append(sub_row.author)
+        items.append(sub_row.id)
+        if sub_row.quality is None or sub_row.error is None:
             qdistr_param.append(AVRG)
             qdistr_param.append(STDEV)
         else:
-            qdistr_param.append(quality_row.quality)
-            qdistr_param.append(quality_row.error)
-    # Get rid of duplicates.
+            qdistr_param.append(sub_row.quality)
+            qdistr_param.append(sub_row.error)
+    # Get rid of duplicates. It can be a case when users have multiple submission.
     users_list = list(set(users_list))
     # Ok, items, qdistr_param  and users_list are filled.
     return items, qdistr_param, users_list
