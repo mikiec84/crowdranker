@@ -328,9 +328,9 @@ def get_list_of_users(venue_id, constraint, users_are_reviewers=True):
         - constraints is whether rate_constraints or submit_constraints
     """
     # Obtaining list of users who can rate the venue.
-    list_of_users = db(db.user_list.id == constraint).select(db.user_list.email_list).first()
-    if not list_of_users is None:
-        return list_of_users
+    list_of_users_r = db(db.user_list.id == constraint).select(db.user_list.email_list).first()
+    if not list_of_users_r is None:
+        return util.get_list(list_of_users_r.email_list)
     # We don't have list of users, so create one base on reviews or submissions.
     if users_are_reviewers:
         rows = db(db.comparison.venue_id == venue_id).select(db.comparison.author)
@@ -364,11 +364,11 @@ def recompute_ranks():
         # Obtaining list of users who can rate the venue.
         list_of_users = get_list_of_users(c.id, c.rate_constraint)
         # Rerun ranking algorithm.
+        session.flash = T('Recomputing ranks has started.')
+        redirect(URL('venues', 'view_venue', args=[c.id]))
         ranker.rerun_processing_comparisons(db, c.id, list_of_users,
                                             alpha_annealing=0.6)
         db.commit()
-        session.flash = T('Recomputing ranks has started.')
-        redirect(URL('venues', 'view_venue', args=[c.id]))
     return dict(venue_form=venue_form, confirmation_form=confirmation_form)
 
 
