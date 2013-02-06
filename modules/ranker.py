@@ -125,7 +125,7 @@ def evaluate_contributors(db, venue_id, list_of_users):
     # READ(michael): write some comment on what this does.
     # Also, is the input parameter list_of_users useful?  Why don't you just compute it as a
     # query for the users having some comparison?
-    
+
     # Obtaining list of submissions.
     items, qdistr_param = get_all_items_and_qdistr_param(db, venue_id)
     if items == None or len(items) == 0:
@@ -142,7 +142,7 @@ def evaluate_contributors(db, venue_id, list_of_users):
 	    # READ(michael): perhaps mine is paranoia, but I would actually then delete
 	    # the db.user_accuracy entry for this venue_id and user_id, or better, set the
 	    # n_ratings to zero.  Otherwise, if an error is inserted, it will never get
-	    # corrected. 
+	    # corrected.
             continue
         ordering = util.get_list(last_comparison.ordering)
         ordering = ordering[::-1]
@@ -158,8 +158,7 @@ def evaluate_contributors(db, venue_id, list_of_users):
     db(db.venue.id == venue_id).update(latest_reviewers_evaluation_date = datetime.utcnow())
 
 
-def rerun_processing_comparisons(db, venue_id, list_of_users,
-                                 alpha_annealing=0.6):
+def rerun_processing_comparisons(db, venue_id, alpha_annealing=0.6):
     # Obtaining list of comparisons.
     # TODO(michael): take care of db.comparison.valid field
     comparisons_r = db(db.comparison.venue_id == venue_id).select(orderby=~db.comparison.date)

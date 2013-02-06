@@ -369,12 +369,9 @@ def recompute_ranks():
     confirmation_form = FORM.confirm(T('Recompute'),
         {T('Cancel'): URL('venues', 'view_venue', args=[c.id])})
     if confirmation_form.accepted:
-        # Obtaining list of users who can rate the venue.
-        list_of_users = get_list_of_users(c.id, c.rate_constraint)
         # Rerun ranking algorithm.
-        # TODO(michael): essentially we need to fork to a separate process
-        ranker.rerun_processing_comparisons(db, c.id, list_of_users,
-                                            alpha_annealing=0.6)
+        # TODO(michael): essentially we need to fork a separate process
+        ranker.rerun_processing_comparisons(db, c.id, alpha_annealing=0.6)
         db.commit()
         session.flash = T('Recomputing of ranks has been done.')
         redirect(URL('venues', 'view_venue', args=[c.id]))
