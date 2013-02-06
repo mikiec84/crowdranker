@@ -332,11 +332,19 @@ def get_list_of_users(venue_id, constraint, users_are_reviewers=True):
     if not list_of_users_r is None:
         return util.get_list(list_of_users_r.email_list)
     # We don't have list of users, so create one base on reviews or submissions.
+    # Next code uses db access a lot but it should not be a problem because we use
+    # list of users stored in the db.
     if users_are_reviewers:
         rows = db(db.comparison.venue_id == venue_id).select(db.comparison.author)
+        list_of_users = []
+        for row in rows:
+            usr_id_r = db(db.auth_user.id == row.author).select().first()
+            if usr_id_r is None:
+                continue
+            list_of_users.append(usr_id_r.email)
     else:
-        rows = db(db.submission.venue_id == venue_id).select(db.submission.author)
-    list_of_users = list(set([x.author for x in rows]))
+        rows = db(db.submission.venue_id == venue_id).select(db.submission.email)
+        list_of_users = list(set([x.email for x in rows]))
     return list_of_users
 
 

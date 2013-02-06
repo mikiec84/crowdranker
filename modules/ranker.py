@@ -26,9 +26,6 @@ def get_all_items_and_qdistr_param(db, venue_id):
         quality_row = db((db.submission.venue_id == venue_id) &
                   (db.submission.id == x.id)).select(db.submission.quality,
                   db.submission.error).first()
-        #quality = db((db.quality.venue_id == venue_id) &
-        #          (db.quality.submission_id == x.id)).select(db.quality.average,
-        #          db.quality.stdev).first()
         if (quality_row is None or quality_row.quality is None or
            quality_row.error is None):
             qdistr_param.append(AVRG)
@@ -47,9 +44,6 @@ def get_qdistr_param(db, venue_id, items_id):
         quality_row = db((db.submission.venue_id == venue_id) &
                   (db.submission.id == x)).select(db.submission.quality,
                   db.submission.error).first()
-        #quality = db((db.quality.venue_id == venue_id) &
-        #          (db.quality.submission_id == x)).select(db.quality.average,
-        #          db.quality.stdev).first()
         if (quality_row is None or quality_row.quality is None or
            quality_row.error is None):
             qdistr_param.append(AVRG)
@@ -120,8 +114,6 @@ def process_comparison(db, venue_id, user_id, sorted_items, new_item,
     # Updating the DB.
     for x in sorted_items:
         perc, avrg, stdev = result[x]
-        #db((db.quality.venue_id == venue_id) &
-        #   (db.quality.submission_id == x)).update(average=avrg, stdev=stdev, percentile=perc)
         # Updating submission table with its quality and error.
         db((db.submission.id == x) &
            (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev)
@@ -151,7 +143,8 @@ def evaluate_contributors(db, venue_id, list_of_users):
                                           (db.user_accuracy.user_id == user_id),
                                            venue_id = venue_id,
                                            user_id = user_id,
-                                           accuracy = val)
+                                           accuracy = val,
+                                           n_ratings = len(ordering) )
         # Saving the latest user evaluation date.
         db(db.venue.id == venue_id).update(latest_reviewers_evaluation_date = datetime.utcnow())
 
@@ -159,7 +152,11 @@ def rerun_processing_comparisons(db, venue_id, list_of_users,
                                  alpha_annealing=0.6):
     # Obtaining list of submissions.
     comparisons = []
-    for user_id in list_of_users:
+    for user_email in list_of_users:
+        user_id_r = db(db.auth_user.email == user_email).select().first()
+        if user_id_r is None:
+            continue
+        user_id = user_id_r.id
         comp_rows = db((db.comparison.author == user_id) &
             (db.comparison.venue_id == venue_id) &
             (db.comparison.valid == True)).select(db.comparison.ordering, db.comparison.date)
@@ -202,9 +199,6 @@ def rerun_processing_comparisons(db, venue_id, list_of_users,
     # Updating the DB.
     for x in items:
         perc, avrg, stdev = result[x]
-        #db((db.quality.venue_id == venue_id) &
-        #   (db.quality.submission_id == x)).update(average=avrg, stdev=stdev, percentile=perc)
-        # Updating submission table with its quality and error.
         db((db.submission.id == x) &
            (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev)
         # Saving the latest rank update date.
