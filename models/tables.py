@@ -89,6 +89,8 @@ db.venue.rate_close_date.label = 'Reviewing deadline'
 db.venue.rate_close_date.default = datetime.utcnow()
 db.venue.max_number_outstanding_reviews.requires = IS_INT_IN_RANGE(1, 100,
     error_message=T('Enter a number between 0 and 100.'))
+db.venue.latest_reviewers_evaluation_date.writable = False
+db.venue.latest_final_grades_evaluation_date.writable = False
 
 def name_user_list(id, row):
     if id == None or id == '':

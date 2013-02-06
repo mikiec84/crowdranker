@@ -324,8 +324,8 @@ def get_list_of_users(venue_id, constraint, users_are_reviewers=True):
     """ Arguments
         - users_are_reviewers
             if True, then method returns a list of users who rated the venue
-            if False, then method returns a list of users who submitter to the venue.
-        - constraints is whether rate_constraints or submit_constraints
+            if False, then method returns a list of users who submitted to the venue.
+        - constraint is either rate_constraints or submit_constraints
     """
     # Obtaining list of users who can rate the venue.
     list_of_users_r = db(db.user_list.id == constraint).select(db.user_list.email_list).first()
