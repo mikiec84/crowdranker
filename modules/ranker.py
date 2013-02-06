@@ -10,7 +10,7 @@ NUM_BINS = 2001
 AVRG = NUM_BINS / 2
 STDEV = NUM_BINS / 8
 
-def get_all_items_and_qdistr_param(db, venue_id):
+def get_all_items_qdistr_param_and_users(db, venue_id):
     """ Returns a tuple (items, qdistr_param) where:
         - itmes is a list of submissions id.
         - qdistr_param[2*i] and qdistr_param[2*i + 1] are mean and standard
@@ -18,10 +18,12 @@ def get_all_items_and_qdistr_param(db, venue_id):
     """
     # List of all submissions id for given venue.
     items = []
-    sub = db(db.submission.venue_id == venue_id).select(db.submission.id)
+    sub = db(db.submission.venue_id == venue_id).select(db.submission.id, db.submission.author)
     # Fetching quality distributions parametes for each submission.
+    users_list = []
     qdistr_param = []
     for x in sub:
+        users_list.append(x.author)
         items.append(x.id)
         quality_row = db((db.submission.venue_id == venue_id) &
                   (db.submission.id == x.id)).select(db.submission.quality,
@@ -33,8 +35,10 @@ def get_all_items_and_qdistr_param(db, venue_id):
         else:
             qdistr_param.append(quality_row.quality)
             qdistr_param.append(quality_row.error)
-    # Ok, items and qdistr_param are filled.
-    return items, qdistr_param
+    # Get rid of duplicates.
+    users_list = list(set(users_list))
+    # Ok, items, qdistr_param  and users_list are filled.
+    return items, qdistr_param, users_list
 
 def get_qdistr_param(db, venue_id, items_id):
     if items_id == None:
@@ -68,7 +72,7 @@ def get_item(db, venue_id, user_id, old_items,
     If rank_cost_coefficient is equal zero then no cost function is used which
     corresponds to treating each submission equally.
     """
-    items, qdistr_param = get_all_items_and_qdistr_param(db, venue_id)
+    items, qdistr_param, _ = get_all_items_qdistr_param_and_users(db, venue_id)
     # If items is None then some submission does not have qualities yet,
     # we need to know qualities of for all submission to correctly choose an
     # item.
@@ -121,28 +125,19 @@ def process_comparison(db, venue_id, user_id, sorted_items, new_item,
         db(db.venue.id == venue_id).update(latest_rank_update_date = datetime.utcnow())
 
 
-def evaluate_contributors(db, venue_id, list_of_users):
-    # READ(michael): write some comment on what this does.
-    # Also, is the input parameter list_of_users useful?  Why don't you just compute it as a
-    # query for the users having some comparison?
+def evaluate_contributors(db, venue_id):
+    # Function evaluates reviewers based on last comparisons made by each user.
 
-    # Obtaining list of submissions.
-    items, qdistr_param = get_all_items_and_qdistr_param(db, venue_id)
+    items, qdistr_param, list_of_users = get_all_items_qdistr_param_and_users(db, venue_id)
     if items == None or len(items) == 0:
         return None
     rankobj = Rank.from_qdistr_param(items, qdistr_param, cost_obj=None)
-    for user_email in list_of_users:
-        user_id_r = db(db.auth_user.email == user_email).select().first()
-        if user_id_r is None:
-            continue
-        user_id = user_id_r.id
+    for user_id in list_of_users:
         last_comparison = db((db.comparison.author == user_id)
             & (db.comparison.venue_id == venue_id)).select(orderby=~db.comparison.date).first()
         if last_comparison == None:
-	    # READ(michael): perhaps mine is paranoia, but I would actually then delete
-	    # the db.user_accuracy entry for this venue_id and user_id, or better, set the
-	    # n_ratings to zero.  Otherwise, if an error is inserted, it will never get
-	    # corrected.
+            # Deleting the db.user_accuracy fot this venu_id and user_id.
+            db((db.user_accuracy.venue_id == venue_id) & (db.user_accuracy.user_id == user_id)).delete()
             continue
         ordering = util.get_list(last_comparison.ordering)
         ordering = ordering[::-1]

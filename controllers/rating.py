@@ -388,9 +388,7 @@ def evaluate_reviewers():
     confirmation_form = FORM.confirm(T('Evaluate'),
         {T('Cancel'): URL('venues', 'view_venue', args=[c.id])})
     if confirmation_form.accepted:
-        list_of_users = get_list_of_users(c.id, c.rate_constraint)
-        # Rerun ranking algorithm.
-        ranker.evaluate_contributors(db, c.id, list_of_users)
+        ranker.evaluate_contributors(db, c.id)
         db.commit()
         session.flash = T('Evaluation has started.')
         redirect(URL('venues', 'view_venue', args=[c.id]))
