@@ -144,6 +144,8 @@ def evaluate_contributors(db, venue_id):
         ordering = ordering[::-1]
         val = rankobj.evaluate_ordering(ordering)
         # Writing to the DB.
+        # TODO(michael): here is temporary normalization on 5
+        val = min(1, val/5.0)
         db.user_accuracy.update_or_insert((db.user_accuracy.venue_id == venue_id) &
                                           (db.user_accuracy.user_id == user_id),
                                            venue_id = venue_id,
@@ -199,7 +201,35 @@ def rerun_processing_comparisons(db, venue_id, alpha_annealing=0.6):
     # Saving the latest rank update date.
     db(db.venue.id == venue_id).update(latest_rank_update_date = datetime.utcnow())
 
-def compute_final_grades(db, venue_id, list_of_users):
-        # TODO(michael): implement the function.
-        # Saving the latest date when final grades were evaluated.
-        db(db.venue.id == venue_id).update(latest_final_grades_evaluation_date = datetime.utcnow())
+def compute_final_grades(db, venue_id):
+    items, qdistr_param, list_of_users = get_all_items_qdistr_param_and_users(db, venue_id)
+    if items == None or len(items) == 0:
+        return None
+    # TODO(michael): obtain rank grades in cleaner way
+    rankobj = Rank.from_qdistr_param(items, qdistr_param, cost_obj=None)
+    _, id2rank = rankobj.compute_ranks(rankobj.qdist)
+    rank_grade = {}
+    for idx in xrange(len(id2rank)):
+        rank_grade[list_of_users[idx]] =  (len(id2rank) - id2rank[idx])/float(len(id2rank))
+    # Obtaining grade as a reviewer
+    # list_of_users[i] is user_id of submission items[i]
+    user_accuracy_records = db(db.user_accuracy.venue_id == venue_id).select()
+    reviewer_grade = {}
+    for r in user_accuracy_records:
+        reviewer_grade[r.user_id] = r.accuracy
+    # Computing final grade
+    final_grades = {}
+    for user_id in rank_grade:
+        val = (2/3.0) * rank_grade[user_id]
+        if reviewer_grade.has_key(user_id):
+            val += (1/3.0) * reviewer_grade[user_id]
+        final_grades[user_id] = val
+    # Writting result to the DB.
+    for user_id in final_grades:
+        db.grades.update_or_insert((db.grades.venue_id == venue_id) &
+                                   (db.grades.author == user_id),
+                                   venue_id = venue_id,
+                                   author = user_id,
+                                   grade = final_grades[user_id])
+    # Saving the latest date when final grades were evaluated.
+    db(db.venue.id == venue_id).update(latest_final_grades_evaluation_date = datetime.utcnow())

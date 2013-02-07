@@ -320,6 +320,7 @@ def my_reviews():
     return dict(grid=grid)
 
 
+# TODO(michael): delete this function.
 def get_list_of_users(venue_id, constraint, users_are_reviewers=True):
     """ Arguments
         - users_are_reviewers
@@ -416,9 +417,7 @@ def compute_final_grades():
     confirmation_form = FORM.confirm(T('Compute grades'),
         {T('Cancel'): URL('venues', 'view_venue', args=[c.id])})
     if confirmation_form.accepted:
-        list_of_users = get_list_of_users(c.id, c.submit_constraint,
-                                                users_are_reviewers=False)
-        ranker.compute_final_grades(db, c.id, list_of_users)
+        ranker.compute_final_grades(db, c.id)
         db.commit()
         session.flash = T('Evaluation has started.')
         redirect(URL('venues', 'view_venue', args=[c.id]))

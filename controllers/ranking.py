@@ -101,7 +101,7 @@ def view_final_grades():
     grid = SQLFORM.grid(q,
 	user_signature=False, details=True,
 	create=False, editable=False, deletable=False,
-	fields=[db.grades.email, db.grades.author, db.grades.grade],
+	fields=[db.grades.author, db.grades.grade],
 	)
     title = A(c.name, _href=URL('venues', 'view_venue', args=[c.id]))
     return dict(grid=grid, title=title)
