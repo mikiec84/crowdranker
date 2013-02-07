@@ -550,19 +550,23 @@ class Rank:
         # a sum of all error_e.
         # max(Pr(error)) is a maxmum error that the user made when comparing
         # entity e.
-        val = 0
+        val = 0.0
         for i in xrange(1, n, 1):
             ii = self.orig_items_id.index(ordering[i])
             l1 = [self.get_missrank_prob(self.orig_items_id.index(ordering[j]),
                                                ii) for j in xrange(i + 1, n, 1)]
             l2 = [self.get_missrank_prob(ii,
                    self.orig_items_id.index(ordering[j])) for j in xrange(0, i, 1)]
-            pr_error = 0
-            if len(l1) != 0:
-                pr_error = max(l1)
-            if len(l2) != 0:
-                pr_error = max([max(l2), pr_error])
-            val += 1 - 2 * pr_error
+            #pr_error = 0
+            #if len(l1) != 0:
+            #    pr_error = max(l1)
+            #if len(l2) != 0:
+            #    pr_error = max([max(l2), pr_error])
+            #val += 1 - 2 * pr_error
+            l1.extend(l2)
+            if len(l1) == 0:
+                continue
+            val += 1 - np.mean(l1)
         return val
 
     def sort_items_truthfully(self, items):

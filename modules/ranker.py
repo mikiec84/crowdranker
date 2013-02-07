@@ -124,9 +124,14 @@ def process_comparison(db, venue_id, user_id, sorted_items, new_item,
 def evaluate_contributors(db, venue_id):
     # Function evaluates reviewers based on last comparisons made by each user.
 
-    items, qdistr_param, list_of_users = get_all_items_qdistr_param_and_users(db, venue_id)
+    items, qdistr_param, _ = get_all_items_qdistr_param_and_users(db, venue_id)
     if items == None or len(items) == 0:
         return None
+    # Obtaining list of users who did comparisons.
+    comp_r = db(db.comparison.venue_id == venue_id).select(db.comparison.author)
+    list_of_users = [x.author for x in comp_r]
+    list_of_users = list(set(list_of_users))
+
     rankobj = Rank.from_qdistr_param(items, qdistr_param, cost_obj=None)
     for user_id in list_of_users:
         last_comparison = db((db.comparison.author == user_id)
