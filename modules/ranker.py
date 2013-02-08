@@ -237,7 +237,7 @@ def compute_final_grades(db, venue_id):
         val = (2/3.0) * rank_grade[user_id]
         if reviewer_grade.has_key(user_id):
             val += (1/3.0) * reviewer_grade[user_id]
-        final_grades[user_id] = val
+        final_grades[user_id] = val * 100
     # Writting result to the DB.
     for user_id in final_grades:
         db.grades.update_or_insert((db.grades.venue_id == venue_id) &
