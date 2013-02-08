@@ -65,6 +65,7 @@ db.define_table('venue',
     Field('feedback_available_to_all', 'boolean', default=False),
     Field('rating_available_to_all', 'boolean', default=False),
     Field('rater_contributions_visible_to_all', default=False),
+    Field('number_of_submissions_per_reviewer', 'integer', default=5),
     Field('latest_rank_update_date', 'datetime'),
     Field('latest_reviewers_evaluation_date', 'datetime'),
     Field('latest_final_grades_evaluation_date', 'datetime'),
@@ -91,6 +92,7 @@ db.venue.max_number_outstanding_reviews.requires = IS_INT_IN_RANGE(1, 100,
     error_message=T('Enter a number between 0 and 100.'))
 db.venue.latest_reviewers_evaluation_date.writable = False
 db.venue.latest_final_grades_evaluation_date.writable = False
+db.venue.number_of_submissions_per_reviewer.writable = False
 
 def name_user_list(id, row):
     if id == None or id == '':

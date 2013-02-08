@@ -143,9 +143,15 @@ def evaluate_contributors(db, venue_id):
         ordering = util.get_list(last_comparison.ordering)
         ordering = ordering[::-1]
         val = rankobj.evaluate_ordering(ordering)
+        # Normalization
+        num_subm_r = db(db.venue.id == venue_id).select(db.venue.number_of_submissions_per_reviewer).first()
+        if num_subm_r is None or num_subm_r.number_of_submissions_per_reviewer is None:
+            # For compatability with venues which do not have the constant.
+            num_subm = 5
+        else:
+            num_subm = num_subm_r.number_of_submissions_per_reviewer
+        val = min(1, val/float(num_subm))
         # Writing to the DB.
-        # TODO(michael): here is temporary normalization on 5
-        val = min(1, val/5.0)
         db.user_accuracy.update_or_insert((db.user_accuracy.venue_id == venue_id) &
                                           (db.user_accuracy.user_id == user_id),
                                            venue_id = venue_id,
@@ -179,6 +185,7 @@ def rerun_processing_comparisons(db, venue_id, alpha_annealing=0.6):
     rankobj = Rank.from_qdistr_param(items, qdistr_param,
                                      alpha=alpha_annealing)
     # Updating.
+    result = None
     for sorted_items in comparisons:
         # TODO(michael): for now a new_item is just the first item
         # in a comparison because we don't use it now,
@@ -193,6 +200,8 @@ def rerun_processing_comparisons(db, venue_id, alpha_annealing=0.6):
         ##    qdist.append(avrg)
         ##    qdist.append(stdev)
         ##rankobj = Rank.from_qdistr_param(items, qdist, alpha=alpha_annealing)
+    if result is None:
+        return
     # Updating the DB.
     for x in items:
         perc, avrg, stdev = result[x]
@@ -202,17 +211,22 @@ def rerun_processing_comparisons(db, venue_id, alpha_annealing=0.6):
     db(db.venue.id == venue_id).update(latest_rank_update_date = datetime.utcnow())
 
 def compute_final_grades(db, venue_id):
-    items, qdistr_param, list_of_users = get_all_items_qdistr_param_and_users(db, venue_id)
-    if items == None or len(items) == 0:
-        return None
-    # TODO(michael): obtain rank grades in cleaner way
-    rankobj = Rank.from_qdistr_param(items, qdistr_param, cost_obj=None)
-    _, id2rank = rankobj.compute_ranks(rankobj.qdist)
+    # Assume that each user has only one submission
+    list2sort = []
+    submission_recods = db(db.submission.venue_id == venue_id).select()
+    if submission_recods is None:
+        return
+    for sub_row in submission_recods:
+        list2sort.append((sub_row.author, sub_row.quality))
+    list2sort = sorted(list2sort, key=lambda x : x[1], reverse=True)
+    ##id_to_rank = {}
     rank_grade = {}
-    for idx in xrange(len(id2rank)):
-        rank_grade[list_of_users[idx]] =  (len(id2rank) - id2rank[idx])/float(len(id2rank))
-    # Obtaining grade as a reviewer
-    # list_of_users[i] is user_id of submission items[i]
+    rank = 1
+    for x in list2sort:
+        ##id_to_rank[x[0]] = rank
+        rank_grade[x[0]] = (len(list2sort) - rank + 1)/float(len(list2sort))
+        rank += 1
+    # Obtaining reviewers grade.
     user_accuracy_records = db(db.user_accuracy.venue_id == venue_id).select()
     reviewer_grade = {}
     for r in user_accuracy_records:

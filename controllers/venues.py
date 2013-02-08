@@ -304,6 +304,7 @@ def managed_index():
 	db.venue.is_approved.writable = True
 	db.venue.created_by.readable = True
 	db.venue.creation_date.readable = True
+        db.venue.number_of_submissions_per_reviewer.writable = True
 	fields = [db.venue.name, db.venue.created_by, db.venue.creation_date, db.venue.is_approved, db.venue.is_active]
     else:
 	fields = [db.venue.name, db.venue.is_active]	
