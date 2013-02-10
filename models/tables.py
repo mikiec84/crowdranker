@@ -196,7 +196,7 @@ db.define_table('quality', # Quality of a submission in a context.
 db.define_table('grades',
     Field('venue_id', db.venue, required=True),
     Field('author', db.auth_user),
-    Field('grade'),
+    Field('grade', 'double'),
     )
 
 db.grades.author.writable = False
