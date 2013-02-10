@@ -65,10 +65,11 @@ db.define_table('venue',
     Field('feedback_available_to_all', 'boolean', default=False),
     Field('rating_available_to_all', 'boolean', default=False),
     Field('rater_contributions_visible_to_all', default=False),
-    Field('number_of_submissions_per_reviewer', 'integer', default=5),
+    Field('number_of_submissions_per_reviewer', 'integer', default=0),
     Field('latest_rank_update_date', 'datetime'),
     Field('latest_reviewers_evaluation_date', 'datetime'),
     Field('latest_final_grades_evaluation_date', 'datetime'),
+    format = '%(name)s',
     )
 
 db.venue.created_by.readable = db.venue.created_by.writable = False
@@ -178,7 +179,7 @@ db.define_table('reviewing_duties', # Reviews a user should be doing.
     )
     
 db.reviewing_duties.user_email.readable = db.reviewing_duties.user_email.writable = False
-db.reviewing_duties.venue_id.readable = db.reviewing_duties.venue_id.writable = False
+db.reviewing_duties.venue_id.writable = False
 db.reviewing_duties.num_reviews.writable = False
 db.reviewing_duties.date_assigned.readable = db.reviewing_duties.date_assigned.writable = False
 db.reviewing_duties.last_performed.readable = db.reviewing_duties.last_performed.writable = False

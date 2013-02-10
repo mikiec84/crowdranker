@@ -233,17 +233,39 @@ def public_index():
                 
 @auth.requires_login()
 def reviewing_duties():
+    """This function lists venues where users have reviews to accept, so that users
+    can be redirected to a page where to perform such reviews."""
     q = ((db.reviewing_duties.user_email == auth.user.email) & (db.reviewing_duties.num_reviews > 0))
+    db.reviewing_duties.venue_id.readable = False
+    db.reviewing_duties.num_reviews.label = T('Number of reviews to accept')
     grid = SQLFORM.grid(q,
         field_id=db.reviewing_duties.id,
         user_signature=False,
         fields = [db.reviewing_duties.venue_id, db.reviewing_duties.num_reviews],
         csv = False, details = False, create = False, editable = False, deletable = False,
-        links = [dict(header='Accept', body = lambda r:
-            A(T('Accept to do a review'), _href=URL('rating', 'accept_review', args=[r.venue_id]))),
+        links = [
+	    dict(header='Venue', body = lambda r: view_venue_link(r.venue_id)),
+	    dict(header='Deadline', body = lambda r: get_review_deadline(r.venue_id)),
+	    dict(header='Accept',
+		 body = lambda r: 
+		 A(T('Accept to do a review'), _href=URL('rating', 'accept_review', args=[r.venue_id]))),
             ],
         )
     return dict(grid=grid)
+
+
+def view_venue_link(venue_id):
+    v = db.venue(venue_id)
+    if v == None:
+	return ''
+    return A(v.name, _href=URL('venues', 'view_venue', args=[venue_id]))
+
+
+def get_review_deadline(venue_id):
+    v = db.venue(venue_id)
+    if v == None:
+	return ''
+    return v.rate_close_date
 
 
 @auth.requires_login()
