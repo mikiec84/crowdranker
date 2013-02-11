@@ -65,10 +65,11 @@ db.define_table('venue',
     Field('feedback_available_to_all', 'boolean', default=False),
     Field('rating_available_to_all', 'boolean', default=False),
     Field('rater_contributions_visible_to_all', default=False),
-    Field('number_of_submissions_per_reviewer', 'integer', default=5),
+    Field('number_of_submissions_per_reviewer', 'integer', default=0),
     Field('latest_rank_update_date', 'datetime'),
     Field('latest_reviewers_evaluation_date', 'datetime'),
     Field('latest_final_grades_evaluation_date', 'datetime'),
+    format = '%(name)s',
     )
 
 db.venue.created_by.readable = db.venue.created_by.writable = False
@@ -117,6 +118,7 @@ db.define_table('submission',
     Field('error', 'double'),
     Field('n_reviews', 'integer'),
     Field('true_quality', 'double'),
+    Field('percentile', 'double'),
     )
     
 db.submission.id.readable = db.submission.id.writable = False
@@ -136,7 +138,7 @@ db.submission.title.requires = IS_LENGTH(minsize=2)
 db.submission.n_reviews.default = 0
 db.submission.n_reviews.writable = False
 db.submission.true_quality.readable = db.submission.true_quality.writable = False
-
+db.submission.percentile.writable = False
         
 db.define_table('user_accuracy',
     Field('user_id', db.auth_user),
@@ -150,7 +152,8 @@ db.define_table('comparison', # An ordering of submissions, from worst to best.
     Field('date', 'datetime', default=datetime.utcnow()),
     Field('venue_id', db.venue),
     Field('ordering', 'list:reference submission'),
-    Field('valid', 'boolean', default=True),
+    Field('new_item', 'reference submission'),
+    Field('is_valid', 'boolean', default=True),
     )
     
 db.define_table('task', # Tasks a user should complete for reviewing.
@@ -178,7 +181,7 @@ db.define_table('reviewing_duties', # Reviews a user should be doing.
     )
     
 db.reviewing_duties.user_email.readable = db.reviewing_duties.user_email.writable = False
-db.reviewing_duties.venue_id.readable = db.reviewing_duties.venue_id.writable = False
+db.reviewing_duties.venue_id.writable = False
 db.reviewing_duties.num_reviews.writable = False
 db.reviewing_duties.date_assigned.readable = db.reviewing_duties.date_assigned.writable = False
 db.reviewing_duties.last_performed.readable = db.reviewing_duties.last_performed.writable = False

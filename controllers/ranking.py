@@ -26,7 +26,7 @@ def view_venue():
     if c.allow_link_submission:
 	db.submission.link.readable = True
     is_editable = False
-    fields=[db.submission.title, db.submission.email, db.submission.quality,
+    fields=[db.submission.title, db.submission.email, db.submission.quality, db.submission.percentile,
 	    db.submission.error, db.submission.content]
     if access.can_enter_true_quality:
 	fields.append(db.submission.true_quality)
@@ -66,6 +66,7 @@ def view_raters():
     # Prepares the query for the grid.
     q = (db.user_accuracy.venue_id == c.id)
     grid = SQLFORM.grid(q,
+	args=request.args[:1],
 	user_signature=False, details=True,
 	create=False, editable=False, deletable=False,
 	fields=[db.user_accuracy.user_id, db.user_accuracy.accuracy, db.user_accuracy.n_ratings],
@@ -100,6 +101,7 @@ def view_final_grades():
     # Prepares the query for the grid.
     q = (db.grades.venue_id == c.id)
     grid = SQLFORM.grid(q,
+	args=request.args[:1],
 	user_signature=False, details=True,
 	create=False, editable=False, deletable=False,
 	fields=[db.grades.author, db.grades.grade],

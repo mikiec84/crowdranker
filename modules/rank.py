@@ -217,6 +217,7 @@ class Rank:
             result[self.orig_items_id[idx]] = (id2percentile[idx], avrg, stdev)
         return result
 
+
     def get_ranking_error_inthe_end_of_round(self, num_items_to_compare):
         """
         TODO(michael): As for now this method is not in use.

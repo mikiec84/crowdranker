@@ -1,11 +1,15 @@
 {{extend 'layout.html'}}
 
-<h1>Recompute Ranks</h1>
+<h1>Recompute Submission Ranking</h1>
 
-<p>Attention, by pressing "Recompute" button old ranks will be overridden! Do you want to recompute ranks?</p>
+<p>If you recompute the submission ranking, the old rankign will be
+over-written.
+Are you sure you want to recompute the ranks?
+</p>
 {{=confirmation_form}}
 
 <h3>Venue information</h3>
+<p>You are recomputing the submission ranking of the following venue:</p>
 {{=venue_form}}
 
 {{if request.is_local:}}

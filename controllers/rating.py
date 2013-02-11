@@ -16,24 +16,35 @@ def assign_reviewers():
     if props == None:
         session.flash = T('You cannot assign reviewers to this venue.')
         redirect(URL('default', 'index'))
-    managed_venues_list = util.get_list(props.venues_can_manage)
-    managed_user_lists = util.get_list(props.managed_user_lists)
-    if c.id not in managed_venues_list:
+    if not access.can_manage(c, props):
         session.flash = T('You cannot assign reviewers to this venue.')
         redirect(URL('default', 'index'))
+    # These are the users that can be called upon reviewing the submissions.
+    managed_user_lists = util.get_list(props.managed_user_lists)
     # Constrains the user lists to those managed by the user.
     list_q = (db.user_list.id.belongs(managed_user_lists))
-    form = SQLFORM.factory(Field('users', requires = IS_IN_DB(
-        db(list_q), 'user_list.id', '%(name)s')),
-        Field('number_of_reviews_per_user', 'integer'),
-        Field('incremental', 'boolean'),
-        )
+    # The default is the list of users that can review the venue.
+    if c.rate_constraint is None:
+	form = SQLFORM.factory(
+	    Field('users', requires = IS_IN_DB(db(list_q), 'user_list.id', '%(name)s')),
+	    Field('number_of_reviews_per_user', 'integer'),
+	    Field('incremental', 'boolean'),
+	    )
+    else:
+	form = SQLFORM.factory(
+	    Field('users', default = c.rate_constraint,
+		  requires = IS_IN_DB(db(list_q), 'user_list.id', '%(name)s')),
+	    Field('number_of_reviews_per_user', 'integer'),
+	    Field('incremental', 'boolean'),
+	    )	
     if form.process().accepted:
         if (util.is_none(form.vars.users) or form.vars.number_of_reviews_per_user == 0 
                 or (form.vars.number_of_reviews_per_user < 0 and not form.vars.incremental)):
             session.flash = T('No reviewing duties added.')
             redirect(URL('venues', 'managed_index'))
-        # TODO(luca): this should be implemented in terms of an appengine queue
+	n = c.number_of_submissions_per_reviewer
+	c.update_record(number_of_submissions_per_reviewer = n + form.vars.number_of_reviews_per_user)
+        # TODO(luca): this should be implemented in terms of a job queue
         user_list = db.user_list(form.vars.users)
         for m in user_list.email_list:
             current_asgn = db((db.reviewing_duties.user_email == m) &
@@ -243,7 +254,7 @@ def review():
     if form.process(onvalidation=verify_rating_form(t.submission_id)).accepted:
         # Creates a new comparison in the db.
 	ordering = form.vars.order
-        comparison_id = db.comparison.insert(venue_id=t.venue_id, ordering=ordering) 
+        comparison_id = db.comparison.insert(venue_id=t.venue_id, ordering=ordering, new_item=new_comparison_item) 
         # Marks the task as done.
         t.update_record(completed_date=datetime.utcnow(), comments=form.vars.comments)
 	
@@ -417,9 +428,11 @@ def check_manager_eligibility(venue_id, user_id, reject_msg):
 
 @auth.requires_login()
 def recompute_ranks():
+    """Recomputes the submission rank.  This can be useful if we change or improve
+    the algorithm for computing ranks."""
     # Gets the information on the venue.
     c = db.venue(request.args[0]) or redirect(URL('default', 'index'))
-    check_manager_eligibility(c.id, auth.user.email, 'You cannot recompute ranks for this venue')
+    check_manager_eligibility(c.id, auth.user.email, 'Not authorized.')
     # This venue_form is used to display the venue.
     venue_form = SQLFORM(db.venue, record=c, readonly=True)
     confirmation_form = FORM.confirm(T('Recompute'),
@@ -429,7 +442,7 @@ def recompute_ranks():
         # TODO(michael): essentially we need to fork a separate process
         ranker.rerun_processing_comparisons(db, c.id, alpha_annealing=0.6)
         db.commit()
-        session.flash = T('Recomputing of ranks has been done.')
+        session.flash = T('The submission ranking has been recomputed.')
         redirect(URL('venues', 'view_venue', args=[c.id]))
     return dict(venue_form=venue_form, confirmation_form=confirmation_form)
 
@@ -446,7 +459,7 @@ def evaluate_reviewers():
     if confirmation_form.accepted:
         ranker.evaluate_contributors(db, c.id)
         db.commit()
-        session.flash = T('Evaluation has started.')
+        session.flash = T('The evaluation of reviewers has been performed.')
         redirect(URL('venues', 'view_venue', args=[c.id]))
     return dict(venue_form=venue_form, confirmation_form=confirmation_form)
 
@@ -474,7 +487,7 @@ def compute_final_grades():
     if confirmation_form.accepted:
         ranker.compute_final_grades(db, c.id)
         db.commit()
-        session.flash = T('Evaluation has started.')
+        session.flash = T('The final grades have been computed.')
         redirect(URL('venues', 'view_venue', args=[c.id]))
     return dict(venue_form=venue_form, confirmation_form=confirmation_form)
 
