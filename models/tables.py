@@ -188,16 +188,6 @@ db.reviewing_duties.num_reviews.writable = False
 db.reviewing_duties.date_assigned.readable = db.reviewing_duties.date_assigned.writable = False
 db.reviewing_duties.last_performed.readable = db.reviewing_duties.last_performed.writable = False
 
-db.define_table('quality', # Quality of a submission in a context.
-    Field('venue_id', db.venue),
-    Field('submission_id', db.submission),
-    Field('user_id', db.auth_user),
-    Field('distribution', 'blob'),
-    Field('average', 'double'),
-    Field('stdev', 'double'),
-    Field('percentile', 'double'),
-    )
-
 db.define_table('grades',
     Field('venue_id', db.venue, required=True),
     Field('author', db.auth_user),

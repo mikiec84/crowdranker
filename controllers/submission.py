@@ -89,9 +89,6 @@ def submit():
 				      venues_has_submitted = submitted_ids)
         else:
             props.update_record(venues_has_submitted = submitted_ids)
-        # Assigns the initial distribution to the submission.
-	# TODO(michael): remove this line (but leave the db.commit). 
-        db.quality.insert(venue_id=c.id, submission_id=form.vars.id, user_id=auth.user_id, average=avg, stdev=stdev)
         db.commit()
         session.flash = T('Your submission has been accepted.')
         redirect(URL('feedback', 'index', args=['all']))
