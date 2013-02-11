@@ -3,6 +3,10 @@
 from datetime import datetime
 import util
 
+def can_manage(venue, props):
+    can_manage = venue.id in util.get_list(props.venues_can_manage)
+    return can_manage
+
 def can_view_ratings(venue, props):
     can_manage = venue.id in util.get_list(props.venues_can_manage)
     can_observe = venue.id in util.get_list(props.venues_can_observe)

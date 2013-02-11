@@ -89,6 +89,7 @@ def get_item(db, venue_id, user_id, old_items,
         users_submission_ids = None
     return rankobj.sample_item(old_items, users_submission_ids)
 
+
 def process_comparison(db, venue_id, user_id, sorted_items, new_item,
                        alpha_annealing=0.6):
     """ Function updates quality distributions and rank of submissions (items).
@@ -162,19 +163,9 @@ def evaluate_contributors(db, venue_id):
     db(db.venue.id == venue_id).update(latest_reviewers_evaluation_date = datetime.utcnow())
 
 
-def rerun_processing_comparisons(db, venue_id, alpha_annealing=0.6):
-    # Obtaining list of comparisons.
-    # TODO(michael): take care of db.comparison.valid field
-    comparisons_r = db(db.comparison.venue_id == venue_id).select(orderby=~db.comparison.date)
-    if comparisons_r is None:
-        return
-    # Dont forget to reverse order in comparion.
-    comparisons = [util.get_list(x.ordering)[::-1] for x in comparisons_r]
-    # select with orderby returns items from newer to older, but we need to process them from older to newer.
-    comparisons = comparisons[::-1]
+def rerun_processing_comparisons(db, venue_id, alpha_annealing=0.5):
 
-    # Okay, we have comparisons in increasing order.
-    # Fetching a list of submissions.
+    # We reset the ranking to the initial values.
     sub = db(db.submission.venue_id == venue_id).select(db.submission.id)
     items = []
     qdistr_param = []
@@ -182,8 +173,50 @@ def rerun_processing_comparisons(db, venue_id, alpha_annealing=0.6):
         items.append(x.id)
         qdistr_param.append(AVRG)
         qdistr_param.append(STDEV)
+    # Gets a ranker object to do the ranking.
     rankobj = Rank.from_qdistr_param(items, qdistr_param,
                                      alpha=alpha_annealing)
+
+    result = None
+    # Obtaining list of comparisons.
+    comparison_list = db(db.comparison.venue_id == venue_id).select(orderby=db.comparison.date)
+    for comp in comparison_list:
+	# Processes the comparison, if valid.
+	if comp.is_valid:
+	    # Reverses the list.
+	    sorted_items = util.get_list(comp.ordering)[::-1]
+	    if len(sorted_items) < 2:
+		continue
+	    result = rankobj.update(sorted_items, new_item=comp.new_item)
+
+    # READ(michael): 
+    # NONONO!! The problem in the code below is that the result above contains the result
+    # only for the items belonging to the last comparison!  If you use result to update
+    # the DB out of the loop as you do below, you are NOT updating all the items!
+    # Or, am I wrong? --Luca
+
+    # --------- cut -- start old code
+    
+    # TODO(michael): take care of db.comparison.valid field
+    comparisons_r = db(db.comparison.venue_id == venue_id).select(orderby=~db.comparison.date)
+    if comparisons_r is None:
+        return
+    # Don't forget to reverse order in comparion.
+    comparisons = [util.get_list(x.ordering)[::-1] for x in comparisons_r]
+    # select with orderby returns items from newer to older, but we need to process them from older to newer.
+    comparisons = comparisons[::-1]
+
+    # READ(michael):
+    # Why don't you do something like:
+    # comparisons = db(db.comparison.venue_id == venue_id).select(orderby=db.comparison.date)
+    # for comp_r in comparisons:
+    #     comp = comp_r[::-1]
+    #     ...
+    # The above code would avoid reading all the comparisons from the db at once.  This is not
+    # so important for a small class, but may be more elegant in general. Comments?
+
+    # Okay, we have comparisons in increasing order.
+
     # Updating.
     result = None
     for sorted_items in comparisons:
@@ -200,6 +233,9 @@ def rerun_processing_comparisons(db, venue_id, alpha_annealing=0.6):
         ##    qdist.append(avrg)
         ##    qdist.append(stdev)
         ##rankobj = Rank.from_qdistr_param(items, qdist, alpha=alpha_annealing)
+
+    # ------------- end cut ---
+	
     if result is None:
         return
     # Updating the DB.
@@ -209,6 +245,7 @@ def rerun_processing_comparisons(db, venue_id, alpha_annealing=0.6):
            (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev)
     # Saving the latest rank update date.
     db(db.venue.id == venue_id).update(latest_rank_update_date = datetime.utcnow())
+
 
 def compute_final_grades(db, venue_id):
     # Assume that each user has only one submission
