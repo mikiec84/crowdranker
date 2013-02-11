@@ -171,8 +171,9 @@ class Rank:
     def compute_percentile(self):
         # Rank is from 0, 1, ..., num_items - 1
         val = 100 / float(self.num_items)
-        id2percentile = [val * (self.num_items - self.id2rank[i])
-                                        for i in range(self.num_items)]
+        id2percentile = {}
+        for idx in xrange(self.num_items):
+            id2percentile[idx] = val * (self.num_items - self.id2rank[idx])
         return id2percentile
 
     def avg(self, quality_distr):
