@@ -45,7 +45,7 @@ def get_qdistr_param(db, venue_id, items_id):
                   (db.submission.id == x)).select(db.submission.quality,
                   db.submission.error).first()
         if (quality_row is None or quality_row.quality is None or
-           quality_row.error is None):
+	    quality_row.error is None):
             qdistr_param.append(AVRG)
             qdistr_param.append(STDEV)
         else:
@@ -166,6 +166,8 @@ def evaluate_contributors(db, venue_id):
 def rerun_processing_comparisons(db, venue_id, alpha_annealing=0.5):
 
     # We reset the ranking to the initial values.
+    # Gets a ranker object to do the ranking, initialized with all the submissions with
+    # their default stdev and avg. 
     sub = db(db.submission.venue_id == venue_id).select(db.submission.id)
     items = []
     qdistr_param = []
@@ -173,12 +175,10 @@ def rerun_processing_comparisons(db, venue_id, alpha_annealing=0.5):
         items.append(x.id)
         qdistr_param.append(AVRG)
         qdistr_param.append(STDEV)
-    # Gets a ranker object to do the ranking.
-    rankobj = Rank.from_qdistr_param(items, qdistr_param,
-                                     alpha=alpha_annealing)
+    rankobj = Rank.from_qdistr_param(items, qdistr_param, alpha=alpha_annealing)
 
+    # Processes the list of comparisons.
     result = None
-    # Obtaining list of comparisons.
     comparison_list = db(db.comparison.venue_id == venue_id).select(orderby=db.comparison.date)
     for comp in comparison_list:
 	# Processes the comparison, if valid.
@@ -189,56 +189,10 @@ def rerun_processing_comparisons(db, venue_id, alpha_annealing=0.5):
 		continue
 	    result = rankobj.update(sorted_items, new_item=comp.new_item)
 
-    # READ(michael): 
-    # NONONO!! The problem in the code below is that the result above contains the result
-    # only for the items belonging to the last comparison!  If you use result to update
-    # the DB out of the loop as you do below, you are NOT updating all the items!
-    # Or, am I wrong? --Luca
-
-    # --------- cut -- start old code
-    
-    # TODO(michael): take care of db.comparison.valid field
-    comparisons_r = db(db.comparison.venue_id == venue_id).select(orderby=~db.comparison.date)
-    if comparisons_r is None:
-        return
-    # Don't forget to reverse order in comparion.
-    comparisons = [util.get_list(x.ordering)[::-1] for x in comparisons_r]
-    # select with orderby returns items from newer to older, but we need to process them from older to newer.
-    comparisons = comparisons[::-1]
-
-    # READ(michael):
-    # Why don't you do something like:
-    # comparisons = db(db.comparison.venue_id == venue_id).select(orderby=db.comparison.date)
-    # for comp_r in comparisons:
-    #     comp = comp_r[::-1]
-    #     ...
-    # The above code would avoid reading all the comparisons from the db at once.  This is not
-    # so important for a small class, but may be more elegant in general. Comments?
-
-    # Okay, we have comparisons in increasing order.
-
-    # Updating.
-    result = None
-    for sorted_items in comparisons:
-        # TODO(michael): for now a new_item is just the first item
-        # in a comparison because we don't use it now,
-        # but fix it if we use new_item.
-        if len(sorted_items) < 2:
-            continue
-        result = rankobj.update(sorted_items, new_item=sorted_items[0])
-        ## Uncomment next lines if we want to load/reload qdist parameters.
-        ##qdist = []
-        ##for x in items:
-        ##    perc, avrg, stdev = result[x]
-        ##    qdist.append(avrg)
-        ##    qdist.append(stdev)
-        ##rankobj = Rank.from_qdistr_param(items, qdist, alpha=alpha_annealing)
-
-    # ------------- end cut ---
-	
+    # Writes the updated statistics to the db.  Note that result contains the result for
+    # all the ids, due to how the rankobj has been initialized.
     if result is None:
         return
-    # Updating the DB.
     for x in items:
         perc, avrg, stdev = result[x]
         db((db.submission.id == x) &
