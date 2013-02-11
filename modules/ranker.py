@@ -182,7 +182,7 @@ def rerun_processing_comparisons(db, venue_id, alpha_annealing=0.5):
     comparison_list = db(db.comparison.venue_id == venue_id).select(orderby=db.comparison.date)
     for comp in comparison_list:
 	# Processes the comparison, if valid.
-	if comp.is_valid:
+	if comp.is_valid is None or comp.is_valid == True:
 	    # Reverses the list.
 	    sorted_items = util.get_list(comp.ordering)[::-1]
 	    if len(sorted_items) < 2:

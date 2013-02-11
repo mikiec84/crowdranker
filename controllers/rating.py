@@ -253,7 +253,7 @@ def review():
     if form.process(onvalidation=verify_rating_form(t.submission_id)).accepted:
         # Creates a new comparison in the db.
 	ordering = form.vars.order
-        comparison_id = db.comparison.insert(venue_id=t.venue_id, ordering=ordering) 
+        comparison_id = db.comparison.insert(venue_id=t.venue_id, ordering=ordering, new_item=new_comparison_item) 
         # Marks the task as done.
         t.update_record(completed_date=datetime.utcnow(), comments=form.vars.comments)
 	
