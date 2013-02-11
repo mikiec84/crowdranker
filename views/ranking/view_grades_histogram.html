@@ -1,0 +1,28 @@
+{{response.files.append(URL(r=request,c='static',f='js/jquery-ui-1.9.2.custom.min.js'))}}
+{{response.files.append(URL(r=request,c='static',f='css/jquery-ui-1.9.2.custom.css'))}}
+{{response.files.append(URL(r=request,c='static',f='js/jquery.flot.js'))}}
+{{extend 'layout.html'}}
+
+<h2>Histogram of final grades for {{=sub_title}}</h2>
+
+<div id="placeholder" style="width:900px;height:300px"></div>
+
+<br>
+<script>
+$(function() {
+    var data_json = {{=XML(response.json(hist))}};
+    var data = [{ data: data_json, label: "Number of students" }];
+    var width = data_json[1][0] - data_json[0][0];
+    var xticks = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+    //$("#placeholder").html(JSON.stringify(data));
+    // Plotting
+    var plot = $.plot($("#placeholder"), data, {
+        bars: { show: true, barWidth: 0.8 * width, fill: 0.9 },
+        xaxis: { ticks: xticks}
+    });
+});
+</script>
+
+{{if request.is_local:}}
+{{=response.toolbar()}}
+{{pass}}

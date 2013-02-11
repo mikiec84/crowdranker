@@ -3,6 +3,7 @@
 import access
 import util
 from datetime import datetime
+import numpy as np
 
 @auth.requires_login()
 def view_venue():
@@ -106,4 +107,24 @@ def view_final_grades():
 	fields=[db.grades.author, db.grades.grade],
 	)
     title = A(c.name, _href=URL('venues', 'view_venue', args=[c.id]))
-    return dict(grid=grid, title=title)
+    histogram_link = A("View gistogram of final grades",
+                  _href=URL('ranking', 'view_grades_histogram', args=[c.id]))
+    return dict(grid=grid, title=title, histogram_link=histogram_link)
+
+@auth.requires_login()
+def view_grades_histogram():
+    c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
+    props = db(db.user_properties.email == auth.user.email).select().first()
+    if not access.can_view_ratings(c, props):
+        session.flash = T('You do not have access to the final grades for this venue.')
+        redirect(URL('venues', 'view_venue', args=[c.id]))
+    # TODO(michael): if we want to optimize db access we can save all grades in
+    # one row.
+    # Fetching grades.
+    grades_records = db(db.grades.venue_id == c.id).select(db.grades.grade)
+    grades = [x.grade for x in grades_records]
+    # Building histogram.
+    hist, bins = np.histogram(grades, bins=50 , range=(0, 100))
+    hist = [(bins[i], hist[i]) for i in xrange(len(hist))]
+    title = A(c.name, _href=URL('venues', 'view_venue', args=[c.id]))
+    return dict(sub_title=title, hist=hist)
