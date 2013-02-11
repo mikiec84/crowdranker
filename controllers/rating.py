@@ -6,7 +6,6 @@ import ranker
 import gluon.contrib.simplejson as simplejson
 from datetime import datetime
 import datetime as dates
-import logwriter as lw
 
 
 @auth.requires_login()
@@ -359,8 +358,6 @@ def edit_reviews():
         submissions[sub_id] = line
     expired =  (datetime.utcnow() < c.rate_open_date or
                 datetime.utcnow() > c.rate_close_date)
-    lw.write(submissions)
-    lw.write(current_ordering)
     # Link for editing ordering.
     if (compar_id is None) or expired:
         ordering_edit_link = None
