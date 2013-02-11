@@ -118,6 +118,7 @@ db.define_table('submission',
     Field('error', 'double'),
     Field('n_reviews', 'integer'),
     Field('true_quality', 'double'),
+    Field('percentile', 'double'),
     )
     
 db.submission.id.readable = db.submission.id.writable = False
@@ -137,7 +138,7 @@ db.submission.title.requires = IS_LENGTH(minsize=2)
 db.submission.n_reviews.default = 0
 db.submission.n_reviews.writable = False
 db.submission.true_quality.readable = db.submission.true_quality.writable = False
-
+db.submission.percentile.writable = False
         
 db.define_table('user_accuracy',
     Field('user_id', db.auth_user),

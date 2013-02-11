@@ -198,7 +198,7 @@ def rerun_processing_comparisons(db, venue_id, alpha_annealing=0.5):
     for x in items:
         perc, avrg, stdev = result[x]
         db((db.submission.id == x) &
-           (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev)
+           (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev, percentile=perc)
     # Saving the latest rank update date.
     db(db.venue.id == venue_id).update(latest_rank_update_date = datetime.utcnow())
 
