@@ -337,7 +337,7 @@ def edit_reviews():
     # Building ordering.
     last_comparison_r = db((db.comparison.venue_id == c.id) &
                            (db.comparison.author == auth.user_id) &
-                           (db.comparison.valid == True)
+                           (db.comparison.is_valid == True)
                           ).select(orderby=~db.comparison.date).first()
     if last_comparison_r is None:
         current_ordering = []
