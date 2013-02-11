@@ -165,7 +165,7 @@ def evaluate_contributors(db, venue_id):
     db(db.venue.id == venue_id).update(latest_reviewers_evaluation_date = datetime.utcnow())
 
 
-def rerun_processing_comparisons(db, venue_id, alpha_annealing=0.5):
+def rerun_processing_comparisons(db, venue_id, alpha_annealing=0.5, run_twice=False):
 
     # We reset the ranking to the initial values.
     # Gets a ranker object to do the ranking, initialized with all the submissions with
@@ -190,6 +190,16 @@ def rerun_processing_comparisons(db, venue_id, alpha_annealing=0.5):
 	    if len(sorted_items) < 2:
 		continue
 	    result = rankobj.update(sorted_items, new_item=comp.new_item)
+    if run_twice:
+	comparison_list = db(db.comparison.venue_id == venue_id).select(orderby=~db.comparison.date)
+	for comp in comparison_list:
+	    # Processes the comparison, if valid.
+	    if comp.is_valid is None or comp.is_valid == True:
+		# Reverses the list.
+		sorted_items = util.get_list(comp.ordering)[::-1]
+		if len(sorted_items) < 2:
+		    continue
+		result = rankobj.update(sorted_items, new_item=comp.new_item)
 
     # Writes the updated statistics to the db.  Note that result contains the result for
     # all the ids, due to how the rankobj has been initialized.

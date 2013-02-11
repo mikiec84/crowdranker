@@ -437,7 +437,8 @@ def recompute_ranks():
     if confirmation_form.accepted:
         # Rerun ranking algorithm.
         # TODO(michael): essentially we need to fork a separate process
-        ranker.rerun_processing_comparisons(db, c.id, alpha_annealing=0.6)
+	# TODO(luca,michael): ask whether to rerun twice.
+        ranker.rerun_processing_comparisons(db, c.id, alpha_annealing=0.5, run_twice=True)
         db.commit()
         session.flash = T('The submission ranking has been recomputed.')
         redirect(URL('venues', 'view_venue', args=[c.id]))
