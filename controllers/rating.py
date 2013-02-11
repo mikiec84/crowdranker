@@ -6,6 +6,7 @@ import ranker
 import gluon.contrib.simplejson as simplejson
 from datetime import datetime
 import datetime as dates
+import logwriter as lw
 
 
 @auth.requires_login()
@@ -319,6 +320,60 @@ def my_reviews():
 	)
     return dict(grid=grid)
 
+@auth.requires_login()
+def edit_reviews():
+    # Gets the information on the venue.
+    c = db.venue(request.args[0]) or redirect(URL('default', 'index'))
+    # Building ordering.
+    last_comparison_r = db((db.comparison.venue_id == c.id) &
+                           (db.comparison.author == auth.user_id) &
+                           (db.comparison.valid == True)
+                          ).select(orderby=~db.comparison.date).first()
+    if last_comparison_r is None:
+        current_ordering = []
+        compar_id = None
+    else:
+        current_ordering = last_comparison_r.ordering
+        compar_id = last_comparison_r.id
+    submissions = {}
+    for sub_id in current_ordering:
+        # Finds the task.
+        st = db((db.task.submission_id == sub_id) &
+                (db.task.user_id == auth.user_id)).select().first()
+        subm = db.submission(sub_id)
+        line = SPAN(A(st.submission_name, _href=URL('submission', 'view_submission', args=[sub_id])),
+            " (Comments: ", util.shorten(st.comments), ") ",
+            A(T('Download'), _class='btn',
+            _href=URL('download_reviewer', args=[st.id, subm.content])))
+        submissions[sub_id] = line
+    expired =  (datetime.utcnow() < c.rate_open_date or
+                datetime.utcnow() > c.rate_close_date)
+    lw.write(submissions)
+    lw.write(current_ordering)
+    # Link for editing ordering.
+    if (compar_id is None) or expired:
+        ordering_edit_link = None
+    else:
+        ordering_edit_link = A(T("Edit ordering"),
+                               _href=URL('rating', 'edit_ordering',
+                               args=[c.id, compar_id]))
+    # View/Editing comments.
+    q = ((db.task.venue_id == c.id) &
+         (db.task.user_id == auth.user_id))
+    db.task.assigned_date.writable = False
+    db.task.completed_date.writable = False
+    grid = SQLFORM.grid(q, details=True, csv=False, create=False,
+                        editable=(not expired), searchable=False,
+                        deletable=False, args=request.args[:1],
+                        )
+    return dict(grid=grid, title=c.name,
+                current_ordering=current_ordering,
+                submissions=submissions,
+                ordering_edit_link=ordering_edit_link)
+
+@auth.requires_login()
+def edit_ordering():
+    return dict()
 
 # TODO(michael): delete this function.
 def get_list_of_users(venue_id, constraint, users_are_reviewers=True):
@@ -422,3 +477,4 @@ def compute_final_grades():
         session.flash = T('Evaluation has started.')
         redirect(URL('venues', 'view_venue', args=[c.id]))
     return dict(venue_form=venue_form, confirmation_form=confirmation_form)
+
