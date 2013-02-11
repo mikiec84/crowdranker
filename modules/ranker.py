@@ -123,7 +123,9 @@ def process_comparison(db, venue_id, user_id, sorted_items, new_item,
 
 
 def evaluate_contributors(db, venue_id):
-    # Function evaluates reviewers based on last comparisons made by each user.
+    """This function evaluates reviewers for a venue.
+    Currently, this based on last comparisons made by each reviewer.
+    TODO(luca,michael): should we use all comparisons instead?"""
 
     items, qdistr_param, _ = get_all_items_qdistr_param_and_users(db, venue_id)
     if items == None or len(items) == 0:

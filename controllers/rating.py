@@ -404,7 +404,7 @@ def evaluate_reviewers():
     if confirmation_form.accepted:
         ranker.evaluate_contributors(db, c.id)
         db.commit()
-        session.flash = T('Evaluation has started.')
+        session.flash = T('The evaluation of reviewers has been performed.')
         redirect(URL('venues', 'view_venue', args=[c.id]))
     return dict(venue_form=venue_form, confirmation_form=confirmation_form)
 
@@ -432,6 +432,6 @@ def compute_final_grades():
     if confirmation_form.accepted:
         ranker.compute_final_grades(db, c.id)
         db.commit()
-        session.flash = T('Evaluation has started.')
+        session.flash = T('The final grades have been computed.')
         redirect(URL('venues', 'view_venue', args=[c.id]))
     return dict(venue_form=venue_form, confirmation_form=confirmation_form)

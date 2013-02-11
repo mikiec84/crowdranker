@@ -65,6 +65,7 @@ def view_raters():
     # Prepares the query for the grid.
     q = (db.user_accuracy.venue_id == c.id)
     grid = SQLFORM.grid(q,
+	args=request.args[:1],
 	user_signature=False, details=True,
 	create=False, editable=False, deletable=False,
 	fields=[db.user_accuracy.user_id, db.user_accuracy.accuracy, db.user_accuracy.n_ratings],
@@ -99,6 +100,7 @@ def view_final_grades():
     # Prepares the query for the grid.
     q = (db.grades.venue_id == c.id)
     grid = SQLFORM.grid(q,
+	args=request.args[:1],
 	user_signature=False, details=True,
 	create=False, editable=False, deletable=False,
 	fields=[db.grades.author, db.grades.grade],
