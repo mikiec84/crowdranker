@@ -111,6 +111,10 @@ def manager_submit():
     db.submission.email.writable = db.submission.email.readable = True
     db.submission.author.readable = db.submission.author.writable = False
     db.submission.email.label = T('Author')
+    # Assigns default quality to the submission.
+    avg, stdev = ranker.get_init_average_stdev()
+    db.submission.quality.default = avg
+    db.submission.error.default = stdev
     # Produces an identifier for the submission.
     db.submission.identifier.default = util.get_random_id()
     form = SQLFORM(db.submission, upload=URL('download_manager', args=[None]))
@@ -132,10 +136,6 @@ def manager_submit():
             db(db.user_properties.email == form.vars.email).update(venues_has_submitted = submitted_ids)
         else:
             props.update_record(venues_has_submitted = submitted_ids)
-        # Assigns the initial distribution to the submission.
-        avg, stdev = ranker.get_init_average_stdev()
-        db.quality.insert(venue_id=c.id, submission_id=form.vars.id, user_id=form.vars.author,
-			  average=avg, stdev=stdev)
         db.commit()
         session.flash = T('The submission has been accepted.')
         redirect(URL('ranking', 'view_venue', args=[c.id]))
