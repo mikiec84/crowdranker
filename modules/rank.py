@@ -553,7 +553,7 @@ class Rank:
         # max(Pr(error)) is a maxmum error that the user made when comparing
         # entity e.
         val = 0.0
-        for i in xrange(1, n, 1):
+        for i in xrange(0, n, 1):
             ii = self.orig_items_id.index(ordering[i])
             l1 = [self.get_missrank_prob(self.orig_items_id.index(ordering[j]),
                                                ii) for j in xrange(i + 1, n, 1)]
