@@ -1,0 +1,25 @@
+{{extend 'layout.html'}}
+
+<h1>View reviews for {{=title}}</h1>
+
+<ol id="item_list">
+{{for key in current_ordering:}}
+	<li class="ui-state-default" id="item_{{=key}}"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span> {{=submissions[key]}}</li>
+{{pass}}
+</ol>
+
+<ul>
+{{if not ordering_edit_link is None:}}
+    <li class="btn">{{=ordering_edit_link}}</li>
+{{pass}}
+</ul>
+
+<br>
+
+<h2> View/Edit comments </h2>
+{{=grid}}
+
+
+{{if request.is_local:}}
+{{=response.toolbar()}}
+{{pass}}

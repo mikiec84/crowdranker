@@ -384,11 +384,13 @@ def my_reviews():
 	fields = [db.venue.name],
 	create=False, details=False,
 	csv=False, editable=False, deletable=False,
+    # TODO(michael): link to View/edit reviews is disabled for now.
 	links=[
 	    dict(header=T('Venue'),
 		 body = lambda r: A(r.name, _href=URL('venue', 'view_venue', args=[r.id]))),
 	    dict(header=T('My reviews'),
-		 body = lambda r: A(T('View/edit reviews'), _href=URL('rating', 'edit_reviews', args=[r.id]))),
+		 #body = lambda r: A(T('View/edit reviews'), _href=URL('rating', 'edit_reviews', args=[r.id]))),
+		 body = lambda r: T('View/edit reviews')),
 	    ],
 	)
     return dict(grid=grid)
@@ -400,7 +402,7 @@ def edit_reviews():
     # Building ordering.
     last_comparison_r = db((db.comparison.venue_id == c.id) &
                            (db.comparison.author == auth.user_id) &
-                           (db.comparison.valid == True)
+                           (db.comparison.is_valid == True)
                           ).select(orderby=~db.comparison.date).first()
     if last_comparison_r is None:
         current_ordering = []

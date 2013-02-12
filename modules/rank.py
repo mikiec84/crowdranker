@@ -392,7 +392,7 @@ class Rank:
                 return list(items)
 
     def sample_item(self, old_items, black_items, sample_one=True ):
-        """ Method samples an item given items the user receivd before.
+        """ Method samples an item given items the user received before.
         If sample_one is true then if old_items is None or empty then method
         returns one item, otherwise it returns two itmes.
         black_items is a list with items which should not be sampled.
@@ -553,7 +553,7 @@ class Rank:
         # max(Pr(error)) is a maxmum error that the user made when comparing
         # entity e.
         val = 0.0
-        for i in xrange(1, n, 1):
+        for i in xrange(0, n, 1):
             ii = self.orig_items_id.index(ordering[i])
             l1 = [self.get_missrank_prob(self.orig_items_id.index(ordering[j]),
                                                ii) for j in xrange(i + 1, n, 1)]
