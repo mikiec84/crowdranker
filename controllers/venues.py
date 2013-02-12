@@ -391,7 +391,7 @@ def add_help_for_venue(bogus):
 def set_homework_defaults(bogus):
     """Sets defaults appropriate for most homeworks."""
     db.venue.allow_multiple_submissions.default = False
-    db.venue.allow_multiple_submissions.readable = db.venue.allow_multiple_submissions.writable = False
+    # db.venue.allow_multiple_submissions.readable = db.venue.allow_multiple_submissions.writable = False
     db.venue.submission_title_is_file_name.default = False
     db.venue.submission_title_is_file_name.readable = db.venue.submission_title_is_file_name.writable = False
     db.venue.can_rank_own_submissions.default = False

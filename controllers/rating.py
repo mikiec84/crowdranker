@@ -217,13 +217,21 @@ def review():
 
     # Finds the grades that were given for the submissions previously reviewed.
     if last_comparison == None or last_comparison.grades == None:
-	grades = {}
+	str_grades = {}
     else:
 	try:
-	    grades = simplejson.loads(last_comparison.grades)
+	    str_grades = simplejson.loads(last_comparison.grades)
 	except Exception, e:
-	    grades = {}
- 
+	    str_grades = {}
+	    logger.warning("Grades cannot be read: " + str(last_comparison.grades))
+    # Now converts the keys to ints.
+    grades = {}
+    for k, v in str_grades.iteritems():
+	try:
+	    grades[long(k)] = float(v)
+	except Exception, e:
+	    logger.warning("Grades cannot be converted: " + str(k) + ":" + str(v))
+
     # Now we need to find the names of the submissions (for the user) that were 
     # used in this last ordering.
     # We create a submission_id to line mapping, that will be passed in json to the view.
@@ -304,6 +312,7 @@ def verify_rating_form(subm_id):
     """Verifies a ranking received from the browser, together with the grades."""
     def decode_order(form):
 	logger.debug("request.vars.order: " + request.vars.order)
+	logger.debug("request.vars.grades: " + request.vars.grades)
 	if request.vars.order == None or request.vars.grades == None:
 	    form.errors.comments = T('Error in the received ranking')
 	    session.flash = T('Error in the received ranking')
@@ -327,28 +336,36 @@ def verify_rating_form(subm_id):
 	    return
 	# Verifies the grades.
 	try:
-	    decoded_grades = simplejson.loads(form.vars.grades)
+	    decoded_grades = simplejson.loads(request.vars.grades)
+	    grade_subm = [(float(g), long(s)) for (s, g) in decoded_grades.iteritems()]
+	    # Check that all grades are between 0 and 10.
+	    for (g, s) in grade_subm:
+		if g < 0.0 or g > 10.0:
+		    form.errors.comments = T('Grades should be in the interval [0..10]')
+		    session.flash = T('Errors in the received grades')
+		    return
 	    # Sorts the grades in decreasing order.
-	    grade_subm = [(float(g), int(s)) for (s, g) in decoded_grades.iteritems()]
 	    grade_subm.sort()
 	    grade_subm.reverse()
 	    # Checks that there are no duplicate grades.
 	    if len(grade_subm) == 0:
-		form.errors.comment = T('No grades specified')
+		form.errors.comments = T('No grades specified')
 		session.flash = T('Errors in the received grades')
 		return
 	    (prev, _) = grade_subm[0]
 	    for (g, s) in grade_subm[1:]:
 		if g == prev:
-		    form.errors.comment = T('There is a repeated grade: grades need to be unique.')
+		    form.errors.comments = T('There is a repeated grade: grades need to be unique.')
 		    session.flash = T('Errors in the received grades')
 		    return
 	    # Checks that the order of the grades matches the one of the submissions.
 	    subm_order = [s for (g, s) in grade_subm]
 	    if subm_order != form.vars.order:
-		form.errors.comment = T('The ranking of the submissions does not reflect the grades.')
+		form.errors.comments = T('The ranking of the submissions does not reflect the grades.')
 		session.flash = T('Errors in the received grades.')
 		return
+	    # Copies the grades in the form variable.
+	    form.vars.grades = request.vars.grades
 	except Exception, e:
 	    form.errors.comments = T('Error in the received grades')
 	    session.flash = T('Error in the received grades')

@@ -48,7 +48,7 @@ $(function() {
 		$("[name='order']").val(tmp);
 		var grades = {};
 		{{for key in current_list:}}
-			grades[{{=key}}] = $("#grade_{{=key}}").value();
+		grades["{{=key}}"] = $("#grade_{{=key}}").val();
 		{{pass}}
 		$("[name='grades']").val(JSON.stringify(grades));
 	});

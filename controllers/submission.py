@@ -73,6 +73,8 @@ def submit():
     avg, stdev = ranker.get_init_average_stdev()
     db.submission.quality.default = avg
     db.submission.error.default = stdev
+    # No percentile readable.
+    db.submission.percentile.readable = False
     # TODO(luca): check that it is fine to do the download link without parameters.
     form = SQLFORM(db.submission, upload=URL('download_auhor', args=[None]))
     form.vars.venue_id = c.id
