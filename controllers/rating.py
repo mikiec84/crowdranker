@@ -194,9 +194,12 @@ def review():
 	session.flash = T('Invalid request.')
         redirect(URL('default', 'index'))
 
-    # Check that the venue rating deadline is currently open.
+    # Check that the venue rating deadline is currently open, or that the ranker
+    # is a manager or observer.
     venue = db.venue(t.venue_id)
-    if datetime.utcnow() < venue.rate_open_date or datetime.utcnow() > venue.rate_close_date:
+    if ((auth.user.email not in util.get_list(venue.managers)) and
+	(auth.user.email not in util.get_list(venue.observers)) and 
+	(datetime.utcnow() < venue.rate_open_date or datetime.utcnow() > venue.rate_close_date)):
 	session.flash = T('The review deadline for this venue is closed.')
         redirect(URL('venues', 'view_venue', args=[venue.id]))
 
@@ -212,6 +215,15 @@ def review():
     if t.submission_id not in last_ordering:
 	current_list.append(t.submission_id)
 
+    # Finds the grades that were given for the submissions previously reviewed.
+    if last_comparison == None or last_comparison.grades == None:
+	grades = {}
+    else:
+	try:
+	    grades = simplejson.loads(last_comparison.grades)
+	except Exception, e:
+	    grades = {}
+ 
     # Now we need to find the names of the submissions (for the user) that were 
     # used in this last ordering.
     # We create a submission_id to line mapping, that will be passed in json to the view.
@@ -247,13 +259,15 @@ def review():
 
     form = SQLFORM.factory(
         Field('comments', 'text'),
-        hidden=dict(order="")
+        hidden=dict(order='', grades='')
         )
 
     if form.process(onvalidation=verify_rating_form(t.submission_id)).accepted:
         # Creates a new comparison in the db.
 	ordering = form.vars.order
-        comparison_id = db.comparison.insert(venue_id=t.venue_id, ordering=ordering, new_item=new_comparison_item) 
+	grades = form.vars.grades
+        comparison_id = db.comparison.insert(
+	    venue_id=t.venue_id, ordering=ordering, grades=grades, new_item=new_comparison_item) 
         # Marks the task as done.
         t.update_record(completed_date=datetime.utcnow(), comments=form.vars.comments)
 	
@@ -278,6 +292,7 @@ def review():
 
     return dict(form=form, task=t, 
         submissions = submissions,
+	grades = grades,
 	sub_title = t.submission_name,
 	venue = venue,
         current_list = current_list,
@@ -285,28 +300,59 @@ def review():
         )
 
         
-def verify_rating_form(subm_id):        
+def verify_rating_form(subm_id):
+    """Verifies a ranking received from the browser, together with the grades."""
     def decode_order(form):
 	logger.debug("request.vars.order: " + request.vars.order)
-	if request.vars.order == None:
+	if request.vars.order == None or request.vars.grades == None:
 	    form.errors.comments = T('Error in the received ranking')
 	    session.flash = T('Error in the received ranking')
-	else:
-	    try:
-		decoded_order = [int(x) for x in request.vars.order.split()]
-		for i in decoded_order:
-		    if i != subm_id:
-			# This must correspond to a previously done task.
-			mt = db((db.task.submission_id == i) &
-				(db.task.user_id == auth.user_id)).select().first()
-			if mt == None or mt.completed_date > datetime.utcnow():
-			    form.errors.comments = T('Corruputed data received')
-			    session.flash = T('Corrupted data received')
-			    break
-		form.vars.order = decoded_order
-	    except ValueError:
-		form.errors.comments = T('Error in the received ranking')
-		session.flash = T('Error in the received ranking')
+	    return
+	# Verifies the order.
+	try:
+	    decoded_order = [int(x) for x in request.vars.order.split()]
+	    for i in decoded_order:
+		if i != subm_id:
+		    # This must correspond to a previously done task.
+		    mt = db((db.task.submission_id == i) &
+			    (db.task.user_id == auth.user_id)).select().first()
+		    if mt == None or mt.completed_date > datetime.utcnow():
+			form.errors.comments = T('Corruputed data received')
+			session.flash = T('Corrupted data received')
+			break
+	    form.vars.order = decoded_order
+	except ValueError:
+	    form.errors.comments = T('Error in the received ranking')
+	    session.flash = T('Error in the received ranking')
+	    return
+	# Verifies the grades.
+	try:
+	    decoded_grades = simplejson.loads(form.vars.grades)
+	    # Sorts the grades in decreasing order.
+	    grade_subm = [(float(g), int(s)) for (s, g) in decoded_grades.iteritems()]
+	    grade_subm.sort()
+	    grade_subm.reverse()
+	    # Checks that there are no duplicate grades.
+	    if len(grade_subm) == 0:
+		form.errors.comment = T('No grades specified')
+		session.flash = T('Errors in the received grades')
+		return
+	    (prev, _) = grade_subm[0]
+	    for (g, s) in grade_subm[1:]:
+		if g == prev:
+		    form.errors.comment = T('There is a repeated grade: grades need to be unique.')
+		    session.flash = T('Errors in the received grades')
+		    return
+	    # Checks that the order of the grades matches the one of the submissions.
+	    subm_order = [s for (g, s) in grade_subm]
+	    if subm_order != form.vars.order:
+		form.errors.comment = T('The ranking of the submissions does not reflect the grades.')
+		session.flash = T('Errors in the received grades.')
+		return
+	except Exception, e:
+	    form.errors.comments = T('Error in the received grades')
+	    session.flash = T('Error in the received grades')
+	    return
     return decode_order
 
 

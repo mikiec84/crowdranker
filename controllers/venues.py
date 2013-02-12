@@ -326,7 +326,7 @@ def managed_index():
 	db.venue.is_approved.writable = True
 	db.venue.created_by.readable = True
 	db.venue.creation_date.readable = True
-        db.venue.number_of_submissions_per_reviewer.writable = True
+	db.venue.is_approved.default = True
 	fields = [db.venue.name, db.venue.created_by, db.venue.creation_date, db.venue.is_approved, db.venue.is_active]
     else:
 	fields = [db.venue.name, db.venue.is_active]	
@@ -395,7 +395,7 @@ def set_homework_defaults(bogus):
     db.venue.submission_title_is_file_name.default = False
     db.venue.submission_title_is_file_name.readable = db.venue.submission_title_is_file_name.writable = False
     db.venue.can_rank_own_submissions.default = False
-    db.venue.can_rank_own_submissions.readable = db.venue.can_rank_own_submissions.writable = False
+    # db.venue.can_rank_own_submissions.readable = db.venue.can_rank_own_submissions.writable = False
     db.venue.max_number_outstanding_reviews.default = 1
     db.venue.max_number_outstanding_reviews.readable = db.venue.max_number_outstanding_reviews.writable = False
     db.venue.feedback_is_anonymous.default = True
@@ -408,7 +408,10 @@ def set_homework_defaults(bogus):
     db.venue.rating_available_to_all.readable = db.venue.rating_available_to_all.writable = False
     db.venue.rater_contributions_visible_to_all.default = False
     db.venue.rater_contributions_visible_to_all.readable = db.venue.rater_contributions_visible_to_all.writable = False
-
+    db.venue.latest_rank_update_date.readable = False
+    db.venue.latest_reviewers_evaluation_date.readable = False
+    db.venue.latest_final_grades_evaluation_date.readable = False
+    db.venue.number_of_submissions_per_reviewer.readable = False
 
     
 def validate_venue(form):

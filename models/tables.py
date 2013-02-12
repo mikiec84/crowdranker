@@ -91,6 +91,7 @@ db.venue.rate_close_date.label = 'Reviewing deadline'
 db.venue.rate_close_date.default = datetime.utcnow()
 db.venue.max_number_outstanding_reviews.requires = IS_INT_IN_RANGE(1, 100,
     error_message=T('Enter a number between 0 and 100.'))
+db.venue.latest_rank_update_date.writable = False
 db.venue.latest_reviewers_evaluation_date.writable = False
 db.venue.latest_final_grades_evaluation_date.writable = False
 db.venue.number_of_submissions_per_reviewer.writable = False
@@ -116,7 +117,6 @@ db.define_table('submission',
     Field('link'),
     Field('quality', 'double'),
     Field('error', 'double'),
-    Field('n_reviews', 'integer'),
     Field('true_quality', 'double'),
     Field('percentile', 'double'),
     Field('n_assigned_reviews', 'integer'),
@@ -136,8 +136,6 @@ db.submission.error.readable = db.submission.error.writable = False
 db.submission.link.readable = db.submission.link.writable = False
 db.submission.link.requires = IS_URL()
 db.submission.title.requires = IS_LENGTH(minsize=2)
-db.submission.n_reviews.default = 0
-db.submission.n_reviews.writable = False
 db.submission.true_quality.readable = db.submission.true_quality.writable = False
 db.submission.percentile.writable = False
 db.submission.n_assigned_reviews.writable = db.submission.n_assigned_reviews.readable = False
@@ -154,6 +152,7 @@ db.define_table('comparison', # An ordering of submissions, from worst to best.
     Field('date', 'datetime', default=datetime.utcnow()),
     Field('venue_id', db.venue),
     Field('ordering', 'list:reference submission'),
+    Field('grades'), # This is a json dictionary of submission_id: grade
     Field('new_item', 'reference submission'),
     Field('is_valid', 'boolean', default=True),
     )

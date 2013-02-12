@@ -9,13 +9,22 @@
     #sortable li span { position: absolute; margin-left: -1.3em; }
 </style>
 
-<div class="alert alert-info"><i class="icon-info-sign"></i> Rank this item relative to items that you have previously reviewed by dragging and dropping each item into place. The best item should be first.</div>
+<div class="alert alert-info"><i class="icon-info-sign"></i> Rank the
+  submission relative to submissions that you have previously reviewed
+  by dragging and dropping submissions into place; the best submission
+  should be on top.  Also assign a grade from 0 to 10 to each item
+  (floating point grades are allowed).  The grades must reflect the
+  ranking.  Assigning the same grade to two different submissions is
+  not allowed.</div>
 
 <ol id="item_list">
 {{for key in current_list:}}
-	<li class="ui-state-{{if new_comparison_item == key:}}highlight{{else:}}default{{pass}}" id="item_{{=key}}"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span> {{=submissions[key]}}</li>
-    {{pass}}
-
+  <li class="ui-state-{{if new_comparison_item == key:}}highlight{{else:}}default{{pass}}" id="item_{{=key}}">
+  <span class="ui-icon ui-icon-arrowthick-2-n-s"></span>
+  {{=submissions[key]}}
+  <span>Grade [0 to 10]: <input id="grade_{{=key}}" style="width:40px" value="{{=grades.get(key, '')}}"/></span>
+  </li>
+{{pass}}
 </ol>
 <br>
 <h4>Please enter comments for {{=sub_title}}</h4>
@@ -26,18 +35,22 @@ $(function() {
 	$("#item_list").sortable();
 	$("#item_list").disableSelection();
 	$("form").submit(function() {
-		var new_order = $( "#item_list" ).sortable('toArray');
-		order_data = [];
+		var new_order = $("#item_list").sortable('toArray');
 		var i = 0;
 		var tmp = "";
-		for ( var key in new_order ) {
+		for (var key in new_order) {
 			var val = new_order[key];
 			var part = val.split("_");
-			if ( i > 0 ) tmp += " ";
+			if (i > 0) tmp += " ";
 			tmp += part[1]; 	
 			i++;
 		}
 		$("[name='order']").val(tmp);
+		var grades = {};
+		{{for key in current_list:}}
+			grades[{{=key}}] = $("#grade_{{=key}}").value();
+		{{pass}}
+		$("[name='grades']").val(JSON.stringify(grades));
 	});
 });
 </script>
