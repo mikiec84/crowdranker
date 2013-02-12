@@ -70,15 +70,15 @@ def get_item(db, venue_id, user_id, old_items,
 
     Description of a sampling method:
         For each submission we count how many time it was assigned as a task.
-        Choose subset (rare_items) of submission which have the smalles frequency.
-        Then we compute probability of all possible mistakes comparisons
+        Choose subset (rare_items) of submissions which have the smallest frequency.
+        Then we compute probability of all possible mistaken comparisons
         between rare_items and old_items (item from previous tasks).
         After that we randomly sample an item proportional of probability of
         a mistake with the item.
 
         Note that code wich randomly samples item is in Rank.sample_item(...).
         To ensure that sampled item is from rare_items we initialize
-        Rank object (rankobj) only with pool items which is union of
+        Rank object (rankobj) only with pool items which is a union of
         rare_items  and old_items.
         This way item is sampled as described above.
     """
@@ -118,12 +118,12 @@ def get_item(db, venue_id, user_id, old_items,
     rare_items = [x[0] for x in frequency if x[1] == min_count]
     if len(rare_items) == 1:
         return rare_items[0]
-    # Construct pool of items.
+    # Constructing pool of items.
     pool_items = rare_items[:]
     pool_items.extend(old_items)
     # Fetching quality distribution parameters.
     qdistr_param_pool = []
-    for subm_id in poll_items:
+    for subm_id in pool_items:
         idx = items.index(subm_id)
         qdistr_param_pool.append(qdistr_param[2 * idx])
         qdistr_param_pool.append(qdistr_param[2 * idx + 1])
