@@ -392,7 +392,7 @@ class Rank:
                 return list(items)
 
     def sample_item(self, old_items, black_items, sample_one=True ):
-        """ Method samples an item given items the user receivd before.
+        """ Method samples an item given items the user received before.
         If sample_one is true then if old_items is None or empty then method
         returns one item, otherwise it returns two itmes.
         black_items is a list with items which should not be sampled.

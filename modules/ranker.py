@@ -67,28 +67,69 @@ def get_item(db, venue_id, user_id, old_items,
 
     If rank_cost_coefficient is equal zero then no cost function is used which
     corresponds to treating each submission equally.
+
+    Description of a sampling method:
+        For each submission we count how many time it was assigned as a task.
+        Choose subset (rare_items) of submission which have the smalles frequency.
+        Then we compute probability of all possible mistakes comparisons
+        between rare_items and old_items (item from previous tasks).
+        After that we randomly sample an item proportional of probability of
+        a mistake with the item.
+
+        Note that code wich randomly samples item is in Rank.sample_item(...).
+        To ensure that sampled item is from rare_items we initialize
+        Rank object (rankobj) only with pool items which is union of
+        rare_items  and old_items.
+        This way item is sampled as described above.
     """
+    if old_items is None:
+        old_items = []
     items, qdistr_param, _ = get_all_items_qdistr_param_and_users(db, venue_id)
     # If items is None then some submission does not have qualities yet,
     # we need to know qualities of for all submission to correctly choose an
     # item.
     if items == None or len(items) == 0:
         return None
-    # Specifying cost object which has cost function.
+    # Specifying cost object which implements cost function.
     cost_obj = Cost(cost_type='rank_power_alpha',
                    rank_cost_coefficient=rank_cost_coefficient)
     if rank_cost_coefficient == 0:
         cost_obj = None
-    rankobj = Rank.from_qdistr_param(items, qdistr_param, cost_obj=cost_obj)
     if not can_rank_own_submissions:
         # Find submission that is authored by the user.
         submission_ids = db((db.submission.venue_id == venue_id) &
                                 (db.submission.author == user_id)).select(db.submission.id)
         users_submission_ids = [x.id for x in submission_ids]
     else:
-        users_submission_ids = None
-    return rankobj.sample_item(old_items, users_submission_ids)
-
+        users_submission_ids = []
+    # Counting how many times each submission was assigned.
+    frequency = []
+    for subm_id in items:
+        if (subm_id not in users_submission_ids and
+            subm_id not in old_items):
+            count = db((db.task.submission_id == subm_id) &
+                       (db.task.venue_id == venue_id)).count()
+            frequency.append((subm_id, count))
+    # Do we have items to sample from?
+    if len(frequency) == 0:
+        return None
+    # Now let's find submissions which have the smalles count number.
+    min_count = min([x[1] for x in frequency])
+    rare_items = [x[0] for x in frequency if x[1] == min_count]
+    if len(rare_items) == 1:
+        return rare_items[0]
+    # Construct pool of items.
+    pool_items = rare_items[:]
+    pool_items.extend(old_items)
+    # Fetching quality distribution parameters.
+    qdistr_param_pool = []
+    for subm_id in poll_items:
+        idx = items.index(subm_id)
+        qdistr_param_pool.append(qdistr_param[2 * idx])
+        qdistr_param_pool.append(qdistr_param[2 * idx + 1])
+    rankobj = Rank.from_qdistr_param(pool_items, qdistr_param_pool,
+                                     cost_obj=cost_obj)
+    return rankobj.sample_item(old_items, black_items=[])
 
 def process_comparison(db, venue_id, user_id, sorted_items, new_item,
                        alpha_annealing=0.6):
