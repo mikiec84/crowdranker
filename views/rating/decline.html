@@ -1,0 +1,11 @@
+{{extend 'layout.html'}}
+
+<h1>Decline Review</h1>
+
+<p>Please explain in the comment below the reason why you decline to
+perform this review.</p>
+{{=form}}
+
+{{if request.is_local:}}
+{{=response.toolbar()}}
+{{pass}}

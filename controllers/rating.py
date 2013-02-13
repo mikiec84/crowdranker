@@ -88,6 +88,7 @@ def accept_review():
     # Does the user have any pending reviewing tasks for the venue?
     num_open_tasks = db((db.task.user_id == auth.user_id) &
 			(db.task.venue_id == c.id) &
+			(db.task.rejected == False) &
 			(db.task.completed_date > datetime.utcnow())).count()
     if num_open_tasks > c.max_number_outstanding_reviews:
 	session.flash = T('You have too many reviews outstanding for this venue. '
@@ -140,7 +141,9 @@ def accept_review():
 @auth.requires_login()
 def task_index():
     if len(request.args) == 0:
-        q = ((db.task.user_id == auth.user_id) & (db.task.completed_date > datetime.utcnow()))
+        q = ((db.task.user_id == auth.user_id) &
+	     (db.task.completed_date > datetime.utcnow()) &
+	     (db.task.rejected == False))
 	db.task.completed_date.readable = False
 	title = T('Reviews to submit')
         links=[
@@ -150,7 +153,9 @@ def task_index():
                 body = lambda r: A(db.venue(r.venue_id).name, _href=URL('venues', 'view_venue', args=[r.venue_id]))),
             dict(header='Submission', 
                 body = lambda r: A(r.submission_name, _href=URL('submission', 'view_submission', args=[r.id]))),
-            dict(header='Review', body = review_link),]
+            dict(header='Review', body = review_link),
+	    dict(header='Decline', body = decline_link),
+	    ]
     else:
 	t = db.task(request.args(0)) or redirect(URL('default', 'index'))
         # The mode if a specific item.
@@ -163,7 +168,9 @@ def task_index():
                 body = lambda r: A(db.venue(r.venue_id).name, _href=URL('venues', 'view_venue', args=[r.venue_id]))),
             dict(header='Submission', 
                 body = lambda r: A(r.submission_name, _href=URL('submission', 'view_submission', args=[r.id]))),
-            dict(header='Review', body = review_link),]
+            dict(header='Review', body = review_link),
+	    dict(header='Decline', body = decline_link),
+	    ]
     db.task.submission_name.readable = False
     grid = SQLFORM.grid(q,
         args=request.args[:1],
@@ -181,6 +188,41 @@ def review_link(r):
     else:
         # TODO(luca): Allow resubmitting a review.
         return T('Completed on ') + str(r.completed_date)
+
+
+def decline_link(r):
+    if r.completed_date > datetime.utcnow():
+        return A(T('Decline review'), _class='btn', _href=URL('decline', args=[r.id]))
+    else:
+        return ''
+
+    
+@auth.requires_login()
+def decline():
+    # Here is where the comparisons are entered.
+    t = db.task(request.args(0)) or redirect(URL('default', 'index'))
+    if t.user_id != auth.user_id:
+	session.flash = T('Invalid request.')
+        redirect(URL('default', 'index'))
+    if t.completed_date < datetime.utcnow():
+	session.flash = T('This task has alredy been completed.')
+	redirect(URL('default', 'index'))
+    db.task.rejected.default = True
+    db.task.completed_date.readable = False
+    db.task.comments.readable = db.task.comments.writable = False
+    form = SQLFORM(db.task, t)
+    form.vars.rejected = True
+    form.add_button(T('Cancel'), URL('rating', 'task_index'))
+    if form.process().accepted:
+	# Increases the number of rejected reviews for the submission.
+	subm = db.submission(t.submission_id)
+	n = subm.n_rejected_reviews
+	subm.n_rejected_reviews = n + 1
+	subm.update_record()
+	db.commit()
+	session.flash = T('Review status updated')
+	redirect(URL('rating', 'task_index'))
+    return dict(form=form)
 
 
 @auth.requires_login()        
@@ -453,34 +495,6 @@ def edit_reviews():
 @auth.requires_login()
 def edit_ordering():
     return dict()
-
-# TODO(michael): delete this function.
-def get_list_of_users(venue_id, constraint, users_are_reviewers=True):
-    """ Arguments
-        - users_are_reviewers
-            if True, then method returns a list of users who rated the venue
-            if False, then method returns a list of users who submitted to the venue.
-        - constraint is either rate_constraints or submit_constraints
-    """
-    # Obtaining list of users who can rate the venue.
-    list_of_users_r = db(db.user_list.id == constraint).select(db.user_list.email_list).first()
-    if not list_of_users_r is None:
-        return util.get_list(list_of_users_r.email_list)
-    # We don't have list of users, so create one base on reviews or submissions.
-    # Next code uses db access a lot but it should not be a problem because we use
-    # list of users stored in the db.
-    if users_are_reviewers:
-        rows = db(db.comparison.venue_id == venue_id).select(db.comparison.author)
-        list_of_users = []
-        for row in rows:
-            usr_id_r = db(db.auth_user.id == row.author).select().first()
-            if usr_id_r is None:
-                continue
-            list_of_users.append(usr_id_r.email)
-    else:
-        rows = db(db.submission.venue_id == venue_id).select(db.submission.email)
-        list_of_users = list(set([x.email for x in rows]))
-    return list_of_users
 
 
 def check_manager_eligibility(venue_id, user_id, reject_msg):

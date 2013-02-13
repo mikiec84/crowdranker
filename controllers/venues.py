@@ -30,7 +30,7 @@ def view_venue():
     if can_submit:
         link_list.append(A(T('Submit to this venue'), _href=URL('submission', 'submit', args=[c.id])))
     if can_rate:
-        link_list.append(A(T('Rate submissions'), _href=URL('rating', 'accept_review', args=[c.id])))
+        link_list.append(A(T('Review a submission'), _href=URL('rating', 'accept_review', args=[c.id])))
     if has_submitted:
         link_list.append(A(T('View my submissions'), _href=URL('submission', 'my_submissions_index', args=[c.id])))
     if can_manage:

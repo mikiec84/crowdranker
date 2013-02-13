@@ -66,6 +66,8 @@ def submit():
     db.submission.title.readable = db.submission.title.writable = True
     # Check whether link submission is allowed.
     db.submission.link.readable = db.submission.link.writable = c.allow_link_submission
+    db.submission.n_completed_reviews.readable = False
+    db.submission.n_rejected_reviews.readable = False
     # Produces an identifier for the submission.
     db.submission.identifier.default = util.get_random_id()
     db.submission.email.default = auth.user.email

@@ -13,12 +13,18 @@
   <td><div>{{=venue_link}}</div></td><td></td></tr>
   <tr><td style="font-weight:bold">Rating</td><td>:</td>
   <td><div>{{=subm.quality}}</div></td><td></td></tr>
+  <tr><td style="font-weight:bold">Percentile</td><td>:</td>
+  <td><div>{{=subm.percentile}}</div></td><td></td></tr>
+  <tr><td style="font-weight:bold">N. reviews received</td><td>:</td>
+  <td><div>{{=subm.n_completed_reviews}}</div></td><td></td></tr>
   <tr><td style="font-weight:bold">Error</td><td>:</td>
   <td><div>{{=subm.error}}</div></td><td></td></tr>
 {{if subm_link:}}
   <tr><td style="font-weight:bold">Submitted link</td><td>:</td>
   <td><div>{{=subm_link}}</div></td><td></td></tr>
 {{pass}}
+  <tr><td style="font-weight:bold">Comment</td><td>:</td>
+  <td><div>{{=subm.comment}}</div></td><td></td></tr>
 {{if subm.content:}}
   <tr><td style="font-weight:bold">Download</td><td>:</td>
   <td><div>{{=download_link}}</div></td><td></td></tr>

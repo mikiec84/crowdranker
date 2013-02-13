@@ -115,12 +115,14 @@ db.define_table('submission',
     Field('identifier'), # Visible to all, unique.
     Field('content', 'upload'),
     Field('link'),
+    Field('comment', 'text'),
     Field('quality', 'double'),
     Field('error', 'double'),
     Field('true_quality', 'double'),
     Field('percentile', 'double'),
     Field('n_assigned_reviews', 'integer'),
     Field('n_completed_reviews', 'integer', default=0),
+    Field('n_rejected_reviews', 'integer', default=0),
     )
     
 db.submission.id.readable = db.submission.id.writable = False
@@ -142,6 +144,8 @@ db.submission.percentile.writable = False
 db.submission.n_assigned_reviews.writable = db.submission.n_assigned_reviews.readable = False
 db.submission.n_completed_reviews.writable = False
 db.submission.n_completed_reviews.label = T('N. reviews')
+db.submission.n_rejected_reviews.writable = False
+db.submission.n_rejected_reviews.label = T('N. rejected reviews')
 
 db.define_table('user_accuracy',
     Field('user_id', db.auth_user),
@@ -167,6 +171,8 @@ db.define_table('task', # Tasks a user should complete for reviewing.
     Field('submission_name'), # Name of the submission from the point of view of the user.
     Field('assigned_date', 'datetime', default=datetime.utcnow()),
     Field('completed_date', 'datetime', default=datetime(dates.MAXYEAR, 12, 1)),
+    Field('rejected', 'boolean', default=False),
+    Field('rejection_comment', 'text'),
     Field('comments', 'text'),
     )
 
@@ -174,7 +180,12 @@ db.task.id.readable = db.task.id.writable = False
 db.task.user_id.readable = db.task.user_id.writable = False
 db.task.submission_id.readable = db.task.submission_id.writable = False
 db.task.venue_id.readable = db.task.venue_id.writable = False
+db.task.assigned_date.writable = False
+db.task.completed_date.writable = False
 db.task.submission_name.writable = False
+db.task.rejected.readable = db.task.rejected.writable = False
+db.task.rejection_comment.label = T('Reason declined')
+db.task.rejected.label = T('Review declined')
 
 db.define_table('reviewing_duties', # Reviews a user should be doing.
     Field('user_email'),

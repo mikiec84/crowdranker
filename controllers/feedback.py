@@ -64,12 +64,15 @@ def view_feedback():
     db.submission.quality.readable = True
     db.submission.identifier.readable = True
     db.submission.error.readable = True
+    db.submission.percentile.readable = True
+    db.submission.comment.readable = True
 
     # Makes a grid of comments.
+    db.task.submission_name.readable = False
     db.task.assigned_date.readable = False
     db.task.completed_date.readable = False
-    q = ((db.task.submission_id == subm.id) &
-         (db.task.comments != None))
+    db.task.rejected.readable = True
+    q = (db.task.submission_id == subm.id)
     grid = SQLFORM.grid(q,
 	details=True, 
         csv=False, create=False, editable=False, deletable=False, searchable=False,

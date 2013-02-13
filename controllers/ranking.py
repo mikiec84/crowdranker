@@ -26,8 +26,9 @@ def view_venue():
     if c.allow_link_submission:
 	db.submission.link.readable = True
     is_editable = False
-    fields=[db.submission.title, db.submission.email, db.submission.quality, db.submission.percentile,
-	    db.submission.n_completed_reviews, db.submission.error, db.submission.content]
+    fields=[db.submission.title, db.submission.email, db.submission.quality,
+	    db.submission.percentile, db.submission.n_completed_reviews,
+	    db.submission.n_rejected_reviews, db.submission.error, db.submission.content]
     if access.can_enter_true_quality:
 	fields.append(db.submission.true_quality)
 	is_editable = True
