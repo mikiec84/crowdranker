@@ -278,6 +278,12 @@ def review():
 	    venue_id=t.venue_id, ordering=ordering, grades=grades, new_item=new_comparison_item) 
         # Marks the task as done.
         t.update_record(completed_date=datetime.utcnow(), comments=form.vars.comments)
+	# Increments the number of reviews this submission has received.
+	subm = db.submission(t.submission_id)
+	if subm != None and subm.n_completed_reviews != None:
+	    n = subm.n_completed_reviews
+	    subm.n_completed_reviews = n + 1
+	    subm.update_record()
 	
 	# Marks that the user has reviewed for this venue.
 	props = db(db.user_properties.email == auth.user.email).select(db.user_properties.id, db.user_properties.venues_has_rated).first()

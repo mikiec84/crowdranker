@@ -27,12 +27,13 @@ def view_venue():
 	db.submission.link.readable = True
     is_editable = False
     fields=[db.submission.title, db.submission.email, db.submission.quality, db.submission.percentile,
-	    db.submission.error, db.submission.content]
+	    db.submission.n_completed_reviews, db.submission.error, db.submission.content]
     if access.can_enter_true_quality:
 	fields.append(db.submission.true_quality)
 	is_editable = True
 	db.submission.true_quality.readable = db.submission.true_quality.writable = True
     links = [
+	# dict(header=T('N. reviews'), body = lambda r: get_num_reviews(r.id, c.id)),
 	dict(header=T('Download'), body = lambda r:
 	     A(T('Download'), _class='btn',
 	       _href=URL('submission', 'download_viewer', args=[r.id, r.content])))]
@@ -53,6 +54,25 @@ def view_venue():
 	)
     title = A(c.name, _href=URL('venues', 'view_venue', args=[c.id]))
     return dict(title=title, grid=grid)
+
+
+def get_num_reviews(subm_id, venue_id):
+    """This function is used to heal old databases, and produce the count
+    of completed reviews for each submission.
+    In future releases, this is computed automatically by the review function."""
+    # Tries to answer fast.
+    subm = db.submission(subm_id)
+    if subm.n_completed_reviews is not None:
+	return subm.n_completed_reviews
+    # Computes the number of reviews for each item.
+    n = db((db.task.venue_id == venue_id) &
+	   (db.task.submission_id == subm.id) &
+	   (db.task.completed_date < datetime.utcnow())).count()
+    # Stores it in the submission.
+    subm.n_completed_reviews = n
+    subm.update_record()
+    db.commit()
+    return n
 
 
 @auth.requires_login()
