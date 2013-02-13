@@ -208,3 +208,12 @@ db.define_table('grades',
     )
 
 db.grades.author.writable = False
+
+# Deprecated.
+db.define_table('comment',
+    Field('author', db.auth_user,  default=auth.user_id),
+    Field('date', 'datetime', default=datetime.utcnow()),
+    Field('submission_id', db.submission),
+    Field('content', 'text'),
+    )
+
