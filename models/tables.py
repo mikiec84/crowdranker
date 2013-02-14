@@ -147,6 +147,11 @@ db.submission.n_completed_reviews.writable = False
 db.submission.n_completed_reviews.label = T('N. reviews')
 db.submission.n_rejected_reviews.writable = False
 db.submission.n_rejected_reviews.label = T('N. rejected reviews')
+db.submission.quality.represent = lambda x, _ : ("%4.2f" % x)
+db.submission.error.represent = lambda x, _ : ("%4.2f" % x)
+db.submission.percentile.represent = lambda x, _ : ("%3.0f%%" % x)
+db.submission.true_quality.label = T('TA Grade')
+db.submission.feedback.label = T('TA Feedback')
 
 db.define_table('user_accuracy',
     Field('user_id', db.auth_user),
