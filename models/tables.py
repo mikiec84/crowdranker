@@ -115,7 +115,8 @@ db.define_table('submission',
     Field('identifier'), # Visible to all, unique.
     Field('content', 'upload'),
     Field('link'),
-    Field('comment', 'text'),
+    Field('comment', 'text'), # Of the person doing the submission.
+    Field('feedback', 'text'), # Of a TA, grader, etc.
     Field('quality', 'double'),
     Field('error', 'double'),
     Field('true_quality', 'double'),

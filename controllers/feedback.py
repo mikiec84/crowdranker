@@ -66,6 +66,7 @@ def view_feedback():
     db.submission.error.readable = True
     db.submission.percentile.readable = True
     db.submission.comment.readable = True
+    db.submission.feedback.readable = True
 
     # Makes a grid of comments.
     db.task.submission_name.readable = False

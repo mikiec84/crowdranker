@@ -23,6 +23,7 @@ def view_venue():
     db.submission.content.readable = False
     db.submission.title.writable = False
     db.submission.content.writable = False
+    db.submission.comment.writable = False
     if c.allow_link_submission:
 	db.submission.link.readable = True
     is_editable = False
