@@ -1,5 +1,6 @@
 # coding: utf8
 
+import access
 import util
 
 @auth.requires_login()
@@ -42,21 +43,30 @@ def view_feedback():
     subm = db.submission(request.args(0)) or redirect(URL('default', 'index'))
     # Checks whether the user is a manager for the venue.
     c = db.venue(subm.venue_id) or redirect(URL('default', 'index'))
-    is_manager = (auth.user.email in util.get_list(c.managers))
-    if is_manager:
-        download_link = A(T('Download'), _class='btn', 
-		      _href=URL('submission', 'download_manager', args=[subm.id, subm.content]))
-    else:
-        download_link = A(T('Download'), _class='btn', 
-		      _href=URL('submission', 'download_author', args=[subm.id, subm.content]))
-    if (not is_manager) and subm.author != auth.user_id:
+    props = db(db.user_properties.email == auth.user.email).select().first()
+    if props == None:
+	session.flash = T('Not authorized.')
+	redirect(URL('default', 'index'))
+    can_view_feedback = access.can_view_feedback(c, props)
+    if (not can_view_feedback) and subm.author != auth.user_id:
         session.flash = T('Not authorized.')
         redirect(URL('default', 'index'))
-    # Checks whether we have the permission to show the feedback already.
-    c = db.venue(subm.venue_id) or redirect(URL('default', 'index'))
-    if (not is_manager) and (not ((datetime.utcnow() > c.rate_close_date) or c.feedback_accessible_immediately)):
+    if (not can_view_feedback) and (
+	    not ((datetime.utcnow() > c.rate_close_date) or c.feedback_accessible_immediately)):
         session.flash = T('The ratings are not yet available.')
         redirect(URL('feedback', 'index', args=['all']))
+    if subm.author == auth.user_id:
+        download_link = A(T('Download'), _class='btn', 
+		      _href=URL('submission', 'download_author', args=[subm.id, subm.content]))
+    else:
+        download_link = A(T('Download'), _class='btn', 
+		      _href=URL('submission', 'download_manager', args=[subm.id, subm.content]))
+    if can_view_feedback:
+	back_link = P(A(T('Back to submission list'),
+			_href=URL('ranking', 'view_venue', args=[c.id])))
+    else:
+	back_link = P(A(T('Back to submission list'),
+			_href=URL('feedback', 'index', args=[c.id])))
     venue_link = A(c.name, _href=URL('venues', 'view_venue', args=[c.id]))
     subm_link = None
     if c.allow_link_submission:
@@ -66,6 +76,7 @@ def view_feedback():
     db.submission.error.readable = True
     db.submission.percentile.readable = True
     db.submission.comment.readable = True
+    db.submission.feedback.readable = True
 
     # Makes a grid of comments.
     db.task.submission_name.readable = False
@@ -80,4 +91,4 @@ def view_feedback():
         args=request.args[:1],
         )
     return dict(subm=subm, download_link=download_link, subm_link=subm_link,
-		venue_link=venue_link, grid=grid)
+		venue_link=venue_link, grid=grid, back_link=back_link)

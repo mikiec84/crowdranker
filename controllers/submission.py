@@ -68,6 +68,7 @@ def submit():
     db.submission.link.readable = db.submission.link.writable = c.allow_link_submission
     db.submission.n_completed_reviews.readable = False
     db.submission.n_rejected_reviews.readable = False
+    db.submission.feedback.readable = db.submission.feedback.writable = False
     # Produces an identifier for the submission.
     db.submission.identifier.default = util.get_random_id()
     db.submission.email.default = auth.user.email
@@ -114,6 +115,7 @@ def manager_submit():
     # Prepares the submission.
     db.submission.email.writable = db.submission.email.readable = True
     db.submission.author.readable = db.submission.author.writable = False
+    db.submission.feedback.readable = db.submission.feedback.writable = False
     db.submission.email.label = T('Author')
     # Assigns default quality to the submission.
     avg, stdev = ranker.get_init_average_stdev()
@@ -126,6 +128,8 @@ def manager_submit():
     if request.vars.content != None and request.vars.content != '':
         form.vars.original_filename = request.vars.content.filename
     if form.process(onvalidation=manager_submit_validation).accepted:
+	# Fixes the author field of the submission.
+	db(db.submission.id == form.vars.id).update(author=form.vars.author)
         # Adds the venue to the list of venues where the user submitted.
         # TODO(luca): Enable users to delete submissions.  But this is complicated; we need to 
         # delete also their quality information etc.  For the moment, no deletion.
@@ -188,14 +192,19 @@ def view_own_submission():
     if subm.author != auth.user_id:
         session.flash = T('You cannot view this submission.')
         redirect(URL('default', 'index'))
-    # If the venue is still open for submissions, then we allow editing of the submission.
     c = db.venue(subm.venue_id) or redirect(URL('default', 'index'))
     t = datetime.utcnow()
     download_link = None
     subm_link = None
     if c.allow_link_submission:
 	subm_link = A(subm.link, _href=subm.link)
+    db.submission.author.readable = db.submission.author.writable = False
+    db.submission.feedback.readable = db.submission.feedback.writable = False
+    db.submission.percentile.readable = db.submission.percentile.writable = False
+    db.submission.n_completed_reviews.readable = False
+    db.submission.n_rejected_reviews.readable = False
     if (c.is_active and c.is_approved and c.open_date <= t and c.close_date >= t):
+	# The venue is still open for submissions, and we allow editing of the submission.
         form = SQLFORM(db.submission, subm, upload=URL('download_author', args=[subm.id]))
         if request.vars.content != None and request.vars.content != '':
             form.vars.original_filename = request.vars.content.filename
@@ -203,6 +212,7 @@ def view_own_submission():
             session.flash = T('Your submission has been updated.')
             redirect(URL('feedback', 'index', args=['all']))
     else:
+	# The venue is no longer open for submission.
         db.submission.content.readable = False
         form = SQLFORM(db.submission, subm, readonly=True,
 		       upload=URL('download_author', args=[subm.id]), buttons=[])

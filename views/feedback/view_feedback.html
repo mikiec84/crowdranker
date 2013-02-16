@@ -12,26 +12,36 @@
   <tr><td style="font-weight:bold">Venue</td><td>:</td>
   <td><div>{{=venue_link}}</div></td><td></td></tr>
   <tr><td style="font-weight:bold">Rating</td><td>:</td>
-  <td><div>{{=subm.quality}}</div></td><td></td></tr>
+  <td><div>{{=subm.quality}} &plusmn {{=subm.error}}</div></td><td></td></tr>
   <tr><td style="font-weight:bold">Percentile</td><td>:</td>
   <td><div>{{=subm.percentile}}</div></td><td></td></tr>
   <tr><td style="font-weight:bold">N. reviews received</td><td>:</td>
   <td><div>{{=subm.n_completed_reviews}}</div></td><td></td></tr>
-  <tr><td style="font-weight:bold">Error</td><td>:</td>
-  <td><div>{{=subm.error}}</div></td><td></td></tr>
+  <tr><td style="font-weight:bold">N. reviews rejected</td><td>:</td>
+  <td><div>{{=subm.n_rejected_reviews}}</div></td><td></td></tr>
 {{if subm_link:}}
   <tr><td style="font-weight:bold">Submitted link</td><td>:</td>
   <td><div>{{=subm_link}}</div></td><td></td></tr>
 {{pass}}
-  <tr><td style="font-weight:bold">Comment</td><td>:</td>
+{{ if subm.comment:}}
+  <tr><td style="font-weight:bold">Author's comments</td><td>:</td>
   <td><div>{{=subm.comment}}</div></td><td></td></tr>
+{{pass}}
+{{ if subm.feedback:}}
+  <tr><td style="font-weight:bold">Feedback from class evaluator</td><td>:</td>
+  <td><div>{{=subm.feedback}}</div></td><td></td></tr>
+{{pass}}
+{{ if subm.true_quality:}}
+  <tr><td style="font-weight:bold">Grade from class evaluator</td><td>:</td>
+  <td><div>{{=subm.true_quality}}</div></td><td></td></tr>
+{{pass}}
 {{if subm.content:}}
   <tr><td style="font-weight:bold">Download</td><td>:</td>
   <td><div>{{=download_link}}</div></td><td></td></tr>
 {{pass}}
 </table></div>
 
-<br>
+{{=back_link}}
 
 <h3>Comments received</h3>
 {{=grid}}

@@ -217,6 +217,7 @@ def decline():
 	# Increases the number of rejected reviews for the submission.
 	subm = db.submission(t.submission_id)
 	n = subm.n_rejected_reviews
+        n = 0 if n is None else n
 	subm.n_rejected_reviews = n + 1
 	subm.update_record()
 	db.commit()
