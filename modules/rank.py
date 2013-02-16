@@ -201,7 +201,8 @@ class Rank:
 
         Arguments:
             - sorted_items is a list of items sorted by user such that
-            rank(sorted_items[i]) > rank(sorted_items[j]) for i > j
+            rank(sorted_items[i]) > rank(sorted_items[j]) for i < j
+            (Worst to Best)
 
             - new_item is an id of a submission from sorted_items which was new
             to the user. If sorted_items contains only two elements then
@@ -274,7 +275,8 @@ class Rank:
         Bins are 0, 1, ..., num_bins - 1
 
         descend_list is a list of id's such that
-        rank(descend_list[i]) > rank(descend_list[j]) if i > j
+        rank(descend_list[i]) > rank(descend_list[j]) if i < j
+        (Worst to Best)
         """
         n = len(descend_list)
         factorial = math.factorial(n)
@@ -539,7 +541,8 @@ class Rank:
         #self.qdistr = self.qdistr / np.sum(self.qdistr, 1) [:, np.newaxis]
 
     def evaluate_ordering(self, ordering):
-        """ rank(oredring[i]) > rank(ordering[j]) for i > j
+        """ rank(oredring[i]) > rank(ordering[j]) for i < j
+        (Worst to Best)
         Function, returns average probability of error.
         """
         n = len(ordering)
@@ -576,6 +579,7 @@ class Rank:
         It simulates sorting by a truthful user.
         Returns sorted list of items so rank(result[i]) > rank(result[j])
         if i > j.
+        #TODO(michael): check this function in case of use
         """
         items_ids = [idx for idx in range(self.num_items) if \
                         self.orig_items_id[idx] in items]

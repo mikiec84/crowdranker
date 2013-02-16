@@ -160,7 +160,7 @@ db.define_table('user_accuracy',
     Field('n_ratings', 'integer'),
     )
 
-db.define_table('comparison', # An ordering of submissions, from worst to best.
+db.define_table('comparison', # An ordering of submissions, from Best to Worst.
     Field('author', db.auth_user,  default=auth.user_id),
     Field('date', 'datetime', default=datetime.utcnow()),
     Field('venue_id', db.venue),
