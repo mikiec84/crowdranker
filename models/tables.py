@@ -190,20 +190,6 @@ db.task.rejected.readable = db.task.rejected.writable = False
 db.task.rejection_comment.label = T('Reason declined')
 db.task.rejected.label = T('Review declined')
 
-db.define_table('reviewing_duties', # Reviews a user should be doing.
-    Field('user_email'),
-    Field('venue_id', db.venue),
-    Field('num_reviews', 'integer'),
-    Field('date_assigned', 'datetime', default=datetime.utcnow()),
-    Field('last_performed', 'datetime', update=datetime.utcnow()),
-    )
-    
-db.reviewing_duties.user_email.readable = db.reviewing_duties.user_email.writable = False
-db.reviewing_duties.venue_id.writable = False
-db.reviewing_duties.num_reviews.writable = False
-db.reviewing_duties.date_assigned.readable = db.reviewing_duties.date_assigned.writable = False
-db.reviewing_duties.last_performed.readable = db.reviewing_duties.last_performed.writable = False
-
 db.define_table('grades',
     Field('venue_id', db.venue, required=True),
     Field('author', db.auth_user),

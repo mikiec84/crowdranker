@@ -36,7 +36,6 @@ def view_venue():
     if can_manage:
         link_list.append(A(T('Edit'), _href=URL('managed_index', vars=dict(cid=c.id))))
 	link_list.append(A(T('Add submission'), _href=URL('submission', 'manager_submit', args=[c.id])))
-	link_list.append(A(T('Assign reviewers'), _href=URL('rating', 'assign_reviewers', args=[c.id])))
         link_list.append(A(T('Recompute submission ranking'), _href=URL('rating', 'recompute_ranks', args=[c.id])))
         link_list.append(A(T('Evaluate reviewers'), _href=URL('rating', 'evaluate_reviewers', args=[c.id])))
         link_list.append(A(T('Compute final grades'), _href=URL('rating', 'compute_final_grades', args=[c.id])))
@@ -234,23 +233,42 @@ def public_index():
 def reviewing_duties():
     """This function lists venues where users have reviews to accept, so that users
     can be redirected to a page where to perform such reviews."""
-    q = ((db.reviewing_duties.user_email == auth.user.email) & (db.reviewing_duties.num_reviews > 0))
-    db.reviewing_duties.venue_id.readable = False
-    db.reviewing_duties.num_reviews.label = T('Number of reviews to accept')
+    # Produces a list of venues that are open for rating.
+    props = db(db.user_properties.email == auth.user.email).select(db.user_properties.venues_can_rate).first()
+    if props == None:
+        l = []
+    else:
+        l = util.get_list(props.venues_can_rate)
+    t = datetime.utcnow()
+    if len(l) == 0:
+	q = (db.venue.id == -1)
+    else:
+	q = ((db.venue.rate_close_date > t) & (db.venue.is_active == True) & (db.venue.id.belongs(l)))
+    db.venue.rate_close_date.label = T('Review deadline')
+    db.venue.number_of_submissions_per_reviewer.label = T('Total n. of reviews')
     grid = SQLFORM.grid(q,
-        field_id=db.reviewing_duties.id,
-        user_signature=False,
-        fields = [db.reviewing_duties.venue_id, db.reviewing_duties.num_reviews],
-        csv = False, details = False, create = False, editable = False, deletable = False,
-        links = [
-	    dict(header='Venue', body = lambda r: view_venue_link(r.venue_id)),
-	    dict(header='Deadline', body = lambda r: get_review_deadline(r.venue_id)),
+        field_id=db.venue.id,
+        fields=[db.venue.name, db.venue.rate_open_date, db.venue.rate_close_date,
+		db.venue.number_of_submissions_per_reviewer],
+        csv=False, details=False, create=False, editable=False, deletable=False,
+        links=[
+	    dict(header=T('N. reviews to do'), body = lambda r: get_num_reviews_todo(r)),
+	    dict(header=T('Review'), body = lambda r: review_link(r)),
 	    dict(header='Accept',
 		 body = lambda r: 
 		 A(T('Accept to do a review'), _href=URL('rating', 'accept_review', args=[r.venue_id]))),
-            ],
+	    ]
         )
     return dict(grid=grid)
+
+
+def get_num_reviews_todo(venue):
+    if venue.number_of_submissions_per_reviewer == 0:
+	return 0
+    # See how many reviewing tasks the user has accepted.
+    n_accepted_tasks = db((db.task.venue_id == venue.id) &
+			  (db.task.user_id == auth.user_id)).select().count()
+    return max(0, venue.number_of_submissions_per_reviewer - n_accepted_tasks)
 
 
 def view_venue_link(venue_id):
