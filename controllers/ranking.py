@@ -4,6 +4,7 @@ import access
 import util
 from datetime import datetime
 import numpy as np
+import gluon.contrib.simplejson as simplejson
 
 @auth.requires_login()
 def view_venue():
@@ -137,6 +138,7 @@ def view_final_grades():
                   _href=URL('ranking', 'view_grades_histogram', args=[c.id]))
     return dict(grid=grid, title=title, histogram_link=histogram_link)
 
+
 @auth.requires_login()
 def view_grades_histogram():
     c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
@@ -154,3 +156,83 @@ def view_grades_histogram():
     hist = [(bins[i], hist[i]) for i in xrange(len(hist))]
     title = A(c.name, _href=URL('venues', 'view_venue', args=[c.id]))
     return dict(sub_title=title, hist=hist)
+
+
+@auth.requires_login()
+def view_tasks():
+    """This function enables the view of the reviewing tasks, as well as the comparisons
+    that they led to."""
+    c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
+    props = db(db.user_properties.email == auth.user.email).select().first()
+    if not access.can_observe(c, props):
+	session.flash = T('Not authorized')
+	redirect(URL('default', 'index'))
+    q = (db.task.venue_id == c.id)
+    db.task.user_id.readable = True
+    db.task.submission_name.readable = True
+    db.task.comments.readable = True
+    db.task.rejection_comment.readable = True
+    db.task.rejected.readable = True
+    grid = SQLFORM.grid(q,
+	field_id=db.task.id,
+	csv=True,
+	args=request.args[:1],
+	user_signature=False,
+	details=True, create=False,
+	editable=False, deletable=False,
+	fields=[db.task.user_id, db.task.submission_id, db.task.venue_id,
+		db.task.submission_name, db.task.completed_date,
+		db.task.comments, db.task.rejected, db.task.rejection_comment],
+	links=[
+	    dict(header=T('Submission feedback'), body = lambda r:
+		 A(T('View feedback'), _class='btn', _href=URL('feedback', 'view_feedback', args=[r.submission_id]))),
+	    dict(header=T('Comparison'), body = lambda r:
+		 A(T('View comparison'), _class='btn', _href=URL('ranking', 'view_comparison', args=[r.venue_id, r.user_id, r.submission_id]))),
+	    ]
+	)
+    title = T('Tasks for venue ' + c.name)
+    return dict(title=title, grid=grid)
+
+
+@auth.requires_login()
+def view_comparison():
+    """This function displays an individual comparison, given parameters that can be
+    known from a task."""
+    comp = db((db.comparison.venue_id == request.args(0)) &
+	      (db.comparison.author == request.args(1)) &
+	      (db.comparison.new_item == request.args(2))).select().first()
+    props = db(db.user_properties.email == auth.user.email).select().first()
+    c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
+    if not access.can_observe(c, props):
+	session.flash = T('Not authorized')
+	redirect(URL('default', 'index'))
+    if comp is None:
+	form = T('No corresponding comparison found.')
+    else:
+	form = SQLFORM(db.comparison, comp, readonly=True)
+    return dict(form=form)
+
+
+@auth.requires_login()
+def view_comparisons_index():
+    """This function displays all comparisons for a venue."""
+    props = db(db.user_properties.email == auth.user.email).select().first()
+    c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
+    if not access.can_observe(c, props):
+	session.flash = T('Not authorized')
+	redirect(URL('default', 'index'))
+    q = (db.comparison.venue_id == c.id)
+    db.comparison.ordering.represent = represent_ordering
+    grid = SQLFORM.grid(q,
+	field_id=db.comparison.id,
+	fields=[db.comparison.author, db.comparison.date, 
+		db.comparison.ordering, db.comparison.grades, db.comparison.new_item,
+		db.comparison.is_valid],
+	csv=True,
+	args=request.args[:1],
+	user_signature=False,
+	details=True, create=False,
+	editable=False, deletable=False,
+	)
+    title = T('Comparisons for venue ' + c.name)
+    return dict(title=title, grid=grid)

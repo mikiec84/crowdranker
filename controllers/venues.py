@@ -39,6 +39,9 @@ def view_venue():
         link_list.append(A(T('Recompute submission ranking'), _href=URL('rating', 'recompute_ranks', args=[c.id])))
         link_list.append(A(T('Evaluate reviewers'), _href=URL('rating', 'evaluate_reviewers', args=[c.id])))
         link_list.append(A(T('Compute final grades'), _href=URL('rating', 'compute_final_grades', args=[c.id])))
+    if can_observe or can_manage:
+	link_list.append(A(T('View reviewing tasks'), _href=URL('ranking', 'view_tasks', args=[c.id])))
+	link_list.append(A(T('View comparisons'), _href=URL('ranking', 'view_comparisons_index', args=[c.id])))
     if can_view_ratings or access.can_view_submissions(c, props):
         link_list.append(A(T('View submissions'), _href=URL('ranking', 'view_venue', args=[c.id])))
     if access.can_view_rating_contributions(c, props):
@@ -253,21 +256,20 @@ def reviewing_duties():
         csv=False, details=False, create=False, editable=False, deletable=False,
         links=[
 	    dict(header=T('N. reviews to do'), body = lambda r: get_num_reviews_todo(r)),
-	    dict(header=T('Review'), body = lambda r: review_link(r)),
 	    dict(header='Accept',
 		 body = lambda r: 
-		 A(T('Accept to do a review'), _href=URL('rating', 'accept_review', args=[r.venue_id]))),
+		 A(T('Accept to do a review'), _href=URL('rating', 'accept_review', args=[r.id]))),
 	    ]
         )
     return dict(grid=grid)
 
 
 def get_num_reviews_todo(venue):
-    if venue.number_of_submissions_per_reviewer == 0:
+    if venue.number_of_submissions_per_reviewer == 0 or venue.number_of_submissions_per_reviewer == None:
 	return 0
     # See how many reviewing tasks the user has accepted.
     n_accepted_tasks = db((db.task.venue_id == venue.id) &
-			  (db.task.user_id == auth.user_id)).select().count()
+			  (db.task.user_id == auth.user_id)).count()
     return max(0, venue.number_of_submissions_per_reviewer - n_accepted_tasks)
 
 

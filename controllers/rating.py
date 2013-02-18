@@ -357,6 +357,8 @@ def verify_rating_form(subm_id):
 	    form.errors.comments = T('Error in the received grades')
 	    session.flash = T('Error in the received grades')
 	    return
+	logger.debug("form.vars.order: " + str(form.vars.order))
+	logger.debug("form.vars.grades: " + str(form.vars.grades))
     return decode_order
 
 
