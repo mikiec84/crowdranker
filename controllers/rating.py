@@ -8,63 +8,6 @@ from datetime import datetime
 import datetime as dates
 
 
-@auth.requires_login()
-def assign_reviewers():
-    c = db.venue(request.args(0)) or redirect('default', 'index')
-    props = db(db.user_properties.email == auth.user.email).select().first()
-    if props == None:
-        session.flash = T('You cannot assign reviewers to this venue.')
-        redirect(URL('default', 'index'))
-    if not access.can_manage(c, props):
-        session.flash = T('You cannot assign reviewers to this venue.')
-        redirect(URL('default', 'index'))
-    # These are the users that can be called upon reviewing the submissions.
-    managed_user_lists = util.get_list(props.managed_user_lists)
-    # Constrains the user lists to those managed by the user.
-    list_q = (db.user_list.id.belongs(managed_user_lists))
-    # The default is the list of users that can review the venue.
-    if c.rate_constraint is None:
-	form = SQLFORM.factory(
-	    Field('users', requires = IS_IN_DB(db(list_q), 'user_list.id', '%(name)s')),
-	    Field('number_of_reviews_per_user', 'integer'),
-	    Field('incremental', 'boolean'),
-	    )
-    else:
-	form = SQLFORM.factory(
-	    Field('users', default = c.rate_constraint,
-		  requires = IS_IN_DB(db(list_q), 'user_list.id', '%(name)s')),
-	    Field('number_of_reviews_per_user', 'integer'),
-	    Field('incremental', 'boolean'),
-	    )	
-    if form.process().accepted:
-        if (util.is_none(form.vars.users) or form.vars.number_of_reviews_per_user == 0 
-                or (form.vars.number_of_reviews_per_user < 0 and not form.vars.incremental)):
-            session.flash = T('No reviewing duties added.')
-            redirect(URL('venues', 'managed_index'))
-	n = c.number_of_submissions_per_reviewer
-	c.update_record(number_of_submissions_per_reviewer = n + form.vars.number_of_reviews_per_user)
-        # TODO(luca): this should be implemented in terms of a job queue
-        user_list = db.user_list(form.vars.users)
-        for m in user_list.email_list:
-            current_asgn = db((db.reviewing_duties.user_email == m) &
-                (db.reviewing_duties.venue_id == c.id)).select().first()
-            if current_asgn == None:
-                # Creates a new one.
-                db.reviewing_duties.insert(user_email = m, venue_id = c.id, 
-                    num_reviews = form.vars.number_of_reviews_per_user)
-            else:
-                # Update an existing one
-                if form.vars.incremental:
-                    new_number = max(0, current_asgn.num_reviews + form.vars.number_of_reviews_per_user)
-                else:
-                    new_number = form.vars.number_of_reviews_per_user
-                current_asgn.update_record(num_reviews = new_number)
-        db.commit()
-        session.flash = T('The reviewing duties have been assigned.')
-        redirect(URL('venues', 'managed_index'))
-    venue_form = SQLFORM(db.venue, record=c, readonly=True)
-    return dict(venue=c, form=form, vform=venue_form)
-                
 
 @auth.requires_login()
 def accept_review():
@@ -99,11 +42,6 @@ def accept_review():
     confirmation_form = FORM.confirm(T('Accept'),
         {T('Decline'): URL('default', 'index')})
     if confirmation_form.accepted:
-        # Decreases the reviewing duties.
-        duties = db((db.reviewing_duties.user_email == auth.user.email) &
-            (db.reviewing_duties.venue_id == c.id)).select().first()
-        if duties != None and duties.num_reviews > 0:
-            duties.update_record(num_reviews = duties.num_reviews - 1)
         # Reads the most recent ratings given by the user.
         # TODO(luca): we should really poll the rating system for this; that's what
         # should keep track of these things.
@@ -444,6 +382,7 @@ def my_reviews():
 	)
     return dict(grid=grid)
 
+
 @auth.requires_login()
 def edit_reviews():
     # Gets the information on the venue.
@@ -498,6 +437,7 @@ def edit_reviews():
                 submissions=submissions,
                 current_grades=current_grades,
                 ordering_edit_link=ordering_edit_link)
+
 
 @auth.requires_login()
 def edit_ordering():

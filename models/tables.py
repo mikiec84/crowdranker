@@ -147,9 +147,6 @@ db.submission.n_completed_reviews.writable = False
 db.submission.n_completed_reviews.label = T('N. reviews')
 db.submission.n_rejected_reviews.writable = False
 db.submission.n_rejected_reviews.label = T('N. rejected reviews')
-db.submission.quality.represent = lambda x, _ : ("%4.2f" % x)
-db.submission.error.represent = lambda x, _ : ("%4.2f" % x)
-db.submission.percentile.represent = lambda x, _ : ("%3.0f%%" % x)
 db.submission.true_quality.label = T('TA Grade')
 db.submission.feedback.label = T('TA Feedback')
 
@@ -193,20 +190,6 @@ db.task.rejected.readable = db.task.rejected.writable = False
 db.task.rejection_comment.label = T('Reason declined')
 db.task.rejected.label = T('Review declined')
 
-db.define_table('reviewing_duties', # Reviews a user should be doing.
-    Field('user_email'),
-    Field('venue_id', db.venue),
-    Field('num_reviews', 'integer'),
-    Field('date_assigned', 'datetime', default=datetime.utcnow()),
-    Field('last_performed', 'datetime', update=datetime.utcnow()),
-    )
-    
-db.reviewing_duties.user_email.readable = db.reviewing_duties.user_email.writable = False
-db.reviewing_duties.venue_id.writable = False
-db.reviewing_duties.num_reviews.writable = False
-db.reviewing_duties.date_assigned.readable = db.reviewing_duties.date_assigned.writable = False
-db.reviewing_duties.last_performed.readable = db.reviewing_duties.last_performed.writable = False
-
 db.define_table('grades',
     Field('venue_id', db.venue, required=True),
     Field('author', db.auth_user),
@@ -222,4 +205,3 @@ db.define_table('comment',
     Field('submission_id', db.submission),
     Field('content', 'text'),
     )
-
