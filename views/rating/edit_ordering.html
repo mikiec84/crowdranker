@@ -1,0 +1,78 @@
+{{response.files.append(URL(r=request,c='static',f='js/jquery-ui-1.9.2.custom.min.js'))}}
+{{response.files.append(URL(r=request,c='static',f='css/jquery-ui-1.9.2.custom.css'))}}
+{{extend 'layout.html'}}
+
+<h2>Edit review for {{=venue.name}}</h2>
+<style type="text/css">
+    #sortable { margin: 0; padding: 0; width: 60%; }
+    #sortable li { margin: 0 3px 3px 3px; padding: 0.4em; padding-left: 1.5em; font-size: 1.4em; height: 18px; }
+    #sortable li span { position: absolute; margin-left: -1.3em; }
+</style>
+
+<div class="alert alert-info"><i class="icon-info-sign"></i> Rank the
+  submission relative to submissions that you have previously reviewed
+  by dragging and dropping submissions into place; the best submission
+  should be on top.  Also assign a grade from 0 to 10 to each item
+  (floating point grades are allowed).  The grades must reflect the
+  ranking.  Assigning the same grade to two different submissions is
+  not allowed.  Use the following grading scale:
+    <ul>
+        <li>10: you already gave awesome to some app, and this one is even better.</li>
+        <li>9: awesome.</li>
+        <li>8: great work, works really well.</li>
+        <li>7: works nicely, meeting the homework requirements./li>
+        <li>6: meets the homework requirements, but not otherwise remarkable.</li>
+        <li>5: meets the homework requirements, but has some relatively minor mistakes.</li>
+        <li>4: has some noticeable missing functionality, but goes some of the way towards meeting the homework requirements.</li>
+        <li>3: something works.</li>
+        <li>2: does not work.</li>
+        <li>0: spurious submission, out of scope (e.g. wrong homework submitted).</li>
+    </ul>
+    When grading, please consider:
+    <ul>
+        <li>Functionality. Can it do what it should?</li>
+        <li>Usability.  How easy to use it is?  And as a lesser concern, how polished it is?</li>
+        <li>Code style.  Is the code readable?  Well factored?  Well commented?</li>
+    </ul>
+</div>
+
+<ol id="item_list">
+{{for key in current_list:}}
+  <li class="ui-state-default" id="item_{{=key}}">
+  <span class="ui-icon ui-icon-arrowthick-2-n-s"></span>
+  {{=submissions[key]}}
+  <span>Grade [0 to 10]: <input id="grade_{{=key}}" style="width:40px" value="{{=grades.get(key, '')}}"/></span>
+  </li>
+{{pass}}
+</ol>
+<br>
+{{=form}}
+
+<script>
+$(function() {
+	$("#item_list").sortable();
+	$("#item_list").disableSelection();
+	$("form").submit(function() {
+		var new_order = $("#item_list").sortable('toArray');
+		var i = 0;
+		var tmp = "";
+		for (var key in new_order) {
+			var val = new_order[key];
+			var part = val.split("_");
+			if (i > 0) tmp += " ";
+			tmp += part[1]; 	
+			i++;
+		}
+		$("[name='order']").val(tmp);
+		var grades = {};
+		{{for key in current_list:}}
+		grades["{{=key}}"] = $("#grade_{{=key}}").val();
+		{{pass}}
+		$("[name='grades']").val(JSON.stringify(grades));
+	});
+});
+</script>
+
+{{if request.is_local:}}
+{{=response.toolbar()}}
+{{pass}}

@@ -456,9 +456,13 @@ def edit_reviews():
     if last_comparison_r is None:
         current_ordering = []
         compar_id = None
+        current_grades = {}
     else:
         current_ordering = last_comparison_r.ordering
         compar_id = last_comparison_r.id
+        # Dictionary submission id: grade.
+        str_grades = simplejson.loads(last_comparison_r.grades)
+        current_grades = {long(key):float(value) for (key, value) in str_grades.iteritems()}
     submissions = {}
     for sub_id in current_ordering:
         # Finds the task.
@@ -484,6 +488,7 @@ def edit_reviews():
          (db.task.user_id == auth.user_id))
     db.task.assigned_date.writable = False
     db.task.completed_date.writable = False
+    db.task.rejection_comment.writable = False
     grid = SQLFORM.grid(q, details=True, csv=False, create=False,
                         editable=(not expired), searchable=False,
                         deletable=False, args=request.args[:1],
@@ -491,11 +496,114 @@ def edit_reviews():
     return dict(grid=grid, title=c.name,
                 current_ordering=current_ordering,
                 submissions=submissions,
+                current_grades=current_grades,
                 ordering_edit_link=ordering_edit_link)
 
 @auth.requires_login()
 def edit_ordering():
-    return dict()
+    """ Edit last ordering."""
+    # Gets the information on the venue and comparison.
+    venue = db.venue(request.args[0]) or redirect(URL('default', 'index'))
+    last_comparison = db.comparison(request.args[1]) or redirect(URL('default', 'index'))
+    if last_comparison.author != auth.user_id:
+        session.flash = T('Invalid request.')
+        redirect(URL('default', 'index'))
+
+    # Check that the venue rating deadline is currently open, or that the ranker
+    # is a manager or observer.
+    if ((auth.user.email not in util.get_list(venue.managers)) and
+	(auth.user.email not in util.get_list(venue.observers)) and 
+	(datetime.utcnow() < venue.rate_open_date or datetime.utcnow() > venue.rate_close_date)):
+	session.flash = T('The review deadline for this venue is closed.')
+        redirect(URL('venues', 'view_venue', args=[venue.id]))
+
+    # Ok, the task belongs to the user.
+    # Gets the last reviewing task done for the same venue.
+    if last_comparison == None:
+        last_ordering = []
+    else:
+        last_ordering = util.get_list(last_comparison.ordering)
+
+    # Finds the grades that were given for the submissions previously reviewed.
+    if last_comparison == None or last_comparison.grades == None:
+	str_grades = {}
+    else:
+	try:
+	    str_grades = simplejson.loads(last_comparison.grades)
+	except Exception, e:
+	    str_grades = {}
+	    logger.warning("Grades cannot be read: " + str(last_comparison.grades))
+    # Now converts the keys to ints.
+    grades = {}
+    for k, v in str_grades.iteritems():
+	try:
+	    grades[long(k)] = float(v)
+	except Exception, e:
+	    logger.warning("Grades cannot be converted: " + str(k) + ":" + str(v))
+
+    # Now we need to find the names of the submissions (for the user) that were 
+    # used in this last ordering.
+    # We create a submission_id to line mapping, that will be passed in json to the view.
+    submissions = {}
+    for i in last_ordering:
+	# Finds the task.
+	st = db((db.task.submission_id == i) &
+		(db.task.user_id == auth.user_id)).select().first()
+	if st != None:
+	    v = access.validate_task(db, st.id, auth.user_id)
+	    if v != None:
+		(_, subm, cont) = v
+		line = SPAN(A(st.submission_name, _href=URL('submission', 'view_submission', args=[i])),
+			    " (Comments: ", util.shorten(st.comments), ") ",
+			    A(T('Download'), _class='btn',
+			      _href=URL('download_reviewer', args=[st.id, subm.content])))
+		submissions[i] = line 
+
+    # Creating form.
+    form = SQLFORM.factory(hidden=dict(order='', grades=''))
+
+    if form.process(onvalidation=verify_rating_form(-1)).accepted:
+        # Creates a new comparison in the db and marks old ona as not valid.
+        new_ordering = form.vars.order
+        new_grades = form.vars.grades
+        decoded_grades = simplejson.loads(new_grades)
+        grades_subm = {long(key):float(value) for (key, value) in decoded_grades.iteritems()}
+        # Check whether new ordering is different from old one.
+        coinside_ordering = (len(new_ordering) == len(last_ordering) and
+                         all(x==y for x, y in zip(new_ordering, last_ordering)))
+        # Check whether new grades are different from old ones.
+        coinside_grades = False
+        if coinside_ordering:
+            coinside_grades = True
+            for subm_id in new_ordering:
+                if abs(grades_subm[subm_id] - grades[subm_id]) > 0.00001:
+                    coinside_grades = False
+        if coinside_ordering and coinside_grades:
+            session.flash = T('The review has not been changed.')
+            redirect(URL('rating', 'edit_reviews', args=[venue.id]))
+        # Okay, we have new review.
+        # Mark current review as not valid and create new comparison.
+        last_comparison.update_record(is_valid=False)
+        new_comparison_id = db.comparison.insert(
+            venue_id=venue.id, ordering=new_ordering, grades=new_grades,
+            new_item=last_comparison.new_item)
+        # TODO(michael):  Mark that user has revised the comparison.
+
+        # TODO(luca): put it in a queue of things that need processing.
+        # All updates done.
+        # Calling ranker.py directly.
+        ranker.process_comparison(db, venue.id, auth.user_id,
+                                  new_ordering[::-1], last_comparison.new_item)
+        db.commit()
+        session.flash = T('The review has been submitted.')
+        redirect(URL('rating', 'edit_reviews', args=[venue.id]))
+
+    return dict(form=form,
+        submissions = submissions,
+        grades = grades,
+        venue = venue,
+        current_list = last_ordering,
+        )
 
 
 def check_manager_eligibility(venue_id, user_id, reject_msg):
