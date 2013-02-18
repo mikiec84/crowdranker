@@ -71,12 +71,13 @@ def view_feedback():
     subm_link = None
     if c.allow_link_submission:
 	subm_link = A(subm.link, _href=subm.link)
-    db.submission.quality.readable = True
     db.submission.identifier.readable = True
-    db.submission.error.readable = True
     db.submission.percentile.readable = True
     db.submission.comment.readable = True
     db.submission.feedback.readable = True
+    if access.can_observe(c, props):
+	db.submission.quality.readable = True
+	db.submission.error.readable = True
 
     # Makes a grid of comments.
     db.task.submission_name.readable = False
