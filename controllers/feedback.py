@@ -83,6 +83,9 @@ def view_feedback():
     db.task.assigned_date.readable = False
     db.task.completed_date.readable = False
     db.task.rejected.readable = True
+    if access.can_observe(c, props):
+	db.task.user_id.readable = True
+	db.task.completed_date.readable = True
     q = (db.task.submission_id == subm.id)
     grid = SQLFORM.grid(q,
 	details=True, 
