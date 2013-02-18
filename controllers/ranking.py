@@ -4,6 +4,7 @@ import access
 import util
 from datetime import datetime
 import numpy as np
+import gluon.contrib.simplejson as simplejson
 
 @auth.requires_login()
 def view_venue():
@@ -221,9 +222,10 @@ def view_comparisons_index():
 	session.flash = T('Not authorized')
 	redirect(URL('default', 'index'))
     q = (db.comparison.venue_id == c.id)
+    db.comparison.ordering.represent = represent_ordering
     grid = SQLFORM.grid(q,
 	field_id=db.comparison.id,
-	fields=[db.comparison.author, db.comparison.date, db.comparison.venue_id,
+	fields=[db.comparison.author, db.comparison.date, 
 		db.comparison.ordering, db.comparison.grades, db.comparison.new_item,
 		db.comparison.is_valid],
 	csv=True,
@@ -231,11 +233,6 @@ def view_comparisons_index():
 	user_signature=False,
 	details=True, create=False,
 	editable=False, deletable=False,
-	links=[
-	    dict(header=T('Submission feedback'), body = lambda r:
-		 A(T('View feedback'), _class='btn', _href=URL('feedback', 'view_feedback', args=[r.new_item]))),
-	    ]
 	)
     title = T('Comparisons for venue ' + c.name)
     return dict(title=title, grid=grid)
-

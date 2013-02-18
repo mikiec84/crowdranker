@@ -226,12 +226,9 @@ def view_submission_by_manager():
     """Allows viewing a submission by a contest manager.
     The argument is the submission id."""
     subm = db.submission(request.args(0)) or redirect(URL('default', 'index'))
-    if subm.author != auth.user_id:
-        session.flash = T('You cannot view this submission.')
-        redirect(URL('default', 'index'))
     c = db.venue(subm.venue_id) or redirect(URL('default', 'index'))
-    managers = util.get_list(c.managers)
-    if auth.user.email not in managers:
+    props = db(db.user_properties.email == auth.user.email).select().first()
+    if not access.can_observe(c, props):
         session.flash = T('Not authorized.')
         redirect(URL('default', 'index'))	    
     download_link = None

@@ -126,6 +126,11 @@ db.define_table('submission',
     Field('n_rejected_reviews', 'integer', default=0),
     )
     
+def represent_percentage(v, r):
+    if v is None:
+	return ''
+    return ("%3.0f%%" % v)
+
 db.submission.id.readable = db.submission.id.writable = False
 db.submission.author.writable = False
 db.submission.email.writable = False
@@ -149,6 +154,7 @@ db.submission.n_rejected_reviews.writable = False
 db.submission.n_rejected_reviews.label = T('N. rejected reviews')
 db.submission.true_quality.label = T('TA Grade')
 db.submission.feedback.label = T('TA Feedback')
+db.submission.percentile.represent = represent_percentage
 
 db.define_table('user_accuracy',
     Field('user_id', db.auth_user),
@@ -167,7 +173,16 @@ db.define_table('comparison', # An ordering of submissions, from worst to best.
     Field('is_valid', 'boolean', default=True),
     )
 
+def represent_ordering(v, r):
+    if v is None:
+	return ''
+    urls = [SPAN(A(str(el), _href=URL('feedback', 'view_feedback', args=[el])), ' ')
+	    for el in v]
+    attributes = {}
+    return SPAN(*urls, **attributes)
+
 db.comparison.new_item.label = T('New submission')
+db.comparison.ordering.represent = represent_ordering
     
 db.define_table('task', # Tasks a user should complete for reviewing.
     Field('user_id', db.auth_user, default=auth.user_id),

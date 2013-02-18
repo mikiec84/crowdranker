@@ -256,21 +256,20 @@ def reviewing_duties():
         csv=False, details=False, create=False, editable=False, deletable=False,
         links=[
 	    dict(header=T('N. reviews to do'), body = lambda r: get_num_reviews_todo(r)),
-	    dict(header=T('Review'), body = lambda r: review_link(r)),
 	    dict(header='Accept',
 		 body = lambda r: 
-		 A(T('Accept to do a review'), _href=URL('rating', 'accept_review', args=[r.venue_id]))),
+		 A(T('Accept to do a review'), _href=URL('rating', 'accept_review', args=[r.id]))),
 	    ]
         )
     return dict(grid=grid)
 
 
 def get_num_reviews_todo(venue):
-    if venue.number_of_submissions_per_reviewer == 0:
+    if venue.number_of_submissions_per_reviewer == 0 or venue.number_of_submissions_per_reviewer == None:
 	return 0
     # See how many reviewing tasks the user has accepted.
     n_accepted_tasks = db((db.task.venue_id == venue.id) &
-			  (db.task.user_id == auth.user_id)).select().count()
+			  (db.task.user_id == auth.user_id)).count()
     return max(0, venue.number_of_submissions_per_reviewer - n_accepted_tasks)
 
 
