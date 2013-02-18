@@ -128,8 +128,13 @@ db.define_table('submission',
     
 def represent_percentage(v, r):
     if v is None:
-	return ''
+	return 'None'
     return ("%3.0f%%" % v)
+
+def represent_quality(v, r):
+    if v is None:
+	return 'None'
+    return ("%.2f" % v)
 
 db.submission.id.readable = db.submission.id.writable = False
 db.submission.author.writable = False
@@ -155,6 +160,8 @@ db.submission.n_rejected_reviews.label = T('N. rejected reviews')
 db.submission.true_quality.label = T('TA Grade')
 db.submission.feedback.label = T('TA Feedback')
 db.submission.percentile.represent = represent_percentage
+db.submission.quality.represent = represent_quality
+db.submission.error.represent = represent_quality
 
 db.define_table('user_accuracy',
     Field('user_id', db.auth_user),
