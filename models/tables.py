@@ -32,6 +32,9 @@ db.define_table('user_properties',
     Field('venues_can_rate', 'list:reference venue'),
     Field('venues_has_submitted', 'list:reference venue'),
     Field('venues_has_rated', 'list:reference venue'),
+    # List of venues where the user has redone reviews.
+    # If the user do it twice then venue_id appears twice in the list.
+    Field('venues_has_re_reviewed', 'list:reference venue'),
     )
 
 db.user_properties.email.required = True

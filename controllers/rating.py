@@ -527,7 +527,15 @@ def edit_ordering():
         new_comparison_id = db.comparison.insert(
             venue_id=venue.id, ordering=new_ordering, grades=new_grades,
             new_item=last_comparison.new_item)
-        # TODO(michael):  Mark that user has revised the comparison.
+        # Mark that user has revised the comparison.
+        props = db(db.user_properties.email == auth.user.email).select(db.user_properties.id, db.user_properties.venues_has_re_reviewed).first()
+        if props == None:
+            # Should not happen.
+            session.flash('You cannot view this review.')
+            redirect(URL('default', 'index'))
+        has_re_reviewed = util.get_list(props.venues_has_re_reviewed)
+        has_re_reviewed.append(venue.id)
+        props.update_record(venues_has_re_reviewed = has_re_reviewed)
 
         # TODO(luca): put it in a queue of things that need processing.
         # All updates done.
