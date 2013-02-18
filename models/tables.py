@@ -166,6 +166,8 @@ db.define_table('comparison', # An ordering of submissions, from worst to best.
     Field('new_item', 'reference submission'),
     Field('is_valid', 'boolean', default=True),
     )
+
+db.comparison.new_item.label = T('New submission')
     
 db.define_table('task', # Tasks a user should complete for reviewing.
     Field('user_id', db.auth_user, default=auth.user_id),
