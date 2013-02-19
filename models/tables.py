@@ -121,7 +121,7 @@ db.define_table('submission',
     Field('error', 'double'),
     Field('true_quality', 'double'),
     Field('percentile', 'double'),
-    Field('n_assigned_reviews', 'integer'),
+    Field('n_assigned_reviews', 'integer', default=0),
     Field('n_completed_reviews', 'integer', default=0),
     Field('n_rejected_reviews', 'integer', default=0),
     )
