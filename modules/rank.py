@@ -193,6 +193,8 @@ class Rank:
 
     def update(self, sorted_items, new_item=None, alpha_annealing=None, 
                annealing_type='before_normalization_uniform'):
+               #annealing_type='after_normalization'):
+               #annealing_type='before_normalization_gauss'):
         """ Main update function.
         Given sorted_items and new_item it updates quality distributions and
         items ranks.

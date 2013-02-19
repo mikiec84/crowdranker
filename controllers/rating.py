@@ -633,3 +633,21 @@ def compute_final_grades():
         redirect(URL('venues', 'view_venue', args=[c.id]))
     return dict(venue_form=venue_form, confirmation_form=confirmation_form)
 
+
+@auth.requires_login()
+def run_rep_system():
+    # Gets the information on the venue.
+    c = db.venue(request.args[0]) or redirect(URL('default', 'index'))
+    check_manager_eligibility(c.id, auth.user.email, 'You cannot evaluate contributors for this venue')
+    # This venue_form is used to display the venue.
+    venue_form = SQLFORM(db.venue, record=c, readonly=True)
+    confirmation_form = FORM.confirm(T('Run'),
+        {T('Cancel'): URL('venues', 'view_venue', args=[c.id])})
+    if confirmation_form.accepted:
+        num_of_iterations = 4
+        ranker.run_reputation_system(db, c.id,
+                                     num_of_iterations=num_of_iterations)
+        db.commit()
+        session.flash = T('Computataions have been finished.')
+        redirect(URL('venues', 'view_venue', args=[c.id]))
+    return dict(venue_form=venue_form, confirmation_form=confirmation_form)

@@ -202,6 +202,7 @@ def evaluate_contributors(db, venue_id):
                                            venue_id = venue_id,
                                            user_id = user_id,
                                            accuracy = val,
+                                           reputation = None,
                                            n_ratings = len(ordering) )
     # Saving the latest user evaluation date.
     db(db.venue.id == venue_id).update(latest_reviewers_evaluation_date = datetime.utcnow())
@@ -319,10 +320,6 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
     # author: last ordering
     author2rep, author2accuracy, author2ordering = {}, {}, {}
     # Initializing these dictionaries.
-    for user_id in author2item:
-        author2rep[user_id] = alpha_annealing
-        author2accuracy[user_id] = -1
-    # Find last ordering for each author.
     for comp in comparison_list_r:
         # Check if comparison is valid.
         if comp.is_valid is None or comp.is_valid == True:
@@ -330,10 +327,13 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
             sorted_items = util.get_list(comp.ordering)[::-1]
             if len(sorted_items) < 2:
                 continue
-            author2item[comp.author] = sorted_items
+            author2ordering[comp.author] = sorted_items
+            # Initializing reviewers reputation and accuracy.
+            author2rep[comp.author] = alpha_annealing
+            author2accuracy[comp.author] = -1
     # Okay, now we are ready to run main iterations.
     result = None
-    for it xrange(num_of_iterations):
+    for it in xrange(num_of_iterations):
         # In the beginning of iteration initialize rankobj with default
         # items qualities.
         rankobj = Rank.from_qdistr_param(items, qdistr_param_default,
@@ -354,8 +354,11 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
         if result is None:
             return
         for user_id in author2rep:
-            perc, avrg, stdev = result[author2item[user_id]]
-            rank = perc / 100.0
+            if author2item.has_key(user_id):
+                perc, avrg, stdev = result[author2item[user_id]]
+                rank = perc / 100.0
+            else:
+                rank = 1 # TODO(michael): Should we trust unknown reviewer
             ordering = author2ordering[user_id]
             accuracy = rankobj.evaluate_ordering_using_dirichlet(ordering)
             author2accuracy[user_id] = accuracy
@@ -372,10 +375,9 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
                                    venue_id = venue_id,
                                    user_id = user_id,
                                    accuracy = author2accuracy[user_id],
-                                   reputation = author2rep[user_id]
-                                   n_ratings = len(author2ordering[user_id) )
+                                   reputation = author2rep[user_id],
+                                   n_ratings = len(author2ordering[user_id]) )
     # Saving evaluation date.
-    # TODO(michael): test compute final grades button.
     t = datetime.utcnow()
     db(db.venue.id == venue_id).update(latest_reviewers_evaluation_date = t,
                                        latest_rank_update_date = t)

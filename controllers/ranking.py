@@ -96,7 +96,8 @@ def view_raters():
 	args=request.args[:1],
 	user_signature=False, details=True,
 	create=False, editable=False, deletable=False,
-	fields=[db.user_accuracy.user_id, db.user_accuracy.accuracy, db.user_accuracy.n_ratings],
+	fields=[db.user_accuracy.user_id, db.user_accuracy.accuracy,
+            db.user_accuracy.reputation, db.user_accuracy.n_ratings],
 	)
     title = A(c.name, _href=URL('venues', 'view_venue', args=[c.id]))
     return dict(grid=grid, title=title)
