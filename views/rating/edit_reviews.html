@@ -4,7 +4,11 @@
 
 <ol id="item_list">
 {{for key in current_ordering:}}
-	<li class="ui-state-default" id="item_{{=key}}"><span class="ui-icon ui-icon-arrowthick-2-n-s"></span> {{=submissions[key]}}</li>
+	<li class="ui-state-default" id="item_{{=key}}">
+    <span class="ui-icon ui-icon-arrowthick-2-n-s"></span> {{=submissions[key]}}
+    <span>Grade : {{=current_grades.get(key, '')}}</span>
+</li>
+
 {{pass}}
 </ol>
 

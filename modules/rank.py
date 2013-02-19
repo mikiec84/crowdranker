@@ -191,7 +191,10 @@ class Rank:
         return avg
 
 
-    def update(self, sorted_items, new_item):
+    def update(self, sorted_items, new_item=None, alpha_annealing=None, 
+               annealing_type='before_normalization_uniform'):
+               #annealing_type='after_normalization'):
+               #annealing_type='before_normalization_gauss'):
         """ Main update function.
         Given sorted_items and new_item it updates quality distributions and
         items ranks.
@@ -199,16 +202,31 @@ class Rank:
         [percentile, average, stdev], i.e. percentile of the submission,
         average and stdev of quaility distribution of it.
 
+        If alpha_annealing is None then we use old self.alpha otherwise we
+        set self.alpha to alpha_annealing.
+
         Arguments:
             - sorted_items is a list of items sorted by user such that
-            rank(sorted_items[i]) > rank(sorted_items[j]) for i > j
+            rank(sorted_items[i]) > rank(sorted_items[j]) for i < j
+            (Worst to Best)
 
             - new_item is an id of a submission from sorted_items which was new
             to the user. If sorted_items contains only two elements then
             new_item is None.
+
+            - annealing_type (see n_comparisons_update method) is whether
+            'before_normalization_uniform' or
+            'before_normalization_gauss' or
+            'after_normalization'
         """
+        # Setting new annealing coefficient.
+        alpha_old = None
+        if not alpha_annealing is None:
+            alpha_old = self.alpha
+            self.alpha = alpha_annealing
+        # Obtaining ordering in terms of internal ids.
         sorted_ids = [self.orig_items_id.index(x) for x in sorted_items]
-        self.n_comparisons_update(sorted_ids)
+        self.n_comparisons_update(sorted_ids, annealing_type)
         id2percentile = self.compute_percentile()
         qdistr_param = self.get_qdistr_parameters()
         result = {}
@@ -216,6 +234,9 @@ class Rank:
             avrg = qdistr_param[2 * idx]
             stdev = qdistr_param[2 * idx + 1]
             result[self.orig_items_id[idx]] = (id2percentile[idx], avrg, stdev)
+        # Setting old alpha back.
+        if not alpha_old is None:
+            self.alpha = alpha_old
         return result
 
 
@@ -268,13 +289,22 @@ class Rank:
         return avrg_rank_error + 2 * stdev_rank_error
 
 
-    def n_comparisons_update(self, descend_list):
+    def n_comparisons_update(self, descend_list,
+                             annealing_type='before_normalization_uniform'):
         """ Updates quality distributions given n ordered items.
         Item id is from set {0, 1, ..., num_items - 1}
         Bins are 0, 1, ..., num_bins - 1
 
         descend_list is a list of id's such that
-        rank(descend_list[i]) > rank(descend_list[j]) if i > j
+        rank(descend_list[i]) > rank(descend_list[j]) if i < j
+        (Worst to Best)
+
+        annealing type
+            - 'after_normalization' is self explanatory
+            - 'before_normalization_uniform' is using by default, it works
+            best in presence of users who gave random ordering.
+            - 'before_normalization_gauss' works best in presence of gaussian
+            users (users who can swap similar items).
         """
         n = len(descend_list)
         factorial = math.factorial(n)
@@ -319,24 +349,64 @@ class Rank:
         idx = descend_list[0]
         q = self.qdistr[idx,:]
         q_prime = q * v[-1, :]
-        self.qdistr[idx,:] = (1.0/factorial) * (1 - self.alpha) * q + \
-                                                           self.alpha * q_prime
-        self.qdistr[idx,:] = self.qdistr[idx,:] / np.sum(self.qdistr[idx,:])
+        # Annealing.
+        if annealing_type == 'before_normalization_uniform':
+            self.qdistr[idx,:] = (1.0/factorial) * (1 - self.alpha) * q + \
+                                                               self.alpha * q_prime
+            self.qdistr[idx,:] = self.qdistr[idx,:] / np.sum(self.qdistr[idx,:])
+        elif annealing_type == 'after_normalization':
+            q_prime = q_prime / np.sum(q_prime)
+            self.qdistr[idx,:] = (1 - self.alpha) * q + self.alpha * q_prime
+        elif annealing_type == 'before_normalization_gauss':
+            ww = v[-1, :]
+            self.qdistr[idx,:] = (1 - self.alpha) * q *(1 - ww) + \
+                                      self.alpha * q * ww
+            self.qdistr[idx,:] = self.qdistr[idx,:] / np.sum(self.qdistr[idx,:])
+        else:
+            # Should not happen.
+            raise Exception("Error: annealing type is not known.")
         # Update last distributions.
         idx = descend_list[-1]
         q = self.qdistr[idx,:]
         q_prime = q * w[-1, :]
-        self.qdistr[idx,:] = (1.0/factorial) * (1 - self.alpha) * q + \
-                                                           self.alpha * q_prime
-        self.qdistr[idx,:] = self.qdistr[idx,:] / np.sum(self.qdistr[idx,:])
+        # Annealing.
+        if annealing_type == 'before_normalization_uniform':
+            self.qdistr[idx,:] = (1.0/factorial) * (1 - self.alpha) * q + \
+                                                               self.alpha * q_prime
+            self.qdistr[idx,:] = self.qdistr[idx,:] / np.sum(self.qdistr[idx,:])
+        elif annealing_type == 'after_normalization':
+            q_prime = q_prime / np.sum(q_prime)
+            self.qdistr[idx,:] = (1 - self.alpha) * q + self.alpha * q_prime
+        elif annealing_type == 'before_normalization_gauss':
+            ww = w[-1, :]
+            self.qdistr[idx,:] = (1 - self.alpha) * q *(1 - ww) + \
+                                      self.alpha * q * ww
+            self.qdistr[idx,:] = self.qdistr[idx,:] / np.sum(self.qdistr[idx,:])
+        else:
+            # Should not happen.
+            raise Exception("Error: annealing type is not known.")
+
         # Update the rest of distributions.
         for i in range(1, n - 1, 1):
             idx = descend_list[i]
             q = self.qdistr[idx,:]
             q_prime = q * w[i - 1, :] * v[-(i+1), :]
-            self.qdistr[idx,:] = (1.0/factorial) * (1 - self.alpha) * q + \
-                                                           self.alpha * q_prime
-            self.qdistr[idx,:] = self.qdistr[idx,:] / np.sum(self.qdistr[idx,:])
+            # Annealing.
+            if annealing_type == 'before_normalization_uniform':
+                self.qdistr[idx,:] = (1.0/factorial) * (1 - self.alpha) * q + \
+                                                               self.alpha * q_prime
+                self.qdistr[idx,:] = self.qdistr[idx,:] / np.sum(self.qdistr[idx,:])
+            elif annealing_type == 'after_normalization':
+                q_prime = q_prime / np.sum(q_prime)
+                self.qdistr[idx,:] = (1 - self.alpha) * q + self.alpha * q_prime
+            elif annealing_type == 'before_normalization_gauss':
+                ww = w[i - 1, :] * v[-(i+1), :]
+                self.qdistr[idx,:] = (1 - self.alpha) * q *(1 - ww) + \
+                                          self.alpha * q * ww
+                self.qdistr[idx,:] = self.qdistr[idx,:] / np.sum(self.qdistr[idx,:])
+            else:
+                # Should not happen.
+                raise Exception("Error: annealing type is not known.")
 
         # Update id2rank and rank2id vectors.
         self.rank2id, self.id2rank = self.compute_ranks(self.qdistr)
@@ -539,7 +609,8 @@ class Rank:
         #self.qdistr = self.qdistr / np.sum(self.qdistr, 1) [:, np.newaxis]
 
     def evaluate_ordering(self, ordering):
-        """ rank(oredring[i]) > rank(ordering[j]) for i > j
+        """ rank(oredring[i]) > rank(ordering[j]) for i < j
+        (Worst to Best)
         Function, returns average probability of error.
         """
         n = len(ordering)
@@ -571,11 +642,54 @@ class Rank:
             val += 1 - np.mean(l1)
         return val
 
+    def evaluate_ordering_using_dirichlet(self, ordering):
+        """ rank(oredring[i]) > rank(ordering[j]) for i < j
+        (Worst to Best).
+        """
+        if len(ordering) <= 1:
+            return 0
+        # alpha is a number of "Truth"
+        # beta is a number of "False"
+        alpha, beta = 0.01, 0.01
+        for i in xrange(len(ordering)):
+            for j in xrange(i + 1, len(ordering), 1):
+                item_i = self.orig_items_id.index(ordering[i])
+                item_j = self.orig_items_id.index(ordering[j])
+                # q is a probability that comparison is True
+                #q = 1 - self.get_missrank_prob(item_i, item_j)
+                q = 1 - self.get_missrank_prob(item_j, item_i)
+                # Update alpha and beta.
+                if q > 0.5:
+                    alpha += 2 * (q - 0.5)
+                else:
+                    beta += 2 * (0.5 - q)
+        # Okay, alpha and beta are computed.
+        # Let's q is a probability that user says True.
+        # The quality of the ordering is 90-th percentile, so we need to compute it.
+        perc = 0.9
+        # First, numerically compute unnormalised probability mass function of q
+        delta = 0.001
+        x = np.arange(0 + delta, 1, delta)
+        #print 'alpha', alpha
+        #print 'beta', beta
+        y = x ** (alpha - 1) * (1 - x) ** (beta - 1)
+        # Integral approximation based on trapezoidal rule.
+        y1 = y[:-1]
+        y2 = y[1:]
+        integral_vec = (y2 + y1) / 2 * delta
+        integral = np.sum(integral_vec)
+        cumsum = np.cumsum(integral_vec)
+        threshold = (1 - perc) * integral
+        idx = cumsum.searchsorted(threshold)
+        val = idx * delta
+        return val
+
     def sort_items_truthfully(self, items):
         """ Method is for testing purposes.
         It simulates sorting by a truthful user.
         Returns sorted list of items so rank(result[i]) > rank(result[j])
         if i > j.
+        #TODO(michael): check this function in case of use
         """
         items_ids = [idx for idx in range(self.num_items) if \
                         self.orig_items_id[idx] in items]

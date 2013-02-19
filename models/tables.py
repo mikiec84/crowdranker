@@ -32,6 +32,9 @@ db.define_table('user_properties',
     Field('venues_can_rate', 'list:reference venue'),
     Field('venues_has_submitted', 'list:reference venue'),
     Field('venues_has_rated', 'list:reference venue'),
+    # List of venues where the user has redone reviews.
+    # If the user do it twice then venue_id appears twice in the list.
+    Field('venues_has_re_reviewed', 'list:reference venue'),
     )
 
 db.user_properties.email.required = True
@@ -166,11 +169,12 @@ db.submission.error.represent = represent_quality
 db.define_table('user_accuracy',
     Field('user_id', db.auth_user),
     Field('venue_id', db.venue),
-    Field('accuracy', 'double'),
+    Field('accuracy', 'double'), # "reviewer" grade
+    Field('reputation', 'double'),
     Field('n_ratings', 'integer'),
     )
 
-db.define_table('comparison', # An ordering of submissions, from worst to best.
+db.define_table('comparison', # An ordering of submissions, from Best to Worst.
     Field('author', db.auth_user,  default=auth.user_id),
     Field('date', 'datetime', default=datetime.utcnow()),
     Field('venue_id', db.venue),
