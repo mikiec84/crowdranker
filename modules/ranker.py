@@ -103,6 +103,7 @@ def get_item(db, venue_id, user_id, old_items,
     else:
         users_submission_ids = []
     # Counting how many times each submission was assigned.
+    # TODO(michael): use the field in the submissions, once we confirm that this works.
     frequency = []
     for subm_id in items:
         if (subm_id not in users_submission_ids and
