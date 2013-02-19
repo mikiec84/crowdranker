@@ -358,7 +358,7 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
                 perc, avrg, stdev = result[author2item[user_id]]
                 rank = perc / 100.0
             else:
-                rank = 1 # TODO(michael): Should we trust unknown reviewer
+                rank = 1 # TODO(michael): Should we trust unknown reviewer?
             ordering = author2ordering[user_id]
             accuracy = rankobj.evaluate_ordering_using_dirichlet(ordering)
             author2accuracy[user_id] = accuracy
@@ -381,3 +381,7 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
     t = datetime.utcnow()
     db(db.venue.id == venue_id).update(latest_reviewers_evaluation_date = t,
                                        latest_rank_update_date = t)
+    # Computing final grades for convenience.
+    # TODO(michael): instead of calling method we can compute final directly
+    # to optimize db access.
+    compute_final_grades(db, venue_id)
