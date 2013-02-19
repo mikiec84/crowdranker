@@ -292,3 +292,90 @@ def compute_final_grades(db, venue_id):
                                    grade = final_grades[user_id])
     # Saving the latest date when final grades were evaluated.
     db(db.venue.id == venue_id).update(latest_final_grades_evaluation_date = datetime.utcnow())
+
+def run_reputation_system(db, venue_id, alpha_annealing=0.5,
+                          num_of_iterations=4):
+    """ Function calculates:
+            - reputation for each user
+            - user precision (quality as a reviewer)
+    """
+    # Fetching submission id and authors.
+    # TODO(michael): take care of a case when a user has multiple submission.
+    sub = db(db.submission.venue_id == venue_id).select(db.submission.id,
+                                                        db.submission.author)
+    items = []
+    author2item = {}
+    qdistr_param_default = []
+    for x in sub:
+        items.append(x.id)
+        author2item[x.author] = x.id
+        qdistr_param_default.append(AVRG)
+        qdistr_param_default.append(STDEV)
+    # Fetching list of comparisons.
+    comparison_list_r = db(db.comparison.venue_id == venue_id).select(orderby=db.comparison.date)
+    # Creating dictionaries
+    # author: reputation
+    # author: accuracy (confedence or reviewer's grade)
+    # author: last ordering
+    author2rep, author2accuracy, author2ordering = {}, {}, {}
+    # Initializing these dictionaries.
+    for user_id in author2item:
+        author2rep[user_id] = alpha_annealing
+        author2accuracy[user_id] = -1
+    # Find last ordering for each author.
+    for comp in comparison_list_r:
+        # Check if comparison is valid.
+        if comp.is_valid is None or comp.is_valid == True:
+            # Reverses the list.
+            sorted_items = util.get_list(comp.ordering)[::-1]
+            if len(sorted_items) < 2:
+                continue
+            author2item[comp.author] = sorted_items
+    # Okay, now we are ready to run main iterations.
+    result = None
+    for it xrange(num_of_iterations):
+        # In the beginning of iteration initialize rankobj with default
+        # items qualities.
+        rankobj = Rank.from_qdistr_param(items, qdistr_param_default,
+                                         alpha=alpha_annealing)
+        # Okay, now we update quality distributions with comparisons
+        # using reputation of users as annealing coefficient.
+        for comp in comparison_list_r:
+            # Processes the comparison, if valid.
+            if comp.is_valid is None or comp.is_valid == True:
+                # Reverses the list.
+                sorted_items = util.get_list(comp.ordering)[::-1]
+                if len(sorted_items) < 2:
+                    continue
+                alpha = author2rep[comp.author]
+                result = rankobj.update(sorted_items, new_item=comp.new_item,
+                                        alpha_annealing=alpha)
+        # In the end of the iteration compute reputation to use in the next iteration.
+        if result is None:
+            return
+        for user_id in author2rep:
+            perc, avrg, stdev = result[author2item[user_id]]
+            rank = perc / 100.0
+            ordering = author2ordering[user_id]
+            accuracy = rankobj.evaluate_ordering_using_dirichlet(ordering)
+            author2accuracy[user_id] = accuracy
+            # Computer user's reputation.
+            author2rep[user_id] = (rank * accuracy) ** 0.5
+    # Updating the DB with submission ranking, users' accuracy and reputation.
+    for x in items:
+        perc, avrg, stdev = result[x]
+        db((db.submission.id == x) &
+           (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev, percentile=perc)
+    for user_id in author2accuracy:
+        db.user_accuracy.update_or_insert((db.user_accuracy.venue_id == venue_id) &
+                                  (db.user_accuracy.user_id == user_id),
+                                   venue_id = venue_id,
+                                   user_id = user_id,
+                                   accuracy = author2accuracy[user_id],
+                                   reputation = author2rep[user_id]
+                                   n_ratings = len(author2ordering[user_id) )
+    # Saving evaluation date.
+    # TODO(michael): test compute final grades button.
+    t = datetime.utcnow()
+    db(db.venue.id == venue_id).update(latest_reviewers_evaluation_date = t,
+                                       latest_rank_update_date = t)
