@@ -75,7 +75,11 @@ db.define_table('venue',
     format = '%(name)s',
     )
 
+def represent_venue_name(v, r):
+    return A(v, _href=URL('view_venue', args=[r.id]))
+
 db.venue.created_by.readable = db.venue.created_by.writable = False
+db.venue.name.represent = represent_venue_name
 db.venue.name.required = True
 db.venue.name.requires = IS_LENGTH(minsize=8)
 db.venue.is_approved.writable = False

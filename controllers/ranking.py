@@ -159,6 +159,9 @@ def view_grades_histogram():
     return dict(sub_title=title, hist=hist)
 
 
+def represent_task_name_view_feedback(v, r):
+    return A(v, _href=URL('feedback', 'view_feedback', args=[r.submission_id]))
+
 @auth.requires_login()
 def view_tasks():
     """This function enables the view of the reviewing tasks, as well as the comparisons
@@ -174,6 +177,8 @@ def view_tasks():
     db.task.comments.readable = True
     db.task.rejection_comment.readable = True
     db.task.rejected.readable = True
+    db.task.submission_name.represent = represent_task_name_view_feedback
+    db.task.submission_name.label = T('Submission feedback')
     grid = SQLFORM.grid(q,
 	field_id=db.task.id,
 	csv=True,
@@ -185,8 +190,6 @@ def view_tasks():
 		db.task.submission_name, db.task.completed_date,
 		db.task.comments, db.task.rejected, db.task.rejection_comment],
 	links=[
-	    dict(header=T('Submission feedback'), body = lambda r:
-		 A(T('View feedback'), _class='btn', _href=URL('feedback', 'view_feedback', args=[r.submission_id]))),
 	    dict(header=T('Comparison'), body = lambda r:
 		 A(T('View comparison'), _class='btn', _href=URL('ranking', 'view_comparison', args=[r.venue_id, r.user_id, r.submission_id]))),
 	    ]

@@ -84,14 +84,11 @@ def subopen_index():
 	q = (db.venue.id.belongs(c_all_open))
     else:
 	q = (db.venue.id == -1)
-    db.venue.name.readable = False
     grid = SQLFORM.grid(q,
         field_id=db.venue.id,
         fields=[db.venue.name, db.venue.close_date],
         csv=False, details=False, create=False, editable=False, deletable=False,
         links=[
-	    dict(header=T('Venue'),
-		 body = lambda r: A(r.name, _href=URL('view_venue', args=[r.id]))),
 	    dict(header=T('Submit'), 
 		 body = lambda r: A(T('Submit'), _class='btn', _href=URL('submission', 'submit', args=[r.id]))),
 	    ],
@@ -132,14 +129,11 @@ def rateopen_index():
     else:
 	q = (db.venue.id == -1)
     db.venue.rate_close_date.label = T('Review deadline')
-    db.venue.name.readable = False
     grid = SQLFORM.grid(q,
         field_id=db.venue.id,
         fields=[db.venue.name, db.venue.rate_close_date],
         csv=False, details=False, create=False, editable=False, deletable=False,
         links=[
-	    dict(header=T('Venue'),
-		 body = lambda r: A(r.name, _href=URL('view_venue', args=[r.id]))),
 	    dict(header='Review', 
 		 body = lambda r: A(T('Accept reviewing task'),
 			       _class='btn',
@@ -162,14 +156,11 @@ def submitted_index():
     db.venue.feedback_accessible_immediately.readable = False
     db.venue.rate_open_date.readable = False
     db.venue.rate_close_date.readable = False
-    db.venue.name.readable = False
     grid = SQLFORM.grid(q,
         field_id=db.venue.id,
         fields=[db.venue.name, db.venue.rate_open_date, db.venue.rate_close_date, db.venue.feedback_accessible_immediately],
         csv=False, details=False, create=False, editable=False, deletable=False,
         links=[
-	    dict(header=T('Venue'),
-		 body = lambda r: A(r.name, _href=URL('view_venue', args=[r.id]))),
 	    dict(header='Feedback', body = lambda r: link_feedback(r)),
             dict(header='My submissions', body = lambda r: 
                 A(T('My submissions'),
@@ -198,15 +189,10 @@ def observed_index():
 	q = (db.venue.id.belongs(l))
     else:
 	q = (db.venue.id == -1)
-    db.venue.name.readable = False
     grid = SQLFORM.grid(q,
         field_id=db.venue.id,
         fields=[db.venue.name, db.venue.close_date, db.venue.rate_close_date],
         csv=False, details=False, create=False, editable=False, deletable=False,
-        links=[
-	    dict(header=T('Venue'),
-		 body = lambda r: A(r.name, _href=URL('view_venue', args=[r.id]))),
-            ],
         )
     return dict(grid=grid)
 
@@ -218,14 +204,11 @@ def public_index():
     db.venue.feedback_accessible_immediately.readable = False
     db.venue.rate_open_date.readable = False
     db.venue.rate_close_date.readable = False
-    db.venue.name.readable = False
     grid = SQLFORM.grid(q,
         field_id=db.venue.id,
         fields=[db.venue.name, db.venue.description, db.venue.close_date],
         csv=False, details=False, create=False, editable=False, deletable=False,
         links=[
-	    dict(header=T('Details'),
-		 body = lambda r: A(T('Details'), _href=URL('view_venue', args=[r.id]))),
 	    dict(header=T('Submissions'),
 		 body = lambda r: A(T('Submissions'), _href=URL('ranking', 'view_venue', args=[r.id])))
             ],
@@ -341,7 +324,6 @@ def managed_index():
         add_help_for_venue('bogus')
 	# Sets defaults for homeworks
 	set_homework_defaults('bogus')
-    db.venue.name.readable = False
     if is_user_admin():
 	db.venue.is_approved.writable = True
 	db.venue.created_by.readable = True
@@ -360,8 +342,6 @@ def managed_index():
         oncreate=create_venue,
         onupdate=update_venue(old_managers, old_observers, old_submit_constraint, old_rate_constraint),
         links_in_grid=True,
-        links=[dict(header=T('Venue'), body = lambda r:
-            A(r.name, _href=URL('view_venue', args=[r.id]))),]
         )
     db.commit()
     return dict(grid=grid)
