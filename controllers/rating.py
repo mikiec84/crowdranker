@@ -656,6 +656,6 @@ def run_rep_system():
         ranker.run_reputation_system(db, c.id,
                                      num_of_iterations=num_of_iterations)
         db.commit()
-        session.flash = T('Computataions have been finished.')
+        session.flash = T('The computation of reviewer contribution, submission quality, and final grade is complete.')
         redirect(URL('venues', 'view_venue', args=[c.id]))
     return dict(venue_form=venue_form, confirmation_form=confirmation_form)

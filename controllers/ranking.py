@@ -135,9 +135,10 @@ def view_final_grades():
 	fields=[db.grades.author, db.grades.grade],
 	)
     title = A(c.name, _href=URL('venues', 'view_venue', args=[c.id]))
-    histogram_link = A("View gistogram of final grades",
+    histogram_link = A(T("View histogram of final grades"),
                   _href=URL('ranking', 'view_grades_histogram', args=[c.id]))
     return dict(grid=grid, title=title, histogram_link=histogram_link)
+
 
 
 @auth.requires_login()
