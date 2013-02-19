@@ -194,6 +194,7 @@ def evaluate_contributors(db, venue_id):
             num_subm = 5
         else:
             num_subm = num_subm_r.number_of_submissions_per_reviewer
+        # TODO(michael): num_subm can be zero, take care of it.
         val = min(1, val/float(num_subm))
         # Writing to the DB.
         db.user_accuracy.update_or_insert((db.user_accuracy.venue_id == venue_id) &

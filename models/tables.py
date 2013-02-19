@@ -169,7 +169,7 @@ db.submission.error.represent = represent_quality
 db.define_table('user_accuracy',
     Field('user_id', db.auth_user),
     Field('venue_id', db.venue),
-    Field('accuracy', 'double'),
+    Field('accuracy', 'double'), # "reviewer" grade
     Field('n_ratings', 'integer'),
     )
 
