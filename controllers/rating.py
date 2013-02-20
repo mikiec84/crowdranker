@@ -71,7 +71,7 @@ def accept_review():
         task_name = (c.name + ' ' + T('Submission') + ' ' + str(num_tasks + 1))[:STRING_FIELD_LENGTH]
         task_id = db.task.insert(submission_id = new_item, venue_id = c.id, submission_name = task_name)
 	# Increments the number of reviews for the item.
-	subm = db.submission(submission_id)
+	subm = db.submission(new_item)
 	if subm is not None:
 	    if subm.n_assigned_reviews is None:
 		subm.n_assigned_reviews = 1
