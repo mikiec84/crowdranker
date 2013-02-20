@@ -237,3 +237,32 @@ def view_comparisons_index():
 	)
     title = T('Comparisons for venue ' + c.name)
     return dict(title=title, grid=grid)
+
+@auth.requires_login()
+def view_comparisons_given_submission():
+    """This function displays comparisons wich contains given submission."""
+    props = db(db.user_properties.email == auth.user.email).select().first()
+    subm = db.submission(request.args(0)) or redirect(URL('default', 'index'))
+    c = db.venue(subm.venue_id) or redirect(URL('default', 'index'))
+    if not access.can_observe(c, props):
+	session.flash = T('Not authorized')
+	redirect(URL('default', 'index'))
+    # Create query.
+    q = ((db.comparison.venue_id == c.id) &
+         (db.comparison.ordering.contains(request.args(subm.id))))
+    db.comparison.ordering.represent = represent_ordering
+    grid = SQLFORM.grid(q,
+	field_id=db.comparison.id,
+	fields=[db.comparison.author, db.comparison.date, 
+		db.comparison.ordering, db.comparison.grades, db.comparison.new_item,
+		db.comparison.is_valid],
+	csv=True,
+	args=request.args[:1],
+	user_signature=False,
+	details=True, create=False,
+	editable=False, deletable=False,
+	)
+    title = T('Comparisons for venue ' + c.name +
+              ' with submission id ' + str(subm.id))
+    return dict(title=title, grid=grid)
+

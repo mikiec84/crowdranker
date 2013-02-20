@@ -348,8 +348,12 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
                 if len(sorted_items) < 2:
                     continue
                 alpha = author2rep[comp.author]
+                annealing_type='before_normalization_uniform'
+                #annealing_type='after_normalization'
+                #annealing_type='before_normalization_gauss'
                 result = rankobj.update(sorted_items, new_item=comp.new_item,
-                                        alpha_annealing=alpha)
+                                        alpha_annealing=alpha,
+                                        annealing_type=annealing_type)
         # In the end of the iteration compute reputation to use in the next iteration.
         if result is None:
             return
