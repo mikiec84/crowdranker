@@ -47,26 +47,21 @@ def view_feedback():
     if props == None:
 	session.flash = T('Not authorized.')
 	redirect(URL('default', 'index'))
-    can_view_feedback = access.can_view_feedback(c, props)
-    if (not can_view_feedback) and subm.author != auth.user_id:
+    is_author = (subm.author == auth.user_id)
+    can_view_feedback = access.can_view_feedback(c, props) or is_author
+    if (not can_view_feedback):
         session.flash = T('Not authorized.')
         redirect(URL('default', 'index'))
-    if (not can_view_feedback) and (
+    if can_view_feedback and (
 	    not ((datetime.utcnow() > c.rate_close_date) or c.feedback_accessible_immediately)):
         session.flash = T('The ratings are not yet available.')
         redirect(URL('feedback', 'index', args=['all']))
-    if subm.author == auth.user_id:
+    if is_author:
         download_link = A(T('Download'), _class='btn', 
 		      _href=URL('submission', 'download_author', args=[subm.id, subm.content]))
     else:
         download_link = A(T('Download'), _class='btn', 
 		      _href=URL('submission', 'download_manager', args=[subm.id, subm.content]))
-    if can_view_feedback:
-	back_link = P(A(T('Back to submission list'),
-			_href=URL('ranking', 'view_venue', args=[c.id])))
-    else:
-	back_link = P(A(T('Back to submission list'),
-			_href=URL('feedback', 'index', args=[c.id])))
     venue_link = A(c.name, _href=URL('venues', 'view_venue', args=[c.id]))
     subm_link = None
     if c.allow_link_submission:
@@ -78,7 +73,20 @@ def view_feedback():
     if access.can_observe(c, props):
 	db.submission.quality.readable = True
 	db.submission.error.readable = True
-
+    # Reads the grade information.
+    percentile = None
+    if c.latest_rank_update_date < datetime.utcnow():
+	percentile = represent_percentage(subm.percentile, None)
+    final_grade = None
+    if c.latest_final_grades_evaluation_date < datetime.utcnow():
+	fg = db((db.grades.author == subm.author) & (db.grades.venue_id == c.id)).select(db.grades.grade).first()
+	if fg != None:
+	    final_grade = represent_percentage(fg.grade, None)
+    review_accuracy = None
+    if c.latest_reviewers_evaluation_date < datetime.utcnow():
+	ra = db((db.user_accuracy.user_id == subm.author) & (db.user_accuracy.venue_id == c.id)).select().first()
+	if ra != None:
+	    review_accuracy = represent_percentage(ra.reputation * 100.0, None)
     # Makes a grid of comments.
     db.task.submission_name.readable = False
     db.task.assigned_date.readable = False
@@ -95,4 +103,5 @@ def view_feedback():
         args=request.args[:1],
         )
     return dict(subm=subm, download_link=download_link, subm_link=subm_link,
-		venue_link=venue_link, grid=grid, back_link=back_link)
+		percentile=percentile, final_grade=final_grade, review_accuracy=review_accuracy,
+		venue_link=venue_link, grid=grid)

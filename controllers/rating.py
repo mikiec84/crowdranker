@@ -70,6 +70,14 @@ def accept_review():
         num_tasks = db((db.task.venue_id == c.id) & (db.task.user_id == auth.user_id)).count()
         task_name = (c.name + ' ' + T('Submission') + ' ' + str(num_tasks + 1))[:STRING_FIELD_LENGTH]
         task_id = db.task.insert(submission_id = new_item, venue_id = c.id, submission_name = task_name)
+	# Increments the number of reviews for the item.
+	subm = db.submission(submission_id)
+	if subm is not None:
+	    if subm.n_assigned_reviews is None:
+		subm.n_assigned_reviews = 1
+	    else:
+		subm.n_assigned_reviews = subm.n_assigned_reviews + 1
+	    subm.update_record()
         db.commit()
         session.flash = T('A review has been added to your review assignments.')
         redirect(URL('task_index', args=[task_id]))
@@ -648,6 +656,6 @@ def run_rep_system():
         ranker.run_reputation_system(db, c.id,
                                      num_of_iterations=num_of_iterations)
         db.commit()
-        session.flash = T('Computataions have been finished.')
+        session.flash = T('The computation of reviewer contribution, submission quality, and final grade is complete.')
         redirect(URL('venues', 'view_venue', args=[c.id]))
     return dict(venue_form=venue_form, confirmation_form=confirmation_form)

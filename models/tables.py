@@ -75,7 +75,11 @@ db.define_table('venue',
     format = '%(name)s',
     )
 
+def represent_venue_name(v, r):
+    return A(v, _href=URL('view_venue', args=[r.id]))
+
 db.venue.created_by.readable = db.venue.created_by.writable = False
+db.venue.name.represent = represent_venue_name
 db.venue.name.required = True
 db.venue.name.requires = IS_LENGTH(minsize=8)
 db.venue.is_approved.writable = False
@@ -124,7 +128,7 @@ db.define_table('submission',
     Field('error', 'double'),
     Field('true_quality', 'double'),
     Field('percentile', 'double'),
-    Field('n_assigned_reviews', 'integer'),
+    Field('n_assigned_reviews', 'integer', default=0),
     Field('n_completed_reviews', 'integer', default=0),
     Field('n_rejected_reviews', 'integer', default=0),
     )
@@ -166,6 +170,11 @@ db.submission.percentile.represent = represent_percentage
 db.submission.quality.represent = represent_quality
 db.submission.error.represent = represent_quality
 
+def represent_double3(v, r):
+    if v is None:
+	return 'None'
+    return ("%.3f" % v)
+
 db.define_table('user_accuracy',
     Field('user_id', db.auth_user),
     Field('venue_id', db.venue),
@@ -173,6 +182,9 @@ db.define_table('user_accuracy',
     Field('reputation', 'double'),
     Field('n_ratings', 'integer'),
     )
+
+db.user_accuracy.accuracy.represent = represent_double3
+db.user_accuracy.reputation.represent = represent_double3
 
 db.define_table('comparison', # An ordering of submissions, from Best to Worst.
     Field('author', db.auth_user,  default=auth.user_id),
@@ -225,6 +237,7 @@ db.define_table('grades',
     )
 
 db.grades.author.writable = False
+db.grades.grade.represent = represent_double3
 
 # Deprecated.
 db.define_table('comment',
