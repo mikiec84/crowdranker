@@ -324,6 +324,8 @@ def managed_index():
         add_help_for_venue('bogus')
 	# Sets defaults for homeworks
 	set_homework_defaults('bogus')
+	db.venue.number_of_submissions_per_reviewer.writable = True
+	db.venue.number_of_submissions_per_reviewer.readable = True
     if is_user_admin():
 	db.venue.is_approved.writable = True
 	db.venue.created_by.readable = True
