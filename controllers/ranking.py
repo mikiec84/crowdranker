@@ -11,6 +11,12 @@ def view_venue():
     """This function enables the view of the ranking of items submitted to a
     venue.  It is assumed that the people accessing this can have full
     information about the venue, including the identity of the submitters."""
+    def represent_n_completed_reviews(v, r):
+        if v is None:
+            return None
+        url = A(str(v), _href=URL('ranking',
+            'view_comparisons_given_submission' ,args=[r.id]))
+        return url
     c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
     props = db(db.user_properties.email == auth.user.email).select().first()
     if not access.can_view_submissions(c, props):
@@ -29,6 +35,7 @@ def view_venue():
     db.submission.n_assigned_reviews.label = T('Reviews Assigned')
     db.submission.n_completed_reviews.label = T('Done')
     db.submission.n_rejected_reviews.label = T('Rejected')
+    db.submission.n_completed_reviews.represent = represent_n_completed_reviews
     if c.allow_link_submission:
 	db.submission.link.readable = True
     is_editable = False
@@ -253,7 +260,7 @@ def view_comparisons_given_submission():
 	redirect(URL('default', 'index'))
     # Create query.
     q = ((db.comparison.venue_id == c.id) &
-         (db.comparison.ordering.contains(request.args(subm.id))))
+         (db.comparison.ordering.contains(subm.id)))
     db.comparison.ordering.represent = represent_ordering
     grid = SQLFORM.grid(q,
 	field_id=db.comparison.id,
@@ -266,7 +273,7 @@ def view_comparisons_given_submission():
 	details=True, create=False,
 	editable=False, deletable=False,
 	)
-    title = T('Comparisons for venue ' + c.name +
-              ' with submission id ' + str(subm.id))
+    title = T('Comparisons with submission ' + str(subm.id) +
+               ' (by ' + subm.email + ') for ' + c.name)
     return dict(title=title, grid=grid)
 
