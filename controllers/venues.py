@@ -242,7 +242,7 @@ def reviewing_duties():
 	    dict(header=T('N. reviews to do'), body = lambda r: get_num_reviews_todo(r)),
 	    dict(header='Accept',
 		 body = lambda r: 
-		 A(T('Accept to do a review'), _href=URL('rating', 'accept_review', args=[r.id]))),
+		 A(T('Accept to do a review'), _class='btn', _href=URL('rating', 'accept_review', args=[r.id]))),
 	    ]
         )
     return dict(grid=grid)
@@ -324,6 +324,8 @@ def managed_index():
         add_help_for_venue('bogus')
 	# Sets defaults for homeworks
 	set_homework_defaults('bogus')
+	db.venue.number_of_submissions_per_reviewer.writable = True
+	db.venue.number_of_submissions_per_reviewer.readable = True
     if is_user_admin():
 	db.venue.is_approved.writable = True
 	db.venue.created_by.readable = True

@@ -71,7 +71,7 @@ def accept_review():
         task_name = (c.name + ' ' + T('Submission') + ' ' + str(num_tasks + 1))[:STRING_FIELD_LENGTH]
         task_id = db.task.insert(submission_id = new_item, venue_id = c.id, submission_name = task_name)
 	# Increments the number of reviews for the item.
-	subm = db.submission(submission_id)
+	subm = db.submission(new_item)
 	if subm is not None:
 	    if subm.n_assigned_reviews is None:
 		subm.n_assigned_reviews = 1
@@ -236,7 +236,7 @@ def review():
 		line = SPAN(A(st.submission_name, _href=URL('submission', 'view_submission', args=[i])),
 			    " (Comments: ", util.shorten(st.comments), ") ",
 			    A(T('Download'), _class='btn',
-			      _href=URL('download_reviewer', args=[st.id, subm.content])))
+			      _href=URL('submission', 'download_reviewer', args=[st.id, subm.content])))
 		submissions[i] = line 
     # Adds also the last submission.
     v = access.validate_task(db, t.id, auth.user_id)
@@ -247,7 +247,7 @@ def review():
     (_, subm, cont) = v
     line = SPAN(A(t.submission_name, _href=(URL('submission', 'view_submission', args=[t.id]))),
 		" ",
-		A(T('Download'), _class='btn', _href=URL('download_reviewer', args=[t.id, subm.content])))
+		A(T('Download'), _class='btn', _href=URL('submission', 'download_reviewer', args=[t.id, subm.content])))
     submissions[t.submission_id] = line
 	    
     # Used to check each draggable item and determine which one we should
@@ -421,7 +421,7 @@ def edit_reviews():
         line = SPAN(A(st.submission_name, _href=URL('submission', 'view_submission', args=[sub_id])),
             " (Comments: ", util.shorten(st.comments), ") ",
             A(T('Download'), _class='btn',
-            _href=URL('download_reviewer', args=[st.id, subm.content])))
+            _href=URL('submission', 'download_reviewer', args=[st.id, subm.content])))
         submissions[sub_id] = line
     expired =  (datetime.utcnow() < c.rate_open_date or
                 datetime.utcnow() > c.rate_close_date)
@@ -506,7 +506,7 @@ def edit_ordering():
 		line = SPAN(A(st.submission_name, _href=URL('submission', 'view_submission', args=[i])),
 			    " (Comments: ", util.shorten(st.comments), ") ",
 			    A(T('Download'), _class='btn',
-			      _href=URL('download_reviewer', args=[st.id, subm.content])))
+			      _href=URL('submission', 'download_reviewer', args=[st.id, subm.content])))
 		submissions[i] = line 
 
     # Creating form.
