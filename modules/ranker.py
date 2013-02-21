@@ -5,6 +5,8 @@ from rank import Rank
 from rank import Cost
 import util
 from datetime import datetime
+import numpy as np
+import random
 
 NUM_BINS = 2001
 AVRG = NUM_BINS / 2
@@ -296,10 +298,28 @@ def compute_final_grades(db, venue_id):
     db(db.venue.id == venue_id).update(latest_final_grades_evaluation_date = datetime.utcnow())
 
 def run_reputation_system(db, venue_id, alpha_annealing=0.5,
-                          num_of_iterations=4):
+                          num_of_iterations=4, last_compar_param=10,
+                          average_result=False):
     """ Function calculates:
             - reputation for each user
             - user precision (quality as a reviewer)
+
+        last_compar_param affects on how we use user's comparisons.
+            If it is None then we user all comparisons one time.
+            Else:
+            Case average_result is False then:
+                For each reviewer we user ONLY the last comparison n times.
+            Case average_result is True, then:
+                We do regular updates with ONLY last comparisons
+                last_compar_param times and in the take average.
+
+        average_result affects the way we average calculations (calculations
+            depends on the order we process comparisons). If value is
+            - True then we do regular comparisons and average final results
+            - False then we do multiple updates with small alpha.
+
+
+
     """
     # Fetching submission id and authors.
     # TODO(michael): take care of a case when a user has multiple submission.
@@ -320,7 +340,9 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
     # author: accuracy (confedence or reviewer's grade)
     # author: last ordering
     author2rep, author2accuracy, author2ordering = {}, {}, {}
-    # Initializing these dictionaries.
+    # Ordering list is a list of tuples (ordering, author of the orderingj).
+    ordering_list = []
+    # Initializing these dictionaries and ordering_list.
     for comp in comparison_list_r:
         # Check if comparison is valid.
         if comp.is_valid is None or comp.is_valid == True:
@@ -332,6 +354,11 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
             # Initializing reviewers reputation and accuracy.
             author2rep[comp.author] = alpha_annealing
             author2accuracy[comp.author] = -1
+            ordering_list.append((sorted_items, comp.author))
+    # If we want to use only last comparisons.
+    if not last_compar_param is None:
+        ordering_list = [(ordering, author) for author, ordering in
+                                                    author2ordering.iteritems()]
     # Okay, now we are ready to run main iterations.
     result = None
     for it in xrange(num_of_iterations):
@@ -341,20 +368,63 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
                                          alpha=alpha_annealing)
         # Okay, now we update quality distributions with comparisons
         # using reputation of users as annealing coefficient.
-        for comp in comparison_list_r:
-            # Processes the comparison, if valid.
-            if comp.is_valid is None or comp.is_valid == True:
-                # Reverses the list.
-                sorted_items = util.get_list(comp.ordering)[::-1]
-                if len(sorted_items) < 2:
-                    continue
-                alpha = author2rep[comp.author]
-                annealing_type='before_normalization_uniform'
-                #annealing_type='after_normalization'
-                #annealing_type='before_normalization_gauss'
-                result = rankobj.update(sorted_items, new_item=comp.new_item,
-                                        alpha_annealing=alpha,
-                                        annealing_type=annealing_type)
+        if last_compar_param is None:
+            for ordering, author in ordering_list:
+                alpha = author2rep[author]
+                result = rankobj.update(ordering, alpha_annealing=alpha)
+        else:
+            if not average_result:
+                ######## iterate many times with small alpha ##########
+                for i in xrange(last_compar_param):
+                    idxs = range(len(ordering_list))
+                    random.shuffle(idxs)
+                    for idx in idxs:
+                        ordering, author = ordering_list[idx]
+                        alpha = author2rep[author]
+                        alpha = 1 - (1 - alpha) ** (1.0/(4*last_compar_param))
+                        #alpha = alpha / float(2*last_compar_param)
+                        result = rankobj.update(ordering, alpha_annealing=alpha)
+                #######################################################
+            else:
+                #### Do regular update multiple times and calculate average values.
+                result_avrg = {}
+                n = 0
+                for i in xrange(last_compar_param):
+                    rankobj = Rank.from_qdistr_param(items,
+                                                     qdistr_param_default,
+                                                     alpha=alpha_annealing)
+                    result = None
+                    idxs = range(len(ordering_list))
+                    random.shuffle(idxs)
+                    for idx in idxs:
+                        ordering, author = ordering_list[idx]
+                        alpha = author2rep[author]
+                        result = rankobj.update(ordering, alpha_annealing=alpha)
+                    # Update average values.
+                    if result is None:
+                        continue
+                    for item in result:
+                        perc, avrg, stdev = result[item]
+                        if not result_avrg.has_key(item):
+                            result_avrg[item] = [-1, 0 , 0]
+                        perc_, avrg_, stdev_ = result_avrg[item]
+                        avrg_ = ((avrg_ * n) + avrg) / float(n + 1)
+                        stdev_ = ((stdev_ * n) + stdev) / float(n + 1)
+                        result_avrg[item] = (perc_, avrg_, stdev_)
+                    n += 1
+                # Obtaining percentile out of average quality.
+                l = np.array([result_avrg[x][1] for x in result_avrg.iterkeys()])
+                rank2idx = l.argsort()[::-1]
+                idx2rank = rank2idx.argsort()
+                val = 100 / float(len(idx2rank))
+                idx = 0
+                for x in result_avrg.iterkeys():
+                    percentile = val * (len(idx2rank) - idx2rank[idx])
+                    result_avrg[x] = (percentile, result_avrg[x][1],
+                                                  result_avrg[x][2])
+                    idx += 1
+                result = result_avrg
+
         # In the end of the iteration compute reputation to use in the next iteration.
         if result is None:
             return
