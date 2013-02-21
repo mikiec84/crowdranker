@@ -41,7 +41,7 @@
   <li class="ui-state-{{if new_comparison_item == key:}}highlight{{else:}}default{{pass}}" id="item_{{=key}}">
   <span class="ui-icon ui-icon-arrowthick-2-n-s"></span>
   {{=submissions[key]}}
-  <span>Grade [0 to 10]: <input id="grade_{{=key}}" style="width:40px" value="{{=grades.get(key, '')}}"/></span>
+  <span>Grade [0 to 10]: <input id="grade_{{=key}}" style="width:40px" value="{{=grades.get(key, '')}}"></input></span>
   </li>
 {{pass}}
 </ol>
@@ -52,7 +52,6 @@
 <script>
 $(function() {
 	$("#item_list").sortable();
-	$("#item_list").disableSelection();
 	$("form").submit(function() {
 		var new_order = $("#item_list").sortable('toArray');
 		var i = 0;
