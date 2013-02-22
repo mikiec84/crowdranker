@@ -55,6 +55,9 @@ def view_venue():
 	links.append(dict(header=T('Feedback'), body = lambda r:
 			  A(T('Read comments'), 
 			    _href=URL('feedback', 'view_feedback', args=[r.id]))))
+	links.append(dict(header=T('Comparisons'), body = lambda r:
+			  A(T('View comparisons'),
+			    _href=URL('ranking', 'view_comparisons_given_submission', args=[r.id]))))
     grid = SQLFORM.grid(q,
 	field_id=db.submission.id,
 	csv=True,

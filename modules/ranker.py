@@ -277,7 +277,8 @@ def compute_final_grades(db, venue_id):
     user_accuracy_records = db(db.user_accuracy.venue_id == venue_id).select()
     reviewer_grade = {}
     for r in user_accuracy_records:
-        reviewer_grade[r.user_id] = r.accuracy
+	# We use the reputation, not the reviewing accuracy.
+        reviewer_grade[r.user_id] = r.reputation
     # Computing final grade
     final_grades = {}
     for user_id in rank_grade:
