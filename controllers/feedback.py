@@ -78,12 +78,12 @@ def view_feedback():
     if c.latest_rank_update_date < datetime.utcnow():
 	percentile = represent_percentage(subm.percentile, None)
     final_grade = None
-    if c.latest_final_grades_evaluation_date < datetime.utcnow():
+    if c.latest_final_grades_evaluation_date is not None and c.latest_final_grades_evaluation_date < datetime.utcnow():
 	fg = db((db.grades.author == subm.author) & (db.grades.venue_id == c.id)).select(db.grades.grade).first()
 	if fg != None:
 	    final_grade = represent_percentage(fg.grade, None)
     review_accuracy = None
-    if c.latest_reviewers_evaluation_date < datetime.utcnow():
+    if c.latest_reviewers_evaluation_date is not None and c.latest_reviewers_evaluation_date < datetime.utcnow():
 	ra = db((db.user_accuracy.user_id == subm.author) & (db.user_accuracy.venue_id == c.id)).select().first()
 	if ra != None:
 	    review_accuracy = represent_percentage(ra.reputation * 100.0, None)
