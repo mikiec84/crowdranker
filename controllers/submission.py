@@ -17,7 +17,7 @@ def my_submissions_index():
     db.submission.venue_id.readable = False
     db.submission.title.readable = False
     grid = SQLFORM.grid(q,
-        args=request.args[:1],
+	args=request.args[:1],
         field_id = db.submission.id,
         fields = [db.submission.id, db.submission.title, db.submission.venue_id],
         create = False,

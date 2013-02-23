@@ -35,8 +35,9 @@ response.menu = [
         (T('Reviews completed'), False, URL('rating', 'my_reviews'), []),
 	]),
     (T('Manage'), False, None, [
-        (T('Venues I manage'), False, URL('venues', 'managed_index'), []),
-        (T('Venues I can observe'), False, URL('venues', 'observed_index'), []),
+        (T('Active managed venues'), False, URL('venues', 'managed_index', args=['active']), []),
+        (T('All managed venues'), False, URL('venues', 'managed_index', args=['all']), []),
+        (T('Observable, active venues'), False, URL('venues', 'observed_index'), []),
 	(T('User lists'), False, URL('user_lists', 'index'), []),
 	]),
 ]

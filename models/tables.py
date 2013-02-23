@@ -53,7 +53,7 @@ db.define_table('venue',
     Field('close_date', 'datetime', required=True),
     Field('rate_open_date', 'datetime', required=True),
     Field('rate_close_date', 'datetime', required=True),
-    Field('allow_multiple_submissions', 'boolean', default=True),
+    Field('allow_multiple_submissions', 'boolean', default=False),
     Field('submission_title_is_file_name', 'boolean', default=False),
     Field('allow_link_submission', 'boolean', default=False),
     Field('is_active', 'boolean', required=True, default=True),
@@ -102,6 +102,17 @@ db.venue.latest_rank_update_date.writable = False
 db.venue.latest_reviewers_evaluation_date.writable = False
 db.venue.latest_final_grades_evaluation_date.writable = False
 db.venue.number_of_submissions_per_reviewer.writable = False
+db.venue.submissions_are_anonymized.readable = db.venue.submissions_are_anonymized.writable = False
+db.venue.allow_multiple_submissions.readable = db.venue.allow_multiple_submissions.writable = False
+db.venue.feedback_available_to_all.default = False
+db.venue.feedback_available_to_all.readable = db.venue.feedback_available_to_all.writable = False
+db.venue.submissions_visible_immediately.default = False
+db.venue.submissions_visible_immediately.readable = db.venue.submissions_visible_immediately.writable = False
+db.venue.can_rank_own_submissions.readable = db.venue.can_rank_own_submissions.writable = False
+db.venue.submissions_visible_to_all.readable = db.venue.submissions_visible_to_all.writable = False
+db.venue.can_rank_own_submissions.readable = db.venue.can_rank_own_submissions.writable = False
+db.venue.feedback_accessible_immediately.readable = db.venue.feedback_accessible_immediately.writable = False
+
 
 def name_user_list(id, row):
     if id == None or id == '':

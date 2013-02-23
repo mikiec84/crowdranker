@@ -185,6 +185,10 @@ def observed_index():
         l = []
     else:
         l = util.id_list(util.get_list(props.venues_can_observe))
+        l1 = util.id_list(util.get_list(props.venues_can_manage))
+	for el in l1:
+	    if el not in l:
+		l.append(l)
     if len(l) > 0:
 	q = (db.venue.id.belongs(l))
     else:
@@ -279,6 +283,9 @@ def simple_index():
 
 @auth.requires_login()
 def managed_index():
+    active_only = False
+    if len(request.args) == 0 or request.args[0] == 'active':
+	active_only = True
     props = db(db.user_properties.email == auth.user.email).select().first()
     if props == None:
         managed_venue_list = []
@@ -331,10 +338,14 @@ def managed_index():
 	db.venue.created_by.readable = True
 	db.venue.creation_date.readable = True
 	db.venue.is_approved.default = True
+	# Useful for debugging.
+	db.venue.can_rank_own_submissions.readable = db.venue.can_rank_own_submissions.writable = True
+	db.venue.feedback_accessible_immediately.readable = db.venue.feedback_accessible_immediately.writable = True
 	fields = [db.venue.name, db.venue.created_by, db.venue.creation_date, db.venue.is_approved, db.venue.is_active]
     else:
 	fields = [db.venue.name, db.venue.is_active]	
     grid = SQLFORM.grid(q,
+	args=request.args[:1],
         field_id=db.venue.id,
         fields=fields,
         csv=False, details=False,
@@ -388,6 +399,8 @@ def add_help_for_venue(bogus):
 	'Submissions are visible to all.')
     db.venue.submissions_visible_immediately.comment = (
 	'Submissions are public immediately, even before the submission deadline.')
+    db.venue.number_of_submissions_per_reviewer.comment = (
+	'How many submissions must every participant review.')
 
 
 def set_homework_defaults(bogus):
@@ -413,7 +426,6 @@ def set_homework_defaults(bogus):
     db.venue.latest_rank_update_date.readable = False
     db.venue.latest_reviewers_evaluation_date.readable = False
     db.venue.latest_final_grades_evaluation_date.readable = False
-    db.venue.number_of_submissions_per_reviewer.readable = False
 
     
 def validate_venue(form):
@@ -422,7 +434,6 @@ def validate_venue(form):
     form.vars.observers = util.normalize_email_list(form.vars.observers)
     if auth.user.email not in form.vars.managers:
         form.vars.managers = [auth.user.email] + form.vars.managers
-    
 
 def add_venue_to_user_managers(id, user_list):
     for m in user_list:

@@ -119,7 +119,7 @@ def task_index():
 	    ]
     db.task.submission_name.readable = False
     grid = SQLFORM.grid(q,
-        args=request.args[:1],
+	args=request.args[:1],
         field_id=db.task.id,
 	user_signature=False,
         create=False, editable=False, deletable=False, csv=False, details=False,
@@ -348,7 +348,7 @@ def verify_rating_form(subm_id):
 		session.flash = T('Errors in the received grades')
 		return
 	    (prev, _) = grade_subm[0]
-	    for (g, s) in grade_subm[1:]:
+	    for (g, s) in grade_subm[:1]:
 		if g == prev:
 		    form.errors.comments = T('There is a repeated grade: grades need to be unique.')
 		    session.flash = T('Errors in the received grades')
