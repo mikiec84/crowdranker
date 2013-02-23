@@ -259,8 +259,12 @@ def view_comparisons_given_submission():
 	session.flash = T('Not authorized')
 	redirect(URL('default', 'index'))
     # Create query.
+    # First, determine the people who have reviewed this submission.
+    reviewers_r = db(db.task.submission_id == subm.id).select(db.task.user_id).as_list()
+    reviewers = [x['user_id'] for x in reviewers_r]
+    # Second, displays all the comparisons by these users in this venue.
     q = ((db.comparison.venue_id == c.id) &
-         (db.comparison.ordering.contains(subm.id)))
+         (db.comparison.author.belongs(reviewers)))
     db.comparison.ordering.represent = represent_ordering
     grid = SQLFORM.grid(q,
 	field_id=db.comparison.id,
