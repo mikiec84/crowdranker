@@ -33,7 +33,7 @@ def view_venue():
     db.submission.comment.writable = False
     db.submission.n_assigned_reviews.readable = True
     db.submission.n_assigned_reviews.label = T('Reviews Assigned')
-    db.submission.n_completed_reviews.label = T('Done')
+    db.submission.n_completed_reviews.label = T('Comparisons')
     db.submission.n_rejected_reviews.label = T('Rejected')
     db.submission.n_completed_reviews.represent = represent_n_completed_reviews
     if c.allow_link_submission:
@@ -55,9 +55,6 @@ def view_venue():
 	links.append(dict(header=T('Feedback'), body = lambda r:
 			  A(T('Read comments'), 
 			    _href=URL('feedback', 'view_feedback', args=[r.id]))))
-	links.append(dict(header=T('Comparisons'), body = lambda r:
-			  A(T('View comparisons'),
-			    _href=URL('ranking', 'view_comparisons_given_submission', args=[r.id]))))
     grid = SQLFORM.grid(q,
 	field_id=db.submission.id,
 	csv=True,
