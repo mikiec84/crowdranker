@@ -25,7 +25,7 @@ response.menu = [
     (T('CrowdLab Ranking System'), False, URL('default', 'index'), []),
     (T('Submit'), False, None, [
         (T('Venues open for submission'), False, URL('venues', 'subopen_index'), []),
-        (T('Venues where I submitted'), False, URL('venues', 'submitted_index'), []),
+        (T('Venues with submissions'), False, URL('venues', 'submitted_index'), []),
 	(T('My submissions'), False, URL('feedback', 'index', args=['all']), []),
 	]),
     (T('Review'), False, None, [

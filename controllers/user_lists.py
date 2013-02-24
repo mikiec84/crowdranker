@@ -15,7 +15,7 @@ def index():
     if len(request.args) > 2 and request.args[-3] == 'edit':
         ul = db.user_list[request.args[-1]]
         old_managers = ul.managers
-        old_members = ul.email_list
+        old_members = ul.user_list
     else:
         old_managers = []
         old_members = []
@@ -23,7 +23,7 @@ def index():
     if len(request.args) > 0 and (request.args[0] == 'edit' or request.args[0] == 'new'):
         db.user_list.name.comment = T('Name of user list')
         db.user_list.managers.comment = T('Email addresses of users who can manage the list')
-        db.user_list.email_list.comment = T('Email addresses of list members')
+        db.user_list.user_list.comment = T('Email addresses of list members')
     # Forms the query.
     if len(list_ids) == 0:
 	q = (db.user_list.id < 0)
@@ -48,7 +48,7 @@ def index():
 def validate_user_list(form):
     """Splits emails on the same line, and adds the user creating the list to its managers."""
     logger.debug("form.vars: " + str(form.vars))
-    form.vars.email_list = util.normalize_email_list(form.vars.email_list)
+    form.vars.user_list = util.normalize_email_list(form.vars.user_list)
     form.vars.managers = util.normalize_email_list(form.vars.managers)
     if auth.user.email not in form.vars.managers:
         form.vars.managers = [auth.user.email] + form.vars.managers
@@ -63,8 +63,8 @@ def update_user_list(old_managers, old_members):
         delete_user_list_managers(form.vars.id, util.list_diff(old_managers, form.vars.managers))
         # If the list membership has been modified, we may need to update all the users
         # for which the list was used as venue constraint.
-        added_users = util.list_diff(form.vars.email_list, old_members)
-        removed_users = util.list_diff(old_members, form.vars.email_list)
+        added_users = util.list_diff(form.vars.user_list, old_members)
+        removed_users = util.list_diff(old_members, form.vars.user_list)
         if len(added_users) + len(removed_users) > 0:
             fix_venues_for_user_submit(form.vars.id, added_users, removed_users)
             fix_venues_for_user_rate(form.vars.id, added_users, removed_users)
