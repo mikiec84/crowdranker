@@ -44,7 +44,7 @@ def view_feedback():
     subm = db.submission(request.args(0)) or redirect(URL('default', 'index'))
     # Checks whether the user is a manager for the venue.
     c = db.venue(subm.venue_id) or redirect(URL('default', 'index'))
-    props = db(db.user_properties.email == auth.user.email).select().first()
+    props = db(db.user_properties.user == auth.user.email).select().first()
     if props == None:
 	session.flash = T('Not authorized.')
 	redirect(URL('default', 'index'))

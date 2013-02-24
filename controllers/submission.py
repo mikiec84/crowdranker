@@ -39,6 +39,7 @@ def submit():
     db.submission.n_completed_reviews.readable = False
     db.submission.n_rejected_reviews.readable = False
     db.submission.feedback.readable = db.submission.feedback.writable = False
+    db.submission.date_updated.readable = False
     # Produces an identifier for the submission.
     db.submission.identifier.default = util.get_random_id()
     db.submission.user.default = auth.user.email

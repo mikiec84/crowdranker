@@ -163,6 +163,7 @@ def represent_quality(v, r):
 db.submission.id.readable = db.submission.id.writable = False
 db.submission.user.writable = False
 db.submission.date_created.default = datetime.utcnow()
+db.submission.date_updated.default = datetime.utcnow()
 db.submission.date_updated.update = datetime.utcnow()
 db.submission.date_created.writable = False
 db.submission.date_updated.writable = False
@@ -186,6 +187,7 @@ db.submission.feedback.label = T('TA Feedback')
 db.submission.percentile.represent = represent_percentage
 db.submission.quality.represent = represent_quality
 db.submission.error.represent = represent_quality
+db.submission.identifier.readable = db.submission.identifier.writable = False
 
 def represent_double3(v, r):
     if v is None:
