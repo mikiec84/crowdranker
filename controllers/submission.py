@@ -124,7 +124,6 @@ def manager_submit():
 		    title = form.vars.title,
 		    original_filename = form.vars.original_filename,
 		    content = new_content,
-		    blob_key = blob_info.key(),
 		    link = form.vars.link,
 		    comment = form.vars.comment,
 		    )

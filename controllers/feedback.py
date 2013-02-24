@@ -14,7 +14,7 @@ def index():
         q = ((db.submission.user == auth.user.email) 
             & (db.submission.venue_id == venue_id))
     db.submission.venue_id.readable = False # prevents use in form
-    db.submission.title.readable = False
+    db.submission.title.represent = lambda x, r: A(x, _href=URL('submission', 'view_own_submission', args=[r.id]))
     grid = SQLFORM.grid(q,
         fields=[db.submission.id, db.submission.title, db.submission.date_created,
 		db.submission.date_updated, db.submission.venue_id],
@@ -24,8 +24,6 @@ def index():
         links=[
             dict(header=T('Venue'), body = lambda r: 
                 A(get_venue_name(r.venue_id), _href=URL('venues', 'view_venue', args=[r.venue_id]))),
-            dict(header=T('Submission'), body = lambda r: 
-                A(r.title, _href=URL('submission', 'view_own_submission', args=[r.id]))),
             dict(header=T('Feedback'), body = lambda r:
                 A(T('View'), _class='btn', _href=URL('feedback', 'view_feedback', args=[r.id]))),
             ],
