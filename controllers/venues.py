@@ -283,10 +283,10 @@ def simple_index():
 
 @auth.requires_login()
 def managed_index():
-    active_only = False
-    if len(request.args) == 0 or request.args[0] == 'active':
-	active_only = True
-    props = db(db.user_properties.user == auth.user.email).select().first()
+    active_only = True
+    if request.vars.all and request.vars.all == 'yes':
+	active_only = False
+    props = db(db.user_properties.user == auth.user.email).select().first()    
     if props == None:
         managed_venue_list = []
         managed_user_lists = []
@@ -294,12 +294,18 @@ def managed_index():
         managed_venue_list = util.get_list(props.venues_can_manage)
         managed_user_lists = util.get_list(props.managed_user_lists)
     if len(managed_venue_list) > 0:
-	q = (db.venue.id.belongs(managed_venue_list))
+	if active_only:
+	    q = (db.venue.id.belongs(managed_venue_list) & (db.venue.is_active == True))
+	else:
+	    q = (db.venue.id.belongs(managed_venue_list))
     else:
 	q = (db.venue.id == -1)
     # Admins can see all venues.
     if is_user_admin():
-	q = (db.venue.id > 0)
+	if active_only:
+	    q = (db.venue.is_active == True)
+	else:
+	    q = db.venue
     # Deals with search parameter.
     if request.vars.cid and request.vars.cid != '':
         try:
@@ -345,7 +351,6 @@ def managed_index():
     else:
 	fields = [db.venue.name, db.venue.is_active]	
     grid = SQLFORM.grid(q,
-	args=request.args[:1],
         field_id=db.venue.id,
         fields=fields,
         csv=False, details=False,

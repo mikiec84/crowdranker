@@ -16,7 +16,7 @@ db.define_table('user_list',
     Field('name'),
     Field('creation_date', 'datetime', default=datetime.utcnow()),
     Field('managers', 'list:string'),
-    Field('email_list', 'list:string'), 
+    Field('user_list', 'list:string'), 
     #TODO(luca): add a 'managed' field, and a table of users,
     # to allow managing very large sets of users via an API.
     format = '%(name)s',
@@ -25,9 +25,9 @@ db.define_table('user_list',
 db.user_list.id.readable = db.user_list.id.writable = False
 db.user_list.creation_date.writable = db.user_list.creation_date.readable = False 
 db.user_list.name.required = True   
-db.user_list.email_list.requires = [IS_LIST_OF(IS_EMAIL())]
+db.user_list.user_list.requires = [IS_LIST_OF(IS_EMAIL())]
 db.user_list.managers.requires = [IS_LIST_OF(IS_EMAIL())]
-db.user_list.email_list.label = 'Members'
+db.user_list.user_list.label = 'Members'
 
 db.define_table('user_properties',
     Field('user'), # Primary key
