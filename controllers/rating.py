@@ -453,7 +453,7 @@ def edit_reviews():
 def edit_ordering():
     """ Edit last ordering."""
     # Gets the information on the venue and comparison.
-    venue = db.venue(request.args[0]) or redirect(URL('default', 'index'))
+    venue = db.venue(request.args(0)) or redirect(URL('default', 'index'))
     last_comparison = db.comparison(request.args[1]) or redirect(URL('default', 'index'))
     if last_comparison.user != auth.user.email:
         session.flash = T('Invalid request.')
@@ -580,7 +580,7 @@ def recompute_ranks():
     """Recomputes the submission rank.  This can be useful if we change or improve
     the algorithm for computing ranks."""
     # Gets the information on the venue.
-    c = db.venue(request.args[0]) or redirect(URL('default', 'index'))
+    c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
     check_manager_eligibility(c.id, auth.user.email, 'Not authorized.')
     # This venue_form is used to display the venue.
     venue_form = SQLFORM(db.venue, record=c, readonly=True)
@@ -600,7 +600,7 @@ def recompute_ranks():
 @auth.requires_login()
 def evaluate_reviewers():
     # Gets the information on the venue.
-    c = db.venue(request.args[0]) or redirect(URL('default', 'index'))
+    c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
     check_manager_eligibility(c.id, auth.user.email, 'You cannot evaluate contributors for this venue')
     # This venue_form is used to display the venue.
     venue_form = SQLFORM(db.venue, record=c, readonly=True)
@@ -617,7 +617,7 @@ def evaluate_reviewers():
 @auth.requires_login()
 def compute_final_grades():
     # Gets the information on the venue.
-    c = db.venue(request.args[0]) or redirect(URL('default', 'index'))
+    c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
     check_manager_eligibility(c.id, auth.user.email, 'You cannot compute final grades for this venue')
     # This venue_form is used to display the venue.
     venue_form = SQLFORM(db.venue, record=c, readonly=True)
@@ -645,7 +645,7 @@ def compute_final_grades():
 @auth.requires_login()
 def run_rep_system():
     # Gets the information on the venue.
-    c = db.venue(request.args[0]) or redirect(URL('default', 'index'))
+    c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
     check_manager_eligibility(c.id, auth.user.email, 'You cannot evaluate contributors for this venue')
     # This venue_form is used to display the venue.
     venue_form = SQLFORM(db.venue, record=c, readonly=True)
