@@ -76,7 +76,7 @@ def view_feedback():
 	db.submission.error.readable = True
     # Reads the grade information.
     percentile = None
-    if c.latest_rank_update_date < datetime.utcnow():
+    if c.latest_rank_update_date is not None and c.latest_rank_update_date < datetime.utcnow():
 	percentile = represent_percentage(subm.percentile, None)
     final_grade = None
     if c.latest_final_grades_evaluation_date is not None and c.latest_final_grades_evaluation_date < datetime.utcnow():
