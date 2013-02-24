@@ -40,7 +40,7 @@ def my_submissions_index():
 @auth.requires_login()
 def submit():
     # Gets the information on the venue.
-    c = db.venue(request.args[0]) or redirect(URL('default', 'index'))
+    c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
     # Gets information on the user.
     props = db(db.user_properties.email == auth.user.email).select().first()
     if props == None: 
@@ -105,7 +105,7 @@ def manager_submit():
     """This function is used by venue managers to do submissions on behalf of others.  It can be used
     even when the submission deadline is past."""
     # Gets the information on the venue.
-    c = db.venue(request.args[0]) or redirect(URL('default', 'index'))
+    c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
     # Checks that the user is a manager for the venue.
     manager_props = db(db.user_properties.email == auth.user.email).select().first()
     can_manage = c.id in util.get_list(manager_props.venues_can_manage)
