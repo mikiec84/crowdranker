@@ -170,7 +170,7 @@ def view_submission():
     and anonymize the submission."""
     v = access.validate_task(db, request.args(0), auth.user_id)
     if v == None:
-        session.flash(T('Not authorized.'))
+        session.flash = T('Not authorized.')
         redirect(URL('default', 'index'))
     (t, subm, cont) = v
     download_link = A(T('Download'),
