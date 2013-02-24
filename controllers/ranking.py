@@ -18,7 +18,7 @@ def view_venue():
             'view_comparisons_given_submission' ,args=[r.id]))
         return url
     c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
-    props = db(db.user_properties.email == auth.user.email).select().first()
+    props = db(db.user_properties.user == auth.user.email).select().first()
     if not access.can_view_submissions(c, props):
 	session.flash = T('You do not have access to the submissions of this venue.')
 	redirect(URL('venues', 'view_venue', args=[c.id]))
@@ -39,7 +39,7 @@ def view_venue():
     if c.allow_link_submission:
 	db.submission.link.readable = True
     is_editable = False
-    fields=[db.submission.title, db.submission.email, db.submission.quality,
+    fields=[db.submission.title, db.submission.user, db.submission.quality,
 	    db.submission.percentile, db.submission.n_assigned_reviews, db.submission.n_completed_reviews,
 	    db.submission.n_rejected_reviews, db.submission.error, db.submission.content]
     if access.can_enter_true_quality:
@@ -93,7 +93,7 @@ def get_num_reviews(subm_id, venue_id):
 def view_raters():
     """This function shows the contribution of each user to the total ranking of a venue."""
     c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
-    props = db(db.user_properties.email == auth.user.email).select().first()
+    props = db(db.user_properties.user == auth.user.email).select().first()
     if not access.can_view_rating_contributions(c, props):
 	session.flash = T('You do not have access to the rater contributions for this venue.')
 	redirect(URL('venues', 'view_venue', args=[c.id]))
@@ -103,7 +103,7 @@ def view_raters():
 	args=request.args[:1],
 	user_signature=False, details=True,
 	create=False, editable=False, deletable=False,
-	fields=[db.user_accuracy.user_id, db.user_accuracy.accuracy,
+	fields=[db.user_accuracy.user, db.user_accuracy.accuracy,
             db.user_accuracy.reputation, db.user_accuracy.n_ratings],
 	)
     title = A(c.name, _href=URL('venues', 'view_venue', args=[c.id]))
@@ -115,7 +115,7 @@ def view_final_grades():
     """This function shows the final grade of each user.
     """
     c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
-    props = db(db.user_properties.email == auth.user.email).select().first()
+    props = db(db.user_properties.user == auth.user.email).select().first()
     if not access.can_view_ratings(c, props):
 	session.flash = T('You do not have access to the final grades for this venue.')
 	redirect(URL('venues', 'view_venue', args=[c.id]))
@@ -151,7 +151,7 @@ def view_final_grades():
 @auth.requires_login()
 def view_grades_histogram():
     c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
-    props = db(db.user_properties.email == auth.user.email).select().first()
+    props = db(db.user_properties.user == auth.user.email).select().first()
     if not access.can_view_ratings(c, props):
         session.flash = T('You do not have access to the final grades for this venue.')
         redirect(URL('venues', 'view_venue', args=[c.id]))
@@ -175,12 +175,12 @@ def view_tasks():
     """This function enables the view of the reviewing tasks, as well as the comparisons
     that they led to."""
     c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
-    props = db(db.user_properties.email == auth.user.email).select().first()
+    props = db(db.user_properties.user == auth.user.email).select().first()
     if not access.can_observe(c, props):
 	session.flash = T('Not authorized')
 	redirect(URL('default', 'index'))
     q = (db.task.venue_id == c.id)
-    db.task.user_id.readable = True
+    db.task.user.readable = True
     db.task.submission_name.readable = True
     db.task.comments.readable = True
     db.task.rejection_comment.readable = True
@@ -194,12 +194,13 @@ def view_tasks():
 	user_signature=False,
 	details=True, create=False,
 	editable=False, deletable=False,
-	fields=[db.task.user_id, db.task.submission_id, db.task.venue_id,
+	fields=[db.task.user, db.task.submission_id, db.task.venue_id,
 		db.task.submission_name, db.task.completed_date,
 		db.task.comments, db.task.rejected, db.task.rejection_comment],
 	links=[
 	    dict(header=T('Comparison'), body = lambda r:
-		 A(T('View comparison'), _class='btn', _href=URL('ranking', 'view_comparison', args=[r.venue_id, r.user_id, r.submission_id]))),
+		 A(T('View comparison'), _class='btn',
+		   _href=URL('ranking', 'view_comparison', args=[r.venue_id, r.user, r.submission_id]))),
 	    ]
 	)
     title = T('Tasks for venue ' + c.name)
@@ -211,9 +212,9 @@ def view_comparison():
     """This function displays an individual comparison, given parameters that can be
     known from a task."""
     comp = db((db.comparison.venue_id == request.args(0)) &
-	      (db.comparison.author == request.args(1)) &
+	      (db.comparison.user == request.args(1)) &
 	      (db.comparison.new_item == request.args(2))).select().first()
-    props = db(db.user_properties.email == auth.user.email).select().first()
+    props = db(db.user_properties.user == auth.user.email).select().first()
     c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
     if not access.can_observe(c, props):
 	session.flash = T('Not authorized')
@@ -228,7 +229,7 @@ def view_comparison():
 @auth.requires_login()
 def view_comparisons_index():
     """This function displays all comparisons for a venue."""
-    props = db(db.user_properties.email == auth.user.email).select().first()
+    props = db(db.user_properties.user == auth.user.email).select().first()
     c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
     if not access.can_observe(c, props):
 	session.flash = T('Not authorized')
@@ -252,7 +253,7 @@ def view_comparisons_index():
 @auth.requires_login()
 def view_comparisons_given_submission():
     """This function displays comparisons wich contains given submission."""
-    props = db(db.user_properties.email == auth.user.email).select().first()
+    props = db(db.user_properties.user == auth.user.email).select().first()
     subm = db.submission(request.args(0)) or redirect(URL('default', 'index'))
     c = db.venue(subm.venue_id) or redirect(URL('default', 'index'))
     if not access.can_observe(c, props):
@@ -278,6 +279,6 @@ def view_comparisons_given_submission():
 	editable=False, deletable=False,
 	)
     title = T('Comparisons with submission ' + str(subm.id) +
-               ' (by ' + subm.email + ') for ' + c.name)
+               ' (by ' + subm.user + ') for ' + c.name)
     return dict(title=title, grid=grid)
 

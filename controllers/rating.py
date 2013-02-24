@@ -15,7 +15,7 @@ def accept_review():
     and if so, picks a task and adds it to the set of tasks for the user."""
     # Checks the permissions.
     c = db.venue(request.args(0)) or redirect('default', 'index')
-    props = db(db.user_properties.email == auth.user.email).select(db.user_properties.venues_can_rate).first()
+    props = db(db.user_properties.user == auth.user.email).select(db.user_properties.venues_can_rate).first()
     if props == None:
 	c_can_rate = []
     else:
@@ -29,7 +29,7 @@ def accept_review():
         redirect(URL('venues', 'rateopen_index'))
     # The user can rate the venue.
     # Does the user have any pending reviewing tasks for the venue?
-    num_open_tasks = db((db.task.user_id == auth.user_id) &
+    num_open_tasks = db((db.task.user == auth.user.email) &
 			(db.task.venue_id == c.id) &
 			(db.task.rejected == False) &
 			(db.task.completed_date > datetime.utcnow())).count()
@@ -45,7 +45,7 @@ def accept_review():
         # Reads the most recent ratings given by the user.
         # TODO(luca): we should really poll the rating system for this; that's what
         # should keep track of these things.
-        previous_ratings = db((db.comparison.author == auth.user_id) 
+        previous_ratings = db((db.comparison.user == auth.user.email) 
             & (db.comparison.venue_id == c.id)).select(orderby=~db.comparison.date).first()
         # To get list of old items we need to check previous ratings
         # and current open tasks.
@@ -55,19 +55,19 @@ def accept_review():
             old_items = util.get_list(previous_ratings.ordering)
         # Now checking open tasks for the user.
         active_items_rows = db((db.task.venue_id == c.id) &
-                               (db.task.user_id == auth.user_id) &
+                               (db.task.user == auth.user.email) &
                                (db.task.completed_date == datetime(dates.MAXYEAR, 12, 1))
                                ).select(db.task.submission_id)
         active_items = [x.submission_id for x in active_items_rows]
         old_items.extend(active_items)
-        new_item = ranker.get_item(db, c.id, auth.user_id, old_items,
+        new_item = ranker.get_item(db, c.id, auth.user.email, old_items,
 				   can_rank_own_submissions=c.can_rank_own_submissions)
         if new_item == None:
             session.flash = T('There are no items to review so far.')
             redirect(URL('venues', 'rateopen_index'))
         # Creates a reviewing task.
         # To name it, counts how many tasks the user has already for this venue.
-        num_tasks = db((db.task.venue_id == c.id) & (db.task.user_id == auth.user_id)).count()
+        num_tasks = db((db.task.venue_id == c.id) & (db.task.user == auth.user.email)).count()
         task_name = (c.name + ' ' + T('Submission') + ' ' + str(num_tasks + 1))[:STRING_FIELD_LENGTH]
         task_id = db.task.insert(submission_id = new_item, venue_id = c.id, submission_name = task_name)
 	# Increments the number of reviews for the item.
@@ -87,7 +87,7 @@ def accept_review():
 @auth.requires_login()
 def task_index():
     if len(request.args) == 0:
-        q = ((db.task.user_id == auth.user_id) &
+        q = ((db.task.user == auth.user.email) &
 	     (db.task.completed_date > datetime.utcnow()) &
 	     (db.task.rejected == False))
 	db.task.completed_date.readable = False
@@ -147,7 +147,7 @@ def decline_link(r):
 def decline():
     # Here is where the comparisons are entered.
     t = db.task(request.args(0)) or redirect(URL('default', 'index'))
-    if t.user_id != auth.user_id:
+    if t.user != auth.user.email:
 	session.flash = T('Invalid request.')
         redirect(URL('default', 'index'))
     if t.completed_date < datetime.utcnow():
@@ -179,7 +179,7 @@ def review():
 
     # Here is where the comparisons are entered.
     t = db.task(request.args(0)) or redirect(URL('default', 'index'))
-    if t.user_id != auth.user_id:
+    if t.user != auth.user.email:
 	session.flash = T('Invalid request.')
         redirect(URL('default', 'index'))
 
@@ -194,7 +194,7 @@ def review():
 
     # Ok, the task belongs to the user. 
     # Gets the last reviewing task done for the same venue.
-    last_comparison = db((db.comparison.author == auth.user_id)
+    last_comparison = db((db.comparison.user == auth.user.email)
         & (db.comparison.venue_id == t.venue_id)).select(orderby=~db.comparison.date).first()
     if last_comparison == None:
         last_ordering = []
@@ -228,9 +228,9 @@ def review():
     for i in last_ordering:
 	# Finds the task.
 	st = db((db.task.submission_id == i) &
-		(db.task.user_id == auth.user_id)).select().first()
+		(db.task.user == auth.user.email)).select().first()
 	if st != None:
-	    v = access.validate_task(db, st.id, auth.user_id)
+	    v = access.validate_task(db, st.id, auth.user.email)
 	    if v != None:
 		(_, subm, cont) = v
 		line = SPAN(A(st.submission_name, _href=URL('submission', 'view_submission', args=[i])),
@@ -239,7 +239,7 @@ def review():
 			      _href=URL('submission', 'download_reviewer', args=[st.id, subm.content])))
 		submissions[i] = line 
     # Adds also the last submission.
-    v = access.validate_task(db, t.id, auth.user_id)
+    v = access.validate_task(db, t.id, auth.user.email)
     if v == None:
 	# Should not happen.
 	session.flash('You cannot view this submission.')
@@ -275,9 +275,9 @@ def review():
 	    subm.update_record()
 	
 	# Marks that the user has reviewed for this venue.
-	props = db(db.user_properties.email == auth.user.email).select(db.user_properties.id, db.user_properties.venues_has_rated).first()
+	props = db(db.user_properties.user == auth.user.email).select(db.user_properties.id, db.user_properties.venues_has_rated).first()
         if props == None:
-	    db.user_properties.insert(email = auth.user.email,
+	    db.user_properties.insert(user = auth.user.email,
 				      venues_has_rated = [venue.id])
         else:
 	    has_rated = util.get_list(props.venues_has_rated)
@@ -287,7 +287,7 @@ def review():
         # TODO(luca): put it in a queue of things that need processing.
         # All updates done.
         # Calling ranker.py directly.
-        ranker.process_comparison(db, t.venue_id, auth.user_id,
+        ranker.process_comparison(db, t.venue_id, auth.user.email,
                                   ordering[::-1], t.submission_id)
         db.commit()
 	session.flash = T('The review has been submitted.')
@@ -319,7 +319,7 @@ def verify_rating_form(subm_id):
 		if i != subm_id:
 		    # This must correspond to a previously done task.
 		    mt = db((db.task.submission_id == i) &
-			    (db.task.user_id == auth.user_id)).select().first()
+			    (db.task.user == auth.user.email)).select().first()
 		    if mt == None or mt.completed_date > datetime.utcnow():
 			form.errors.comments = T('Corruputed data received')
 			session.flash = T('Corrupted data received')
@@ -372,7 +372,7 @@ def verify_rating_form(subm_id):
 
 @auth.requires_login()
 def my_reviews():
-    props = db(db.user_properties.email == auth.user.email).select(db.user_properties.venues_has_rated).first()
+    props = db(db.user_properties.user == auth.user.email).select(db.user_properties.venues_has_rated).first()
     venue_list = util.get_list(props.venues_has_rated)
     q = (db.venue.id.belongs(venue_list))
     db.venue.name.readable = False
@@ -399,7 +399,7 @@ def edit_reviews():
     c = db.venue(request.args[0]) or redirect(URL('default', 'index'))
     # Building ordering.
     last_comparison_r = db((db.comparison.venue_id == c.id) &
-                           (db.comparison.author == auth.user_id) &
+                           (db.comparison.user == auth.user) &
                            (db.comparison.is_valid == True)
                           ).select(orderby=~db.comparison.date).first()
     if last_comparison_r is None:
@@ -416,7 +416,7 @@ def edit_reviews():
     for sub_id in current_ordering:
         # Finds the task.
         st = db((db.task.submission_id == sub_id) &
-                (db.task.user_id == auth.user_id)).select().first()
+                (db.task.user == auth.user.email)).select().first()
         subm = db.submission(sub_id)
         line = SPAN(A(st.submission_name, _href=URL('submission', 'view_submission', args=[sub_id])),
             " (Comments: ", util.shorten(st.comments), ") ",
@@ -434,7 +434,7 @@ def edit_reviews():
                                args=[c.id, compar_id]))
     # View/Editing comments.
     q = ((db.task.venue_id == c.id) &
-         (db.task.user_id == auth.user_id))
+         (db.task.user == auth.user.email))
     db.task.assigned_date.writable = False
     db.task.completed_date.writable = False
     db.task.rejection_comment.writable = False
@@ -455,7 +455,7 @@ def edit_ordering():
     # Gets the information on the venue and comparison.
     venue = db.venue(request.args[0]) or redirect(URL('default', 'index'))
     last_comparison = db.comparison(request.args[1]) or redirect(URL('default', 'index'))
-    if last_comparison.author != auth.user_id:
+    if last_comparison.user != auth.user.email:
         session.flash = T('Invalid request.')
         redirect(URL('default', 'index'))
 
@@ -498,9 +498,9 @@ def edit_ordering():
     for i in last_ordering:
 	# Finds the task.
 	st = db((db.task.submission_id == i) &
-		(db.task.user_id == auth.user_id)).select().first()
+		(db.task.user == auth.user.email)).select().first()
 	if st != None:
-	    v = access.validate_task(db, st.id, auth.user_id)
+	    v = access.validate_task(db, st.id, auth.user.email)
 	    if v != None:
 		(_, subm, cont) = v
 		line = SPAN(A(st.submission_name, _href=URL('submission', 'view_submission', args=[i])),
@@ -538,7 +538,7 @@ def edit_ordering():
             venue_id=venue.id, ordering=new_ordering, grades=new_grades,
             new_item=last_comparison.new_item)
         # Mark that user has revised the comparison.
-        props = db(db.user_properties.email == auth.user.email).select(db.user_properties.id, db.user_properties.venues_has_re_reviewed).first()
+        props = db(db.user_properties.user == auth.user.email).select(db.user_properties.id, db.user_properties.venues_has_re_reviewed).first()
         if props == None:
             # Should not happen.
             session.flash('You cannot view this review.')
@@ -550,7 +550,7 @@ def edit_ordering():
         # TODO(luca): put it in a queue of things that need processing.
         # All updates done.
         # Calling ranker.py directly.
-        ranker.process_comparison(db, venue.id, auth.user_id,
+        ranker.process_comparison(db, venue.id, auth.user.email,
                                   new_ordering[::-1], last_comparison.new_item)
         db.commit()
         session.flash = T('The review has been submitted.')
@@ -564,8 +564,8 @@ def edit_ordering():
         )
 
 
-def check_manager_eligibility(venue_id, user_id, reject_msg):
-    props = db(db.user_properties.email == user_id).select().first()
+def check_manager_eligibility(venue_id, user, reject_msg):
+    props = db(db.user_properties.user == user).select().first()
     if props == None:
         session.flash = T(reject_msg)
         redirect(URL('default', 'index'))

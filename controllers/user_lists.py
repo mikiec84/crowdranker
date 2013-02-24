@@ -6,7 +6,7 @@ import util
 def index():
     """Index of user list one can manage or use."""
     # Reads the list of ids of lists managed by the user.
-    list_ids_l = db(db.user_properties.email == auth.user.email).select(db.user_properties.managed_user_lists).first()
+    list_ids_l = db(db.user_properties.user == auth.user.email).select(db.user_properties.managed_user_lists).first()
     if list_ids_l == None:
         list_ids = []
     else:
@@ -23,7 +23,7 @@ def index():
     if len(request.args) > 0 and (request.args[0] == 'edit' or request.args[0] == 'new'):
         db.user_list.name.comment = T('Name of user list')
         db.user_list.managers.comment = T('Email addresses of users who can manage the list')
-        db.user_list.email_list.commentn = T('Email addresses of list members')
+        db.user_list.email_list.comment = T('Email addresses of list members')
     # Forms the query.
     if len(list_ids) == 0:
 	q = (db.user_list.id < 0)
@@ -98,74 +98,74 @@ def fix_venues_for_user_rate(list_id, added_users, removed_users):
  
 def add_user_list_managers(id, managers):
     for m in managers:
-        u = db(db.user_properties.email == m).select(db.user_properties.managed_user_lists).first()
+        u = db(db.user_properties.user == m).select(db.user_properties.managed_user_lists).first()
         if u == None:
             # We never heard of this user, but we still create the permission.
-            logger.debug("Creating user properties for email:" + str(m) + "<")
-            db.user_properties.insert(email=m, managed_user_lists=[id])
+            logger.debug("Creating user properties for user:" + str(m) + "<")
+            db.user_properties.insert(user=m, managed_user_lists=[id])
         else:
             l = util.get_list(u.managed_user_lists)
 	    l = util.list_append_unique(l, id)
-	    db(db.user_properties.email == m).update(managed_user_lists = l)
+	    db(db.user_properties.user == m).update(managed_user_lists = l)
             
 def delete_user_list_managers(id, managers):
     """Removes the user list from those that each user can manage"""
     for m in managers:
-        u = db(db.user_properties.email == m).select(db.user_properties.managed_user_lists).first()
+        u = db(db.user_properties.user == m).select(db.user_properties.managed_user_lists).first()
         if u != None:
             l = util.list_remove(u.managed_user_lists, id)
-            db(db.user_properties.email == m).update(managed_user_lists = l)
+            db(db.user_properties.user == m).update(managed_user_lists = l)
 
 # User properties management for submit, can_rate
 	   
 def add_venue_to_user_submit(venue_id, users):
     """Add the given users to those that can submit to venue venue_id."""
     for m in users:
-        u = db(db.user_properties.email == m).select(db.user_properties.venues_can_submit).first()
+        u = db(db.user_properties.user == m).select(db.user_properties.venues_can_submit).first()
         if u == None:
             # We never heard of this user, but we still create the permission.
             logger.debug("Creating user properties for email:" + str(m) + "<")
-            db.user_properties.insert(email=m, venues_can_submit = [venue_id])
+            db.user_properties.insert(user=m, venues_can_submit = [venue_id])
         else:
             l = util.get_list(u.venues_can_submit)
 	    l = util.list_append_unique(l, venue_id)
-	    db(db.user_properties.email == m).update(venues_can_submit = l)
+	    db(db.user_properties.user == m).update(venues_can_submit = l)
         
 def add_venue_to_user_rate(venue_id, users):
     """Add the given users to those that can rate venue_id."""
     for m in users:
-        u = db(db.user_properties.email == m).select(db.user_properties.venues_can_rate).first()
+        u = db(db.user_properties.user == m).select(db.user_properties.venues_can_rate).first()
         if u == None:
             # We never heard of this user, but we still create the permission.
-            logger.debug("Creating user properties for email:" + str(m) + "<")
-            db.user_properties.insert(email=m, venues_can_rate = [venue_id])
+            logger.debug("Creating user properties for user:" + str(m) + "<")
+            db.user_properties.insert(user=m, venues_can_rate = [venue_id])
         else:
             l = util.get_list(u.venues_can_rate)
 	    l = util.list_append_unique(l, venue_id)
-	    db(db.user_properties.email == m).update(venues_can_rate = l)
+	    db(db.user_properties.user == m).update(venues_can_rate = l)
         
 def delete_venue_from_user_submit(venue_id, users):
     """Delete the users from those can can submit to venue_id."""
     for m in users:
-        u = db(db.user_properties.email == m).select(db.user_properties.venues_can_submit).first()
+        u = db(db.user_properties.user == m).select(db.user_properties.venues_can_submit).first()
         if u == None:
             # We never heard of this user, but we still create the permission.
-            logger.debug("Creating user properties for email:" + str(m) + "<")
-            db.user_properties.insert(email=m, venues_can_submit = [])
+            logger.debug("Creating user properties for user:" + str(m) + "<")
+            db.user_properties.insert(user=m, venues_can_submit = [])
         else:
             l = util.get_list(u.venues_can_submit)
             l = util.list_remove(l, venue_id)
-            db(db.user_properties.email == m).update(venues_can_submit = l)
+            db(db.user_properties.user == m).update(venues_can_submit = l)
 
 def delete_venue_from_user_rate(venue_id, users):
     """Delete the users from those that can rate venue_id."""
     for m in users:
-        u = db(db.user_properties.email == m).select(db.user_properties.venues_can_rate).first()
+        u = db(db.user_properties.user == m).select(db.user_properties.venues_can_rate).first()
         if u == None:
             # We never heard of this user, but we still create the permission.
-            logger.debug("Creating user properties for email:" + str(m) + "<")
-            db.user_properties.insert(email=m, venues_can_rate = [])
+            logger.debug("Creating user properties for user:" + str(m) + "<")
+            db.user_properties.insert(user=m, venues_can_rate = [])
         else:
             l = util.get_list(u.venues_can_rate)
             l = util.list_remove(l, venue_id)
-            db(db.user_properties.email == m).update(venues_can_rate = l)
+            db(db.user_properties.user == m).update(venues_can_rate = l)

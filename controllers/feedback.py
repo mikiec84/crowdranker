@@ -9,14 +9,15 @@ def index():
     or for all venues."""
     venue_id = request.args(0)
     if venue_id == 'all':
-        q = (db.submission.author == auth.user_id)
+        q = (db.submission.user == auth.user.email)
     else:
-        q = ((db.submission.author == auth.user_id) 
+        q = ((db.submission.user == auth.user.email) 
             & (db.submission.venue_id == venue_id))
     db.submission.venue_id.readable = False # prevents use in form
     db.submission.title.readable = False
     grid = SQLFORM.grid(q,
-        fields=[db.submission.id, db.submission.title, db.submission.date, db.submission.venue_id],
+        fields=[db.submission.id, db.submission.title, db.submission.date_created,
+		db.submission.date_updated, db.submission.venue_id],
         csv=False, details=False, create=False, editable=False, deletable=False,
         args=request.args[:1],
         user_signature=False,
@@ -47,7 +48,7 @@ def view_feedback():
     if props == None:
 	session.flash = T('Not authorized.')
 	redirect(URL('default', 'index'))
-    is_author = (subm.author == auth.user_id)
+    is_author = (subm.user == auth.user.email)
     can_view_feedback = access.can_view_feedback(c, props) or is_author
     if (not can_view_feedback):
         session.flash = T('Not authorized.')
@@ -79,12 +80,12 @@ def view_feedback():
 	percentile = represent_percentage(subm.percentile, None)
     final_grade = None
     if c.latest_final_grades_evaluation_date is not None and c.latest_final_grades_evaluation_date < datetime.utcnow():
-	fg = db((db.grades.author == subm.author) & (db.grades.venue_id == c.id)).select(db.grades.grade).first()
+	fg = db((db.grades.user == subm.user) & (db.grades.venue_id == c.id)).select(db.grades.grade).first()
 	if fg != None:
 	    final_grade = represent_percentage(fg.grade, None)
     review_accuracy = None
     if c.latest_reviewers_evaluation_date is not None and c.latest_reviewers_evaluation_date < datetime.utcnow():
-	ra = db((db.user_accuracy.user_id == subm.author) & (db.user_accuracy.venue_id == c.id)).select().first()
+	ra = db((db.user_accuracy.user == subm.user) & (db.user_accuracy.venue_id == c.id)).select().first()
 	if ra != None:
 	    review_accuracy = represent_percentage(ra.reputation * 100.0, None)
     # Makes a grid of comments.
@@ -93,7 +94,7 @@ def view_feedback():
     db.task.completed_date.readable = False
     db.task.rejected.readable = True
     if access.can_observe(c, props):
-	db.task.user_id.readable = True
+	db.task.user.readable = True
 	db.task.completed_date.readable = True
     q = (db.task.submission_id == subm.id)
     grid = SQLFORM.grid(q,

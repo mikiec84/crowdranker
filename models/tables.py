@@ -6,6 +6,12 @@ STRING_FIELD_LENGTH = 512 # Default length of string fields.
 
 db.auth_user._format='%(email)s'
 
+def get_user_email():
+    if auth.user:
+	return auth.user.email
+    else:
+	return None
+
 db.define_table('user_list',
     Field('name'),
     Field('creation_date', 'datetime', default=datetime.utcnow()),
@@ -24,7 +30,7 @@ db.user_list.managers.requires = [IS_LIST_OF(IS_EMAIL())]
 db.user_list.email_list.label = 'Members'
 
 db.define_table('user_properties',
-    Field('email'), # Primary key
+    Field('user'), # Primary key
     Field('managed_user_lists', 'list:reference user_list'),
     Field('venues_can_manage', 'list:reference venue'),
     Field('venues_can_observe', 'list:reference venue'),
@@ -37,14 +43,14 @@ db.define_table('user_properties',
     Field('venues_has_re_reviewed', 'list:reference venue'),
     )
 
-db.user_properties.email.required = True
+db.user_properties.user.required = True
 
 
 db.define_table('venue',
     Field('name'),
     Field('description', 'text'),
     Field('creation_date', 'datetime', default=datetime.utcnow()),
-    Field('created_by', db.auth_user,  default=auth.user_id),
+    Field('created_by', default=get_user_email()),
     Field('managers', 'list:string'),
     Field('observers', 'list:string'),
     Field('submit_constraint', db.user_list),
@@ -124,9 +130,9 @@ db.venue.submit_constraint.represent = name_user_list
 db.venue.rate_constraint.represent = name_user_list
                                                 
 db.define_table('submission',
-    Field('author', db.auth_user,  default=auth.user_id),
-    Field('email'),
-    Field('date', 'datetime'),
+    Field('user', default=get_user_email()),
+    Field('date_created', 'datetime'),
+    Field('date_updated', 'datetime'),
     Field('venue_id', db.venue),
     Field('title'),
     Field('original_filename'),
@@ -155,11 +161,11 @@ def represent_quality(v, r):
     return ("%.2f" % v)
 
 db.submission.id.readable = db.submission.id.writable = False
-db.submission.author.writable = False
-db.submission.email.writable = False
-db.submission.date.default = datetime.utcnow()
-db.submission.date.update = datetime.utcnow()
-db.submission.date.writable = False
+db.submission.user.writable = False
+db.submission.date_created.default = datetime.utcnow()
+db.submission.date_updated.update = datetime.utcnow()
+db.submission.date_created.writable = False
+db.submission.date_updated.writable = False
 db.submission.original_filename.readable = db.submission.original_filename.writable = False
 db.submission.venue_id.readable = db.submission.venue_id.writable = False
 db.submission.identifier.writable = False
@@ -187,7 +193,7 @@ def represent_double3(v, r):
     return ("%.3f" % v)
 
 db.define_table('user_accuracy',
-    Field('user_id', db.auth_user),
+    Field('user'),
     Field('venue_id', db.venue),
     Field('accuracy', 'double'), # "reviewer" grade
     Field('reputation', 'double'),
@@ -198,7 +204,7 @@ db.user_accuracy.accuracy.represent = represent_double3
 db.user_accuracy.reputation.represent = represent_double3
 
 db.define_table('comparison', # An ordering of submissions, from Best to Worst.
-    Field('author', db.auth_user,  default=auth.user_id),
+    Field('user', default=get_user_email()),
     Field('date', 'datetime', default=datetime.utcnow()),
     Field('venue_id', db.venue),
     Field('ordering', 'list:reference submission'),
@@ -219,7 +225,7 @@ db.comparison.new_item.label = T('New submission')
 db.comparison.ordering.represent = represent_ordering
     
 db.define_table('task', # Tasks a user should complete for reviewing.
-    Field('user_id', db.auth_user, default=auth.user_id),
+    Field('user', default=get_user_email()),
     Field('submission_id', db.submission),
     Field('venue_id', db.venue),
     Field('submission_name'), # Name of the submission from the point of view of the user.
@@ -231,7 +237,7 @@ db.define_table('task', # Tasks a user should complete for reviewing.
     )
 
 db.task.id.readable = db.task.id.writable = False
-db.task.user_id.readable = db.task.user_id.writable = False
+db.task.user.readable = db.task.user.writable = False
 db.task.submission_id.readable = db.task.submission_id.writable = False
 db.task.venue_id.readable = db.task.venue_id.writable = False
 db.task.assigned_date.writable = False
@@ -243,16 +249,16 @@ db.task.rejected.label = T('Review declined')
 
 db.define_table('grades',
     Field('venue_id', db.venue, required=True),
-    Field('author', db.auth_user),
+    Field('user'),
     Field('grade', 'double'),
     )
 
-db.grades.author.writable = False
+db.grades.user.writable = False
 db.grades.grade.represent = represent_double3
 
 # Deprecated.
 db.define_table('comment',
-    Field('author', db.auth_user,  default=auth.user_id),
+    Field('user', default=get_user_email()),
     Field('date', 'datetime', default=datetime.utcnow()),
     Field('submission_id', db.submission),
     Field('content', 'text'),

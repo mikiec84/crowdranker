@@ -3,12 +3,6 @@
 <h1>{{=subm.title}}</h1>
 
 {{=form}}
-{{if download_link != None:}}
-{{=P(TAG['']('Submission: ', A(subm.original_filename, _class='btn', _href=download_link)))}}
-{{pass}}
-{{if subm_link != None:}}
-{{=P(TAG['']('Submitted link: ', subm_link))}}
-{{pass}}
 
 <ul>
   <li class="btn">{{=A(T('View venue'), _href=URL('venues', 'view_venue', args=[subm.venue_id]))}}</li>

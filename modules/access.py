@@ -75,12 +75,12 @@ def can_view_submissions(venue, props):
 	return False
 
     
-def validate_task(db, t_id, user_id):
-    """Validates that user_id can do the reviewing task t."""
+def validate_task(db, t_id, user_email):
+    """Validates that user_email can do the reviewing task t."""
     t = db.task(t_id)
     if t == None:
         return None
-    if t.user_id != user_id:
+    if t.user != user_email:
         return None
     s = db.submission(t.submission_id)
     if s == None:

@@ -6,36 +6,6 @@ import ranker
 import re
 from contenttype import contenttype
 
-@auth.requires_login()
-def my_submissions_index():
-    """Index of submissions to a context."""
-    # Gets information on this specific venue.
-    c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
-    # Gets the list of all submissions to the given venue.
-    q = ((db.submission.author == auth.user_id) 
-            & (db.submission.venue_id == c.id))
-    db.submission.venue_id.readable = False
-    db.submission.title.readable = False
-    grid = SQLFORM.grid(q,
-	args=request.args[:1],
-        field_id = db.submission.id,
-        fields = [db.submission.id, db.submission.title, db.submission.venue_id],
-        create = False,
-        user_signature = False,
-        details = False,
-        csv = False,
-        editable = False,
-        deletable = False,
-        links = [
-            dict(header = T('Submission'), body = lambda r:
-                A(T(r.title), _href=URL('view_own_submission', args=[r.id]))),
-            dict(header = T('Feedback'), body = lambda r:
-                A(T('View Feedback'), _class='btn', _href=URL('feedback', 'view_feedback', args=[r.id]))),
-            ]
-        )
-    # TODO(luca): check can_add to see if we can include a link to submit, below.
-    return dict(grid=grid, venue=c)
-
 
 @auth.requires_login()
 def submit():
@@ -58,7 +28,7 @@ def submit():
 	session.flash = T('The submission deadline has passed; submissions are closed.')
         redirect(URL('venues', 'view_venue', args=[c.id]))
     # Ok, the user can submit.  Looks for previous submissions.
-    sub = db((db.submission.author == auth.user_id) & (db.submission.venue_id == c.id)).select().first()
+    sub = db((db.submission.user == auth.user.email) & (db.submission.venue_id == c.id)).select().first()
     if sub != None and not c.allow_multiple_submissions:
         session.flash = T('You have already submitted to this venue.')
         redirect(URL('my_submissions_index', args=[c.id]))
@@ -71,7 +41,7 @@ def submit():
     db.submission.feedback.readable = db.submission.feedback.writable = False
     # Produces an identifier for the submission.
     db.submission.identifier.default = util.get_random_id()
-    db.submission.email.default = auth.user.email
+    db.submission.user.default = auth.user.email
     # Assigns default quality to the submission.
     avg, stdev = ranker.get_init_average_stdev()
     db.submission.quality.default = avg
@@ -99,7 +69,7 @@ def submit():
         redirect(URL('feedback', 'index', args=['all']))
     return dict(form=form, venue=c)
 
-         
+
 @auth.requires_login()
 def manager_submit():
     """This function is used by venue managers to do submissions on behalf of others.  It can be used
@@ -113,26 +83,23 @@ def manager_submit():
 	session.flash = T('Not authorized!')
 	redirect(URL('default', 'index'))
     # Prepares the submission.
-    db.submission.email.writable = db.submission.email.readable = True
-    db.submission.author.readable = db.submission.author.writable = False
+    db.submission.user.readable = db.submission.user.writable = True
+    db.submission.user.default = ''
     db.submission.feedback.readable = db.submission.feedback.writable = False
-    db.submission.email.label = T('Author')
     # Assigns default quality to the submission.
     avg, stdev = ranker.get_init_average_stdev()
     db.submission.quality.default = avg
     db.submission.error.default = stdev
     # Produces an identifier for the submission.
     db.submission.identifier.default = util.get_random_id()
+
+    # Prepares the submission form.
     form = SQLFORM(db.submission, upload=URL('download_manager', args=[None]))
     form.vars.venue_id = c.id
     if request.vars.content != None and request.vars.content != '':
         form.vars.original_filename = request.vars.content.filename
-    if form.process(onvalidation=manager_submit_validation).accepted:
-	# Fixes the author field of the submission.
-	db(db.submission.id == form.vars.id).update(author=form.vars.author)
+    if form.process().accepted:
         # Adds the venue to the list of venues where the user submitted.
-        # TODO(luca): Enable users to delete submissions.  But this is complicated; we need to 
-        # delete also their quality information etc.  For the moment, no deletion.
 	props = db(db.user_properties.email == form.vars.email).select().first()
 	if props == None: 
 	    venues_has_submitted = []
@@ -141,41 +108,49 @@ def manager_submit():
         submitted_ids = util.id_list(venues_has_submitted)
         submitted_ids = util.list_append_unique(submitted_ids, c.id)
         if props == None:
-            db(db.user_properties.email == form.vars.email).update(venues_has_submitted = submitted_ids)
+            db(db.user_properties.email == form.vars.user).update(venues_has_submitted = submitted_ids)
         else:
             props.update_record(venues_has_submitted = submitted_ids)
+
+	# If there is a prior submission of the same author to this venue, replaces the content.
+	is_there_another = False
+	other_subms = db(db.submission.user == form.vars.user).select()
+	for other_subm in other_subms:
+	    if other_subm.id != form.vars.id:
+		is_there_another = True
+		other_subm.update_record(
+		    date_updated = datetime.utcnow(),
+		    title = form.vars.title,
+		    original_filename = form.vars.original_filename,
+		    content = new_content,
+		    blob_key = blob_info.key(),
+		    link = form.vars.link,
+		    comment = form.vars.comment,
+		    )
+	# And deletes this submission.
+	if is_there_another:
+	    db(db.submission.id == form.vars.id).delete()
+	    session.flash = T('The previous submission by the same author has been updated.')
+	else:
+	    session.flash = T('The submission has been added.')
         db.commit()
-        session.flash = T('The submission has been accepted.')
-        redirect(URL('ranking', 'view_venue', args=[c.id]))
+	redirect(URL('ranking', 'view_venue', args=[c.id]))
     return dict(form=form, venue=c)
          
-
-def manager_submit_validation(form):
-    """Validates a manager-entered submission.  The main validation is
-    that the user account must already exist for that user.
-    TODO(luca): we could lift this restriction, but at the price of
-    having to move to email as the general user identifier.
-    Shall we do this?"""
-    user_info = db(db.auth_user.email == form.vars.email).select().first()
-    if user_info is None:
-	form.errors.email = T('User does not exist.')
-    else:
-	form.vars.author = user_info.id
-
 
 @auth.requires_login()
 def view_submission():
     """Allows viewing a submission by someone who has the task to review it.
     This function is accessed by task id, not submission id, to check access
     and anonymize the submission."""
-    v = access.validate_task(db, request.args(0), auth.user_id)
+    v = access.validate_task(db, request.args(0), auth.user.email)
     if v == None:
         session.flash = T('Not authorized.')
         redirect(URL('default', 'index'))
     (t, subm, cont) = v
     download_link = A(T('Download'),
 		      _class='btn',
-	              _href=URL('download_reviewer', args=[t.id, subm.content]))
+	              _href=URL('download_reviewer', args=[t.id]))
     venue_link = A(cont.name, _href=URL('venues', 'view_venue', args=[cont.id]))
     subm_link = None
     if cont.allow_link_submission:
@@ -189,7 +164,7 @@ def view_own_submission():
     """Allows viewing a submission by the submission owner.
     The argument is the submission id."""
     subm = db.submission(request.args(0)) or redirect(URL('default', 'index'))
-    if subm.author != auth.user_id:
+    if subm.user != auth.user.email:
         session.flash = T('You cannot view this submission.')
         redirect(URL('default', 'index'))
     c = db.venue(subm.venue_id) or redirect(URL('default', 'index'))
@@ -198,27 +173,28 @@ def view_own_submission():
     subm_link = None
     if c.allow_link_submission:
 	subm_link = A(subm.link, _href=subm.link)
-    db.submission.author.readable = db.submission.author.writable = False
+    db.submission.user.readable = db.submission.user.writable = False
     db.submission.feedback.readable = db.submission.feedback.writable = False
     db.submission.percentile.readable = db.submission.percentile.writable = False
     db.submission.n_completed_reviews.readable = False
     db.submission.n_rejected_reviews.readable = False
-    if (c.is_active and c.is_approved and c.open_date <= t and c.close_date >= t):
+    # Prepares the form, according to whether the author can edit the submission or not.
+    is_editable = (c.is_active and c.is_approved and c.open_date <= t and c.close_date >= t)
+    if is_editable:
 	# The venue is still open for submissions, and we allow editing of the submission.
-        form = SQLFORM(db.submission, subm, upload=URL('download_author', args=[subm.id]))
+        form = SQLFORM(db.submission, subm, upload=URL('download_author', args=[subm.id]),
+		       deletable=False)
         if request.vars.content != None and request.vars.content != '':
             form.vars.original_filename = request.vars.content.filename
-        if form.process().accepted:
+	if form.process().accepted:
             session.flash = T('Your submission has been updated.')
-            redirect(URL('feedback', 'index', args=['all']))
+	    redirect(URL('feedback', 'index', args=['all']))
     else:
 	# The venue is no longer open for submission.
         db.submission.content.readable = False
         form = SQLFORM(db.submission, subm, readonly=True,
 		       upload=URL('download_author', args=[subm.id]), buttons=[])
-	download_link = A(T('Download'), _class='btn',
-			  _href=URL('download_author', args=[subm.id, subm.content]))
-    return dict(form=form, subm=subm, download_link=download_link, subm_link=subm_link)
+    return dict(form=form, subm=subm)
 
 
 @auth.requires_login()
@@ -249,18 +225,16 @@ def download_author():
     subm = db.submission(request.args(0))
     if (subm  == None):
         redirect(URL('default', 'index' ) )
-    if subm.author != auth.user_id:
+    if subm.user != auth.user.email:
         session.flash = T('Not authorized.')
         redirect(URL('default', 'index'))
     return my_download(request, db, subm.original_filename)
-	
+
 
 @auth.requires_login()
 def download_manager():
     # The user must be the manager of the venue where the submission occurred.
-    subm = db.submission(request.args(0))
-    if (subm  == None):
-        redirect(URL('default', 'index' ))
+    subm = db.submission(request.args(0)) or redirect(URL('default', 'index' ))
     # Gets the venue.
     c = db.venue(subm.venue_id)
     if c is None:
@@ -270,7 +244,7 @@ def download_manager():
     if auth.user.email not in managers:
         session.flash = T('Not authorized.')
         redirect(URL('default', 'index'))	
-    return my_download(request, db, subm.original_filename)
+    return my_download(subm)
 	
 
 @auth.requires_login()
@@ -279,33 +253,27 @@ def download_viewer():
     all the submissions of the venue.  We need to do all access control here."""
     subm = db.submission(request.args(0)) or redirect(URL('default', 'index'))
     c = db.venue(subm.venue_id) or redirect(URL('default', 'index'))
-    # Does the user have access to the venue submissions?
-    # TODO(luca): factor this in a permission module.
     props = db(db.user_properties.email == auth.user.email).select().first()
-    can_manage = c.id in util.get_list(props.venues_can_manage)
-    can_observe = c.id in util.get_list(props.venues_can_observe)
-    can_view_ratings = can_manage or c.rating_available_to_all or can_observe
-    if not can_view_ratings:
+    # Does the user have access to the venue submissions?
+    if not can_view_submissions(c, props): 
 	session.flash(T('Not authorized.'))
 	redirect(URL('default', 'index'))
     # Creates an appropriate file name for the submission.
     original_ext = subm.original_filename.split('.')[-1]
-    filename = subm.email or 'anonymous'
+    filename = subm.user
     if subm.title != None and len(subm.title) > 0:
 	filename += '_' + subm.title
     else:
 	filename += '_' + subm.identifier
     filename += '.' + original_ext
     # Allows the download.
-    # TODO(luca): The next line should be useless.
-    request.args = request.args[1:]
-    return my_download(request, db, filename)
+    return my_download(subm, filename=filename)
 
 
 @auth.requires_login()
 def download_reviewer():
     # Checks that the reviewer has access.
-    v = access.validate_task(db, request.args(0), auth.user_id)
+    v = access.validate_task(db, request.args(0), auth.user.email)
     if v == None:
         session.flash = T('Not authorized.')
         redirect(URL('default', 'index'))
