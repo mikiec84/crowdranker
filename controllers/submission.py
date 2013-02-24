@@ -12,7 +12,7 @@ def submit():
     # Gets the information on the venue.
     c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
     # Gets information on the user.
-    props = db(db.user_properties.email == auth.user.email).select().first()
+    props = db(db.user_properties.user == auth.user.email).select().first()
     if props == None: 
         venue_ids = []
         venues_has_submitted = []
@@ -60,7 +60,7 @@ def submit():
         submitted_ids = util.id_list(venues_has_submitted)
         submitted_ids = util.list_append_unique(submitted_ids, c.id)
         if props == None:
-	    db.user_properties.insert(email = auth.user.email,
+	    db.user_properties.insert(user = auth.user.email,
 				      venues_has_submitted = submitted_ids)
         else:
             props.update_record(venues_has_submitted = submitted_ids)
@@ -77,7 +77,7 @@ def manager_submit():
     # Gets the information on the venue.
     c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
     # Checks that the user is a manager for the venue.
-    manager_props = db(db.user_properties.email == auth.user.email).select().first()
+    manager_props = db(db.user_properties.user == auth.user.email).select().first()
     can_manage = c.id in util.get_list(manager_props.venues_can_manage)
     if not can_manage:
 	session.flash = T('Not authorized!')
@@ -100,7 +100,7 @@ def manager_submit():
         form.vars.original_filename = request.vars.content.filename
     if form.process().accepted:
         # Adds the venue to the list of venues where the user submitted.
-	props = db(db.user_properties.email == form.vars.email).select().first()
+	props = db(db.user_properties.user == form.vars.email).select().first()
 	if props == None: 
 	    venues_has_submitted = []
 	else:
@@ -108,7 +108,7 @@ def manager_submit():
         submitted_ids = util.id_list(venues_has_submitted)
         submitted_ids = util.list_append_unique(submitted_ids, c.id)
         if props == None:
-            db(db.user_properties.email == form.vars.user).update(venues_has_submitted = submitted_ids)
+            db(db.user_properties.user == form.vars.user).update(venues_has_submitted = submitted_ids)
         else:
             props.update_record(venues_has_submitted = submitted_ids)
 
@@ -203,7 +203,7 @@ def view_submission_by_manager():
     The argument is the submission id."""
     subm = db.submission(request.args(0)) or redirect(URL('default', 'index'))
     c = db.venue(subm.venue_id) or redirect(URL('default', 'index'))
-    props = db(db.user_properties.email == auth.user.email).select().first()
+    props = db(db.user_properties.user == auth.user.email).select().first()
     if not access.can_observe(c, props):
         session.flash = T('Not authorized.')
         redirect(URL('default', 'index'))	    
@@ -253,7 +253,7 @@ def download_viewer():
     all the submissions of the venue.  We need to do all access control here."""
     subm = db.submission(request.args(0)) or redirect(URL('default', 'index'))
     c = db.venue(subm.venue_id) or redirect(URL('default', 'index'))
-    props = db(db.user_properties.email == auth.user.email).select().first()
+    props = db(db.user_properties.user == auth.user.email).select().first()
     # Does the user have access to the venue submissions?
     if not can_view_submissions(c, props): 
 	session.flash(T('Not authorized.'))
