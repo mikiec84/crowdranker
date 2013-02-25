@@ -258,10 +258,3 @@ db.define_table('grades',
 db.grades.user.writable = False
 db.grades.grade.represent = represent_double3
 
-# Deprecated.
-db.define_table('comment',
-    Field('user', default=get_user_email()),
-    Field('date', 'datetime', default=datetime.utcnow()),
-    Field('submission_id', db.submission),
-    Field('content', 'text'),
-    )
