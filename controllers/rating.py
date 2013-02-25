@@ -38,7 +38,8 @@ def accept_review():
 			  'Complete some of them before accepting additional reviewing tasks.')
 	redirect(URL('rating', 'task_index'))
     # This venue_form is used to display the venue.
-    venue_form = SQLFORM(db.venue, record=c, readonly=True)
+    venue_form = SQLFORM(db.venue, record=c, readonly=True, fields=[
+	'name', 'description', 'rate_open_date', 'rate_close_date'])
     confirmation_form = FORM.confirm(T('Accept'),
         {T('Decline'): URL('default', 'index')})
     if confirmation_form.accepted:
