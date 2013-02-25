@@ -104,6 +104,7 @@ db.venue.rate_close_date.label = 'Reviewing deadline'
 db.venue.rate_close_date.default = datetime.utcnow()
 db.venue.max_number_outstanding_reviews.requires = IS_INT_IN_RANGE(1, 100,
     error_message=T('Enter a number between 0 and 100.'))
+db.venue.max_number_outstanding_reviews.readable = db.venue.max_number_outstanding_reviews.writable = False
 db.venue.latest_rank_update_date.writable = False
 db.venue.latest_reviewers_evaluation_date.writable = False
 db.venue.latest_final_grades_evaluation_date.writable = False
@@ -118,7 +119,10 @@ db.venue.can_rank_own_submissions.readable = db.venue.can_rank_own_submissions.w
 db.venue.submissions_visible_to_all.readable = db.venue.submissions_visible_to_all.writable = False
 db.venue.can_rank_own_submissions.readable = db.venue.can_rank_own_submissions.writable = False
 db.venue.feedback_accessible_immediately.readable = db.venue.feedback_accessible_immediately.writable = False
-
+db.venue.feedback_is_anonymous.readable = db.venue.feedback_is_anonymous.writable = False
+db.venue.rating_available_to_all.readable = db.venue.rating_available_to_all.writable = False
+db.venue.rater_contributions_visible_to_all.readable = db.venue.rater_contributions_visible_to_all.writable = False
+db.venue.submission_title_is_file_name.readable = db.venue.submission_title_is_file_name.writable = False
 
 def name_user_list(id, row):
     if id == None or id == '':
@@ -233,6 +237,7 @@ db.define_table('task', # Tasks a user should complete for reviewing.
     Field('submission_name'), # Name of the submission from the point of view of the user.
     Field('assigned_date', 'datetime', default=datetime.utcnow()),
     Field('completed_date', 'datetime', default=datetime(dates.MAXYEAR, 12, 1)),
+    Field('is_completed', 'boolean', default=False),
     Field('rejected', 'boolean', default=False),
     Field('rejection_comment', 'text'),
     Field('comments', 'text'),
@@ -244,6 +249,7 @@ db.task.submission_id.readable = db.task.submission_id.writable = False
 db.task.venue_id.readable = db.task.venue_id.writable = False
 db.task.assigned_date.writable = False
 db.task.completed_date.writable = False
+db.task.is_completed.writable = False
 db.task.submission_name.writable = False
 db.task.rejected.readable = db.task.rejected.writable = False
 db.task.rejection_comment.label = T('Reason declined')

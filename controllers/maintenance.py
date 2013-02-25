@@ -30,3 +30,18 @@ def compute_n_reviews():
     db.commit()
     session.flash = T('Fixed numbers of completed reviews')
     redirect(URL('default', 'index'))
+
+@auth.requires_login()
+def mark_completed_tasks():
+    if auth.user.email != 'luca@ucsc.edu':
+        session.flash = T('Not authorized')
+        redirect(URL('default', 'index'))
+    tasks = db().select(db.task.ALL)
+    for t in tasks:
+	if t.completed_date < datetime.utcnow():
+	    t.update_record(is_completed = True)
+	else:
+	    t.update_record(is_completed = False)
+    db.commit()
+    session.flash = T('done')
+    

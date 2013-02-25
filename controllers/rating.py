@@ -89,7 +89,7 @@ def accept_review():
 def task_index():
     if len(request.args) == 0:
         q = ((db.task.user == auth.user.email) &
-	     (db.task.completed_date > datetime.utcnow()) &
+	     (db.task.is_completed == False) &
 	     (db.task.rejected == False))
 	db.task.completed_date.readable = False
 	title = T('Reviews to submit')
@@ -130,18 +130,23 @@ def task_index():
 
        
 def review_link(r):
-    if r.completed_date > datetime.utcnow():
+    if open_for_review(r):
         return A(T('Enter review'), _class='btn', _href=URL('review', args=[r.id]))
     else:
-        # TODO(luca): Allow resubmitting a review.
-        return T('Completed on ') + str(r.completed_date)
+        return T('Review period closed')
 
 
 def decline_link(r):
-    if r.completed_date > datetime.utcnow():
+    if open_for_review(r):
         return A(T('Decline review'), _class='btn', _href=URL('decline', args=[r.id]))
     else:
-        return ''
+        return T('Review period closed')
+
+def open_for_review(r):
+    date_now = datetime.utcnow()
+    if r.completed_date > date_now:
+	venue = db.venue(r.venue_id)
+	return date_now < venue.rate_close_date and date_now > venue.rate_open_date
 
     
 @auth.requires_login()
@@ -151,14 +156,16 @@ def decline():
     if t.user != auth.user.email:
 	session.flash = T('Invalid request.')
         redirect(URL('default', 'index'))
-    if t.completed_date < datetime.utcnow():
+    if t.is_completed:
 	session.flash = T('This task has alredy been completed.')
 	redirect(URL('default', 'index'))
     db.task.rejected.default = True
     db.task.completed_date.readable = False
+    db.task.is_completed.readable = False
     db.task.comments.readable = db.task.comments.writable = False
     form = SQLFORM(db.task, t)
     form.vars.rejected = True
+    form.vars.is_completed = True
     form.add_button(T('Cancel'), URL('rating', 'task_index'))
     if form.process().accepted:
 	# Increases the number of rejected reviews for the submission.
@@ -231,8 +238,8 @@ def review():
 	st = db((db.task.submission_id == i) &
 		(db.task.user == auth.user.email)).select().first()
 	if st != None:
-	    v = access.validate_task(db, st.id, auth.user.email)
-	    if v != None:
+	    ok, v = access.validate_task(db, st.id, auth.user.email)
+	    if ok:
 		(_, subm, cont) = v
 		line = SPAN(A(st.submission_name, _href=URL('submission', 'view_submission', args=[i])),
 			    " (Comments: ", util.shorten(st.comments), ") ",
@@ -240,10 +247,10 @@ def review():
 			      _href=URL('submission', 'download_reviewer', args=[st.id, subm.content])))
 		submissions[i] = line 
     # Adds also the last submission.
-    v = access.validate_task(db, t.id, auth.user.email)
-    if v == None:
+    ok, v = access.validate_task(db, t.id, auth.user.email)
+    if not ok:
 	# Should not happen.
-	session.flash('You cannot view this submission.')
+	session.flash = T(v)
 	redirect(URL('default', 'index'))
     (_, subm, cont) = v
     line = SPAN(A(t.submission_name, _href=(URL('submission', 'view_submission', args=[t.id]))),
@@ -267,7 +274,7 @@ def review():
         comparison_id = db.comparison.insert(
 	    venue_id=t.venue_id, ordering=ordering, grades=grades, new_item=new_comparison_item) 
         # Marks the task as done.
-        t.update_record(completed_date=datetime.utcnow(), comments=form.vars.comments)
+        t.update_record(completed_date=datetime.utcnow(), is_completed=True, comments=form.vars.comments)
 	# Increments the number of reviews this submission has received.
 	subm = db.submission(t.submission_id)
 	if subm != None and subm.n_completed_reviews != None:
@@ -501,8 +508,8 @@ def edit_ordering():
 	st = db((db.task.submission_id == i) &
 		(db.task.user == auth.user.email)).select().first()
 	if st != None:
-	    v = access.validate_task(db, st.id, auth.user.email)
-	    if v != None:
+	    ok, v = access.validate_task(db, st.id, auth.user.email)
+	    if ok:
 		(_, subm, cont) = v
 		line = SPAN(A(st.submission_name, _href=URL('submission', 'view_submission', args=[i])),
 			    " (Comments: ", util.shorten(st.comments), ") ",

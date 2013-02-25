@@ -143,9 +143,9 @@ def view_submission():
     """Allows viewing a submission by someone who has the task to review it.
     This function is accessed by task id, not submission id, to check access
     and anonymize the submission."""
-    v = access.validate_task(db, request.args(0), auth.user.email)
-    if v == None:
-        session.flash = T('Not authorized.')
+    ok, v = access.validate_task(db, request.args(0), auth.user.email)
+    if not ok:
+        session.flash = T(v)
         redirect(URL('default', 'index'))
     (t, subm, cont) = v
     download_link = A(T('Download'),
@@ -273,9 +273,9 @@ def download_viewer():
 @auth.requires_login()
 def download_reviewer():
     # Checks that the reviewer has access.
-    v = access.validate_task(db, request.args(0), auth.user.email)
-    if v == None:
-        session.flash = T('Not authorized.')
+    ok, v = access.validate_task(db, request.args(0), auth.user.email)
+    if not ok:
+        session.flash = T(v)
         redirect(URL('default', 'index'))
     (t, s, c) = v
     # Builds the download name for the file.

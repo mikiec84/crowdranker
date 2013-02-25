@@ -79,18 +79,18 @@ def validate_task(db, t_id, user_email):
     """Validates that user_email can do the reviewing task t."""
     t = db.task(t_id)
     if t == None:
-        return None
+        return False, 'Not authorized.'
     if t.user != user_email:
-        return None
+        return False, 'Not authorized.'
     s = db.submission(t.submission_id)
     if s == None:
-        return None
+        return False, 'Not authorized.'
     c = db.venue(s.venue_id)
     if c == None:
-        return None
+        return False, 'Not authorized.'
     d = datetime.utcnow()
     if c.rate_open_date > d or c.rate_close_date < d:
-        return None
-    return (t, s, c)
+        return False, 'The review period is closed.'
+    return True, (t, s, c)
 
 	

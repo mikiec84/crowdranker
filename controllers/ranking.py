@@ -139,7 +139,7 @@ def view_final_grades():
 	args=request.args[:1],
 	user_signature=False, details=True,
 	create=False, editable=False, deletable=False,
-	fields=[db.grades.author, db.grades.grade],
+	fields=[db.grades.user, db.grades.grade],
 	)
     title = A(c.name, _href=URL('venues', 'view_venue', args=[c.id]))
     histogram_link = A(T("View histogram of final grades"),
@@ -238,7 +238,7 @@ def view_comparisons_index():
     db.comparison.ordering.represent = represent_ordering
     grid = SQLFORM.grid(q,
 	field_id=db.comparison.id,
-	fields=[db.comparison.author, db.comparison.date, 
+	fields=[db.comparison.user, db.comparison.date, 
 		db.comparison.ordering, db.comparison.grades, db.comparison.new_item,
 		db.comparison.is_valid],
 	csv=True,
@@ -261,15 +261,15 @@ def view_comparisons_given_submission():
 	redirect(URL('default', 'index'))
     # Create query.
     # First, determine the people who have reviewed this submission.
-    reviewers_r = db(db.task.submission_id == subm.id).select(db.task.user_id).as_list()
-    reviewers = [x['user_id'] for x in reviewers_r]
+    reviewers_r = db(db.task.submission_id == subm.id).select(db.task.user).as_list()
+    reviewers = [x['user'] for x in reviewers_r]
     # Second, displays all the comparisons by these users in this venue.
     q = ((db.comparison.venue_id == c.id) &
-         (db.comparison.author.belongs(reviewers)))
+         (db.comparison.user.belongs(reviewers)))
     db.comparison.ordering.represent = represent_ordering
     grid = SQLFORM.grid(q,
 	field_id=db.comparison.id,
-	fields=[db.comparison.author, db.comparison.date, 
+	fields=[db.comparison.user, db.comparison.date, 
 		db.comparison.ordering, db.comparison.grades, db.comparison.new_item,
 		db.comparison.is_valid],
 	csv=True,
