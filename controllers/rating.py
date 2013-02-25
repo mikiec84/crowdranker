@@ -349,7 +349,7 @@ def verify_rating_form(subm_id):
 		session.flash = T('Errors in the received grades')
 		return
 	    (prev, _) = grade_subm[0]
-	    for (g, s) in grade_subm[:1]:
+	    for (g, s) in grade_subm[1:]:
 		if g == prev:
 		    form.errors.comments = T('There is a repeated grade: grades need to be unique.')
 		    session.flash = T('Errors in the received grades')
