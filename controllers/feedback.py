@@ -91,13 +91,19 @@ def view_feedback():
     db.task.assigned_date.readable = False
     db.task.completed_date.readable = False
     db.task.rejected.readable = True
+    db.task.is_bogus.readable = db.task.is_bogus.writable = True
+    db.task.why_bogus.readable = db.task.why_bogus.writable = True
+    db.task.why_bogus.label = T('Reason why the review is bogus')
+    # Prevent editing the comments; the only thing editable should be the "is bogus" field.
+    db.task.comments.writable = False
+    db.task.rejection_comment.writable = False
     if access.can_observe(c, props):
 	db.task.user.readable = True
 	db.task.completed_date.readable = True
     q = (db.task.submission_id == subm.id)
     grid = SQLFORM.grid(q,
 	details=True, 
-        csv=False, create=False, editable=False, deletable=False, searchable=False,
+        csv=False, create=False, editable=True, deletable=False, searchable=False,
 	user_signature=False,
         args=request.args[:1],
         )

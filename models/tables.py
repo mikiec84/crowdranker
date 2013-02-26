@@ -241,6 +241,8 @@ db.define_table('task', # Tasks a user should complete for reviewing.
     Field('rejected', 'boolean', default=False),
     Field('rejection_comment', 'text'),
     Field('comments', 'text'),
+    Field('is_bogus', 'boolean', default=False),
+    Field('why_bogus', 'text'),
     )
 
 db.task.id.readable = db.task.id.writable = False
@@ -249,11 +251,15 @@ db.task.submission_id.readable = db.task.submission_id.writable = False
 db.task.venue_id.readable = db.task.venue_id.writable = False
 db.task.assigned_date.writable = False
 db.task.completed_date.writable = False
-db.task.is_completed.writable = False
+db.task.is_completed.writable = db.task.is_completed.readable = False
 db.task.submission_name.writable = False
 db.task.rejected.readable = db.task.rejected.writable = False
 db.task.rejection_comment.label = T('Reason declined')
 db.task.rejected.label = T('Review declined')
+db.task.is_bogus.readable = db.task.is_bogus.writable = False
+db.task.why_bogus.readable = db.task.why_bogus.writable = False
+db.task.is_bogus.label = T('This review is bogus')
+
 
 db.define_table('grades',
     Field('venue_id', db.venue, required=True),
