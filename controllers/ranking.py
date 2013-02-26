@@ -203,7 +203,7 @@ def view_tasks():
 	links=[
 	    dict(header=T('Review details'), body = lambda r:
 		 A(T('View feedback'), _class='btn',
-		   _href=URL('ranking', 'view_comparison', args=['t', r.id]))),
+		   _href=URL('ranking', 'view_comparison', args=[r.id]))),
 	    ]
 	)
     title = T('Tasks for venue ' + c.name)
@@ -212,28 +212,21 @@ def view_tasks():
 
 @auth.requires_login()
 def view_comparison():
-    """This function displays an individual task and comparison, given the id of one of the two."""
-    mode = request.args(0)
-    if mode == 't':
-	# We are given the task id.
-	t = db.task(request.args(1)) or redirect(URL('default', 'index'))
-	comp = db((db.comparison.venue_id == t.venue_id) &
-		  (db.comparison.user == t.user) &
-	          (db.comparison.new_item == t.submission_id)).select(orderby=~db.comparison.date).first()
-	c = db.venue(t.venue_id) or redirect(URL('default', 'index'))
-    elif mode == 'c':
-	comp = db.comparison(request.args(1)) or redirect(URL('default', 'index'))
-	t = db((db.task.venue_id == comp.venue_id) &
-	       (db.task.user == comp.user) & (db.task.submission_id == comp.new_item)).select().first()
-	c = db.venue(comp.venue_id) or redirect(URL('default', 'index'))
-    else:
-	redirect(URL('default', 'index'))
+    """This function displays an individual task."""
+    # We are given the task id.
+    t = db.task(request.args(0)) or redirect(URL('default', 'index'))
+    rating_user = t.user
+    submission_id = t.submission_id
+    # We need to get the most recent comparison by the user who has done this task.
+    comp = db((db.comparison.venue_id == t.venue_id) &
+	      (db.comparison.user == t.user)).select(orderby=~db.comparison.date).first()
+    c = db.venue(t.venue_id) or redirect(URL('default', 'index'))
     props = db(db.user_properties.user == auth.user.email).select().first()
     if not access.can_observe(c, props):
 	session.flash = T('Not authorized')
 	redirect(URL('default', 'index'))
     db.comparison.id.readable = False
-    db.comparison.ordering.label = T('Ordering (best to worst)')
+    db.comparison.ordering.readable = False
     db.comparison.grades.represent = represent_grades
     db.comparison.date.readable = False
     db.task.user.readable = True
@@ -244,15 +237,13 @@ def view_comparison():
     db.comparison.venue_id.represent = represent_venue_id
     db.comparison.user.readable = (comp is None)
     db.comparison.user.label = T('Reviewer')
+    db.comparison.new_item.readable = False
     if comp is None:
 	comp_form = T('No corresponding comparison found.')
     else:
 	comp_form = SQLFORM(db.comparison, comp, readonly=True)
-    if t is None:
-	task_form = T('No task found') # should not happen
-    else:
-	task_form = SQLFORM(db.task, t, readonly=True)
-    return dict(comp_form=comp_form, task_form=task_form)
+    task_form = SQLFORM(db.task, t, readonly=True)
+    return dict(comp_form=comp_form, task_form=task_form, user=rating_user, subm_id=submission_id)
 
 
 @auth.requires_login()
@@ -267,19 +258,14 @@ def view_comparisons_index():
     db.comparison.ordering.represent = represent_ordering
     grid = SQLFORM.grid(q,
 	field_id=db.comparison.id,
-	fields=[db.comparison.user, db.comparison.date, 
+	fields=[db.comparison.user, 
 		db.comparison.ordering, db.comparison.grades,
-		db.comparison.is_valid],
+		db.comparison.is_valid, db.comparison.date,],
 	csv=True,
 	args=request.args[:1],
 	user_signature=False,
 	details=False, create=False,
 	editable=False, deletable=False,
-	links = [
-	    dict(header=T('Details'), body = lambda r:
-		 A(T('View'), _class='btn',
-		   _href=URL('ranking', 'view_comparison', args=['c', r.id]))),
-	    ]
 	)
     title = T('Comparisons for venue ' + c.name)
     return dict(title=title, grid=grid)
@@ -303,16 +289,16 @@ def view_comparisons_given_submission():
     db.comparison.ordering.represent = represent_ordering
     grid = SQLFORM.grid(q,
 	field_id=db.comparison.id,
-	fields=[db.comparison.user, db.comparison.date, 
-		db.comparison.ordering, db.comparison.grades, db.comparison.new_item,
-		db.comparison.is_valid],
+	fields=[db.comparison.user,
+		db.comparison.ordering, db.comparison.grades,
+		db.comparison.is_valid, db.comparison.date],
 	csv=True,
 	args=request.args[:1],
 	user_signature=False,
-	details=True, create=False,
+	details=False, create=False,
 	editable=False, deletable=False,
 	)
-    title = T('Comparisons with submission ' + str(subm.id) +
-               ' (by ' + subm.user + ') for ' + c.name)
-    return dict(title=title, grid=grid)
+    title_words = T('Comparisons including submission ')
+    title_links = A(str(subm.id), _href=URL('feedback', 'view_feedback', args=[subm.id]))
+    return dict(title_words=title_words, title_links=title_links, grid=grid)
 

@@ -3,7 +3,18 @@
 <h1>Review Details</h1>
 
 {{=task_form}}
+
+{{if user:}}
+<h3>Grades assigned by {{=user}}</h3>
 {{=comp_form}}
+{{pass}}
+
+<h3>More information on the submission</h3>
+
+<p>{{=A(T('View all grades for this submission'),
+        _href=URL('ranking', 'view_comparisons_given_submission', args=[subm_id]))}}</p>
+<p>{{=A(T('View all feedback for this submission'),
+        _href=URL('feedback', 'view_feedback', args=[subm_id]))}}</p>
 
 {{if request.is_local:}}
 {{=response.toolbar()}}

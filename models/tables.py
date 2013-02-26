@@ -226,9 +226,13 @@ def represent_grades(v, r, breaker=BR()):
     try:
 	d = simplejson.loads(v)
 	l = []
+	sorted_sub = []
 	for k, w in d.iteritems():
-	    kk = int(k)
-	    l.append(SPAN(A(str(k), _href=URL('feedback', 'view_feedback', args=[k])), ': ', w, breaker))
+	    sorted_sub.append((int(k), float(w)))
+	sorted_sub = sorted(sorted_sub, key = lambda el : el[1], reverse = True)
+	for k, w, in sorted_sub:
+	    l.append(SPAN(A(str(k), _href=URL('feedback', 'view_feedback', args=[k])),
+			  SPAN(':  '), '{:5.2f}'.format(w), breaker))
 	attributes = {}
 	return SPAN(*l, **attributes)
     except Exception, e:
@@ -238,6 +242,7 @@ def represent_grades(v, r, breaker=BR()):
 def represent_grades_compact(v, r):
     return represent_grades(v, r, breaker='; ')
 
+# For logging purposes.
 db.define_table('comparison', # An ordering of submissions, from Best to Worst.
     Field('user', default=get_user_email()),
     Field('date', 'datetime', default=datetime.utcnow()),
