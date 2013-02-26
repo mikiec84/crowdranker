@@ -358,11 +358,11 @@ def read_db_for_rep_sys(db, venue_id, last_compar_param):
             sorted_items = util.get_list(r.ordering)[::-1]
             if len(sorted_items) < 2:
                 continue
-            ordering_d[comp.user] = sorted_items
+            ordering_d[r.user] = sorted_items
             # Initializing reviewers reputation and accuracy.
             ordering_l.append((sorted_items, r.user))
     # Adding reviewers to user_l.
-    for user in ordering_l.iterkeys():
+    for user in ordering_d.iterkeys():
         if user not in user_l:
             user_l.append(user)
     # If we want to use only last comparisons.
@@ -370,7 +370,7 @@ def read_db_for_rep_sys(db, venue_id, last_compar_param):
         ordering_l = [(ordering, user) for user, ordering in ordering_d.iteritems()]
     return user_l, subm_l, ordering_l, subm_d, ordering_d
 
-def write_to_db_for_rep_sys(db, venue_id, rankobj_result, subm_l,
+def write_to_db_for_rep_sys(db, venue_id, rankobj_result, subm_l, user_l,
                             ordering_d, accuracy_d, rep_d, perc_final_d,
                             final_grade_d):
     # Writting to submission table.
@@ -380,13 +380,17 @@ def write_to_db_for_rep_sys(db, venue_id, rankobj_result, subm_l,
            (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev, percentile=perc)
     # Writting to user accuracy table.
     for user in accuracy_d:
+        if ordering_d.has_key(user):
+            n_ratings = len(ordering_d[user])
+        else:
+            n_ratings = 0
         db.user_accuracy.update_or_insert((db.user_accuracy.venue_id == venue_id) &
                                   (db.user_accuracy.user == user),
                                    venue_id = venue_id,
                                    user = user,
                                    accuracy = accuracy_d[user],
                                    reputation = rep_d[user],
-                                   n_ratings = len(ordering_d[user]) )
+                                   n_ratings = n_ratings )
     # Updating final grades.
     db(db.grades.venue_id == venue_id).delete()
     for u in user_l:
@@ -408,7 +412,7 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
     """ Function calculates submission qualities, user's reputation, reviewer's
     quality and final grades.
     Arguments:
-        - last_compar_param works as a swithch between two types of reputation system
+        - last_compar_param works as a switch between two types of reputation system
         If the argument is None then we update using all comparisons one time in chronological order.
         Otherwise we use "small alpha" approach, where last_compar_param is
         number of iterations.
@@ -421,14 +425,14 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
     for subm in subm_l:
         qdistr_param_default.append(AVRG)
         qdistr_param_default.append(STDEV)
-    rep_d = {user: alpha_annealing for user in ordering_d.iterkeys()}
-    accuracy_d = {user: -1 for user in ordering_d.iterkeys()}
+    rep_d = {user: alpha_annealing for user in user_l}
+    accuracy_d = {user: 0 for user in user_l}
 
     # Okay, now we are ready to run main iterations.
     result = None
     for it in xrange(num_of_iterations):
         # In the beginning of iteration initialize rankobj with default
-        # items qualities.
+        # submissions qualities.
         rankobj = Rank.from_qdistr_param(subm_l, qdistr_param_default,
                                          alpha=alpha_annealing)
         # Okay, now we update quality distributions with comparisons
@@ -458,20 +462,23 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
                 perc, avrg, stdev = result[subm_d[user]]
                 rank = perc / 100.0
             else:
-                rank = 1 # TODO(michael): Should we trust unknown reviewer?
-            ordering = ordering_d[user]
-            accuracy = rankobj.evaluate_ordering_using_dirichlet(ordering)
+                rank = 0.5 # TODO(michael): Should we trust unknown reviewer?
+            if ordering_d.has_key(user):
+                ordering = ordering_d[user]
+                accuracy = rankobj.evaluate_ordering_using_dirichlet(ordering)
+            else:
+                accuracy = 0
             accuracy_d[user] = accuracy
             # Computer user's reputation.
             rep_d[user] = (rank * accuracy) ** 0.5
 
-    # Updating the DB with submission ranking, users' accuracy and reputation.
+    # Computing submission grades.
     subm_grade_d = {}
-    for x in items:
-        perc, avrg, stdev = result[x]
-        subm_grade_d[subm_d[x]] = perc / 100.0
+    for user, subm in subm_d.iteritems():
+        perc, avrg, stdev = result[subm]
+        subm_grade_d[subm] = perc / 100.0
     # Computing final grades.
     perc_final_d, final_grade_d = compute_final_grades_helper(user_l, subm_grade_d, rep_d)
     # Writing to the BD.
-    write_to_db_for_rep_sys(db, venue_id, result, subm_l, ordering_d,
+    write_to_db_for_rep_sys(db, venue_id, result, subm_l, user_l, ordering_d,
                             accuracy_d, rep_d, perc_final_d, final_grade_d)
