@@ -259,44 +259,57 @@ def rerun_processing_comparisons(db, venue_id, alpha_annealing=0.5, run_twice=Fa
     db(db.venue.id == venue_id).update(latest_rank_update_date = datetime.utcnow())
 
 
+def get_or_0(d, k):
+    r = d.get(k, None)
+    if r == None:
+	return 0.0
+    else:
+	return r
+
+
 def compute_final_grades(db, venue_id):
-    # Assume that each user has only one submission
-    list2sort = []
-    submission_recods = db(db.submission.venue_id == venue_id).select()
-    if submission_recods is None:
-        return
-    for sub_row in submission_recods:
-        list2sort.append((sub_row.user, sub_row.quality))
-    list2sort = sorted(list2sort, key=lambda x : x[1], reverse=True)
-    ##id_to_rank = {}
-    rank_grade = {}
-    rank = 1
-    for x in list2sort:
-        ##id_to_rank[x[0]] = rank
-        rank_grade[x[0]] = (len(list2sort) - rank + 1)/float(len(list2sort))
-        rank += 1
-    # Obtaining reviewers grade.
-    user_accuracy_records = db(db.user_accuracy.venue_id == venue_id).select()
-    reviewer_grade = {}
-    for r in user_accuracy_records:
-	# We use the reputation, not the reviewing accuracy.
-        reviewer_grade[r.user] = r.reputation
-    # Computing final grade
-    final_grades = {}
-    for user in rank_grade:
-        val = (2/3.0) * rank_grade[user]
-        if reviewer_grade.has_key(user):
-            val += (1/3.0) * reviewer_grade[user]
-        final_grades[user] = val * 100
-    # Writting result to the DB.
-    for user_id in final_grades:
-        db.grades.update_or_insert((db.grades.venue_id == venue_id) &
-                                   (db.grades.user == user),
-                                   venue_id = venue_id,
-                                   author = user_id,
-                                   grade = final_grades[user])
+    """This function computes the final grades.  We assume that every user has only one submission."""
+    # Let us read and sort all submission grades.
+    list_of_users = []
+    user_to_subm_grade = {}
+    rows = db(db.submission.venue_id == venue_id).select()
+    for r in rows:
+	list_of_users.append(r.user)
+	user_to_subm_grade[r.user] = r.percentile / 100.0
+    # Read reviewer's grades.
+    user_to_rev_grade = {}
+    rows = db(db.user_accuracy.venue_id == venue_id).select()
+    for r in rows:
+	user_to_rev_grade[r.user] = r.reputation
+	if r.user not in list_of_users:
+	    list_of_users.append(r.user)
+    # Computes the final grade.
+    user_to_final_grade = {}
+    for u in list_of_users:
+	g = (get_or_0(user_to_subm_grade, u) * (2.0 / 3.0) +
+	     get_or_0(user_to_rev_grade,  u) * (1.0 / 3.0))
+	user_to_final_grade[u] = g
+    # Computes the final grade percentiles.
+    l = []
+    for u, g in user_to_final_grade.iteritems():
+	l.append((u, g))
+    sorted_l = sorted(l, key = lambda x: x[1], reverse=True)
+    percentile = {}
+    n_users = float(len(sorted_l))
+    for i, el in enumerate(sorted_l):
+	percentile[el[0]] = 100.0 * (n_users - float(i)) / n_users
+    # Writes the final grades to the DB.
+    db(db.grades.venue_id == venue_id).delete()
+    for u in list_of_users:
+	db.grades.insert(venue_id = venue_id,
+			 user = u,
+			 grade = user_to_final_grade[u],
+			 percentile = percentile[u]
+			 )
     # Saving the latest date when final grades were evaluated.
     db(db.venue.id == venue_id).update(latest_final_grades_evaluation_date = datetime.utcnow())
+    db.commit()
+
 
 def run_reputation_system(db, venue_id, alpha_annealing=0.5,
                           num_of_iterations=4, last_compar_param=10,
@@ -327,21 +340,21 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
     sub = db(db.submission.venue_id == venue_id).select(db.submission.id,
                                                         db.submission.user)
     items = []
-    author2item = {}
+    user2item = {}
     qdistr_param_default = []
     for x in sub:
         items.append(x.id)
-        author2item[x.user] = x.id
+        user2item[x.user] = x.id
         qdistr_param_default.append(AVRG)
         qdistr_param_default.append(STDEV)
     # Fetching list of comparisons.
     comparison_list_r = db(db.comparison.venue_id == venue_id).select(orderby=db.comparison.date)
     # Creating dictionaries
-    # author: reputation
-    # author: accuracy (confedence or reviewer's grade)
-    # author: last ordering
-    author2rep, author2accuracy, author2ordering = {}, {}, {}
-    # Ordering list is a list of tuples (ordering, author of the orderingj).
+    # user: reputation
+    # user: accuracy (confedence or reviewer's grade)
+    # user: last ordering
+    user2rep, user2accuracy, user2ordering = {}, {}, {}
+    # Ordering list is a list of tuples (ordering, user of the orderingj).
     ordering_list = []
     # Initializing these dictionaries and ordering_list.
     for comp in comparison_list_r:
@@ -351,15 +364,15 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
             sorted_items = util.get_list(comp.ordering)[::-1]
             if len(sorted_items) < 2:
                 continue
-            author2ordering[comp.user] = sorted_items
+            user2ordering[comp.user] = sorted_items
             # Initializing reviewers reputation and accuracy.
-            author2rep[comp.author] = alpha_annealing
-            author2accuracy[comp.user] = -1
+            user2rep[comp.user] = alpha_annealing
+            user2accuracy[comp.user] = -1
             ordering_list.append((sorted_items, comp.user))
     # If we want to use only last comparisons.
     if not last_compar_param is None:
-        ordering_list = [(ordering, author) for author, ordering in
-                                                    author2ordering.iteritems()]
+        ordering_list = [(ordering, user) for user, ordering in
+                                                    user2ordering.iteritems()]
     # Okay, now we are ready to run main iterations.
     result = None
     for it in xrange(num_of_iterations):
@@ -370,8 +383,8 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
         # Okay, now we update quality distributions with comparisons
         # using reputation of users as annealing coefficient.
         if last_compar_param is None:
-            for ordering, author in ordering_list:
-                alpha = author2rep[author]
+            for ordering, user in ordering_list:
+                alpha = user2rep[user]
                 result = rankobj.update(ordering, alpha_annealing=alpha)
         else:
             if not average_result:
@@ -380,8 +393,8 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
                     idxs = range(len(ordering_list))
                     random.shuffle(idxs)
                     for idx in idxs:
-                        ordering, author = ordering_list[idx]
-                        alpha = author2rep[author]
+                        ordering, user = ordering_list[idx]
+                        alpha = user2rep[user]
                         alpha = 1 - (1 - alpha) ** (1.0/(4*last_compar_param))
                         #alpha = alpha / float(2*last_compar_param)
                         result = rankobj.update(ordering, alpha_annealing=alpha)
@@ -398,8 +411,8 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
                     idxs = range(len(ordering_list))
                     random.shuffle(idxs)
                     for idx in idxs:
-                        ordering, author = ordering_list[idx]
-                        alpha = author2rep[author]
+                        ordering, user = ordering_list[idx]
+                        alpha = user2rep[user]
                         result = rankobj.update(ordering, alpha_annealing=alpha)
                     # Update average values.
                     if result is None:
@@ -429,30 +442,31 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
         # In the end of the iteration compute reputation to use in the next iteration.
         if result is None:
             return
-        for user in author2rep:
-            if author2item.has_key(user):
-                perc, avrg, stdev = result[author2item[user]]
+        for user in user2rep:
+            if user2item.has_key(user):
+                perc, avrg, stdev = result[user2item[user]]
                 rank = perc / 100.0
             else:
                 rank = 1 # TODO(michael): Should we trust unknown reviewer?
-            ordering = author2ordering[user]
+            ordering = user2ordering[user]
             accuracy = rankobj.evaluate_ordering_using_dirichlet(ordering)
-            author2accuracy[user] = accuracy
+            user2accuracy[user] = accuracy
             # Computer user's reputation.
-            author2rep[user] = (rank * accuracy) ** 0.5
+            user2rep[user] = (rank * accuracy) ** 0.5
+	    
     # Updating the DB with submission ranking, users' accuracy and reputation.
     for x in items:
         perc, avrg, stdev = result[x]
         db((db.submission.id == x) &
            (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev, percentile=perc)
-    for user_id in author2accuracy:
+    for user_id in user2accuracy:
         db.user_accuracy.update_or_insert((db.user_accuracy.venue_id == venue_id) &
                                   (db.user_accuracy.user == user),
                                    venue_id = venue_id,
                                    user = user,
-                                   accuracy = author2accuracy[user],
-                                   reputation = author2rep[user],
-                                   n_ratings = len(author2ordering[user]) )
+                                   accuracy = user2accuracy[user],
+                                   reputation = user2rep[user],
+                                   n_ratings = len(user2ordering[user]) )
     # Saving evaluation date.
     t = datetime.utcnow()
     db(db.venue.id == venue_id).update(latest_reviewers_evaluation_date = t,

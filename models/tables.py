@@ -259,6 +259,7 @@ db.define_table('grades',
     Field('venue_id', db.venue, required=True),
     Field('user'),
     Field('grade', 'double'),
+    Field('percentile', 'double'),
     )
 
 db.grades.user.writable = False
