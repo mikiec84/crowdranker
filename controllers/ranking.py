@@ -187,6 +187,8 @@ def view_tasks():
     db.task.rejected.readable = True
     db.task.submission_name.represent = represent_task_name_view_feedback
     db.task.submission_name.label = T('Submission feedback')
+    db.task.is_bogus.readable = True
+    db.task.is_bogus.label = T('Bogus')
     grid = SQLFORM.grid(q,
 	field_id=db.task.id,
 	csv=True,
@@ -196,11 +198,12 @@ def view_tasks():
 	editable=False, deletable=False,
 	fields=[db.task.user, db.task.submission_id, db.task.venue_id,
 		db.task.submission_name, db.task.completed_date,
-		db.task.comments, db.task.rejected, db.task.rejection_comment],
+		db.task.comments, db.task.rejected, db.task.rejection_comment,
+		db.task.is_bogus],
 	links=[
 	    dict(header=T('Comparison'), body = lambda r:
 		 A(T('View comparison'), _class='btn',
-		   _href=URL('ranking', 'view_comparison', args=[r.venue_id, r.user, r.submission_id]))),
+		   _href=URL('ranking', 'view_comparison', args=[r.id]))),
 	    ]
 	)
     title = T('Tasks for venue ' + c.name)
@@ -209,16 +212,19 @@ def view_tasks():
 
 @auth.requires_login()
 def view_comparison():
-    """This function displays an individual comparison, given parameters that can be
-    known from a task."""
-    comp = db((db.comparison.venue_id == request.args(0)) &
-	      (db.comparison.user == request.args(1)) &
-	      (db.comparison.new_item == request.args(2))).select().first()
+    """This function displays an individual comparison, given the task that originated it."""
+    t = db.task(request.args(0)) or redirect(URL('default', 'index'))
+    c = db.venue(t.venue_id) or redirect(URL('default', 'index'))
     props = db(db.user_properties.user == auth.user.email).select().first()
-    c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
     if not access.can_observe(c, props):
 	session.flash = T('Not authorized')
 	redirect(URL('default', 'index'))
+    comp = db((db.comparison.venue_id == t.venue_id) &
+	      (db.comparison.user == t.user) &
+	      (db.comparison.new_item == t.submission_id)).select().first()
+    db.comparison.id.readable = False
+    db.comparison.ordering.label = T('Ordering (best to worst)')
+    db.comparison.grades.represent = represent_grades
     if comp is None:
 	form = T('No corresponding comparison found.')
     else:

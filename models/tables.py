@@ -1,6 +1,7 @@
 # coding: utf8
 from datetime import datetime
 import datetime as dates # Ah, what a mess these python names
+import gluon.contrib.simplejson as simplejson
 
 STRING_FIELD_LENGTH = 512 # Default length of string fields.
 
@@ -209,6 +210,24 @@ db.define_table('user_accuracy',
 db.user_accuracy.accuracy.represent = represent_double3
 db.user_accuracy.reputation.represent = represent_double3
 
+def represent_grades(v, r, breaker=BR()):
+    if v is None:
+	return 'None'
+    try:
+	d = simplejson.loads(v)
+	l = []
+	for k, w in d.iteritems():
+	    kk = int(k)
+	    l.append(SPAN(A(str(k), _href=URL('feedback', 'view_feedback', args=[k])), ': ', w, breaker))
+	attributes = {}
+	return SPAN(*l, **attributes)
+    except Exception, e:
+	return str(e)
+	return '-- data error --'
+
+def represent_grades_compact(v, r):
+    return represent_grades(v, r, breaker='; ')
+
 db.define_table('comparison', # An ordering of submissions, from Best to Worst.
     Field('user', default=get_user_email()),
     Field('date', 'datetime', default=datetime.utcnow()),
@@ -218,6 +237,8 @@ db.define_table('comparison', # An ordering of submissions, from Best to Worst.
     Field('new_item', 'reference submission'),
     Field('is_valid', 'boolean', default=True),
     )
+
+db.comparison.grades.represent = represent_grades_compact
 
 def represent_ordering(v, r):
     if v is None:
@@ -264,7 +285,7 @@ db.task.is_bogus.label = T('This review is bogus')
 db.define_table('grades',
     Field('venue_id', db.venue, required=True),
     Field('user'),
-    Field('grade', 'double'),
+    Field('grade', 'double'), # This is the system-assigned grade.
     Field('percentile', 'double'),
     )
 
