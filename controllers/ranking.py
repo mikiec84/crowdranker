@@ -268,7 +268,7 @@ def view_comparisons_index():
     grid = SQLFORM.grid(q,
 	field_id=db.comparison.id,
 	fields=[db.comparison.user, db.comparison.date, 
-		db.comparison.ordering, db.comparison.grades, db.comparison.new_item,
+		db.comparison.ordering, db.comparison.grades,
 		db.comparison.is_valid],
 	csv=True,
 	args=request.args[:1],
