@@ -168,7 +168,7 @@ def view_grades_histogram():
 
 
 def represent_task_name_view_feedback(v, r):
-    return A(v, _href=URL('feedback', 'view_feedback', args=[r.submission_id]))
+    return A(T('View submission'), _class='btn', _href=URL('feedback', 'view_feedback', args=[r.submission_id]))
 
 @auth.requires_login()
 def view_tasks():
@@ -182,11 +182,11 @@ def view_tasks():
     q = (db.task.venue_id == c.id)
     db.task.user.readable = True
     db.task.submission_name.readable = True
-    db.task.comments.readable = True
-    db.task.rejection_comment.readable = True
+    db.task.comments.readable = False
+    db.task.rejection_comment.readable = False
     db.task.rejected.readable = True
     db.task.submission_name.represent = represent_task_name_view_feedback
-    db.task.submission_name.label = T('Submission feedback')
+    db.task.submission_name.label = T('Submission details')
     db.task.is_bogus.readable = True
     db.task.is_bogus.label = T('Bogus')
     grid = SQLFORM.grid(q,
@@ -194,16 +194,16 @@ def view_tasks():
 	csv=True,
 	args=request.args[:1],
 	user_signature=False,
-	details=True, create=False,
+	details=False, create=False,
 	editable=False, deletable=False,
 	fields=[db.task.user, db.task.submission_id, db.task.venue_id,
 		db.task.submission_name, db.task.completed_date,
 		db.task.comments, db.task.rejected, db.task.rejection_comment,
 		db.task.is_bogus],
 	links=[
-	    dict(header=T('Comparison'), body = lambda r:
-		 A(T('View comparison'), _class='btn',
-		   _href=URL('ranking', 'view_comparison', args=[r.id]))),
+	    dict(header=T('Review details'), body = lambda r:
+		 A(T('View feedback'), _class='btn',
+		   _href=URL('ranking', 'view_comparison', args=['t', r.id]))),
 	    ]
 	)
     title = T('Tasks for venue ' + c.name)
@@ -212,24 +212,47 @@ def view_tasks():
 
 @auth.requires_login()
 def view_comparison():
-    """This function displays an individual comparison, given the task that originated it."""
-    t = db.task(request.args(0)) or redirect(URL('default', 'index'))
-    c = db.venue(t.venue_id) or redirect(URL('default', 'index'))
+    """This function displays an individual task and comparison, given the id of one of the two."""
+    mode = request.args(0)
+    if mode == 't':
+	# We are given the task id.
+	t = db.task(request.args(1)) or redirect(URL('default', 'index'))
+	comp = db((db.comparison.venue_id == t.venue_id) &
+		  (db.comparison.user == t.user) &
+	          (db.comparison.new_item == t.submission_id)).select(orderby=~db.comparison.date).first()
+	c = db.venue(t.venue_id) or redirect(URL('default', 'index'))
+    elif mode == 'c':
+	comp = db.comparison(request.args(1)) or redirect(URL('default', 'index'))
+	t = db((db.task.venue_id == comp.venue_id) &
+	       (db.task.user == comp.user) & (db.task.submission_id == comp.new_item)).select().first()
+	c = db.venue(comp.venue_id) or redirect(URL('default', 'index'))
+    else:
+	redirect(URL('default', 'index'))
     props = db(db.user_properties.user == auth.user.email).select().first()
     if not access.can_observe(c, props):
 	session.flash = T('Not authorized')
 	redirect(URL('default', 'index'))
-    comp = db((db.comparison.venue_id == t.venue_id) &
-	      (db.comparison.user == t.user) &
-	      (db.comparison.new_item == t.submission_id)).select().first()
     db.comparison.id.readable = False
     db.comparison.ordering.label = T('Ordering (best to worst)')
     db.comparison.grades.represent = represent_grades
+    db.comparison.date.readable = False
+    db.task.user.readable = True
+    db.task.user.label = T('Reviewer')
+    db.task.venue_id.readable = True
+    db.task.venue_id.represent = represent_venue_id
+    db.comparison.venue_id.readable = (t is None)
+    db.comparison.venue_id.represent = represent_venue_id
+    db.comparison.user.readable = (comp is None)
+    db.comparison.user.label = T('Reviewer')
     if comp is None:
-	form = T('No corresponding comparison found.')
+	comp_form = T('No corresponding comparison found.')
     else:
-	form = SQLFORM(db.comparison, comp, readonly=True)
-    return dict(form=form)
+	comp_form = SQLFORM(db.comparison, comp, readonly=True)
+    if t is None:
+	task_form = T('No task found') # should not happen
+    else:
+	task_form = SQLFORM(db.task, t, readonly=True)
+    return dict(comp_form=comp_form, task_form=task_form)
 
 
 @auth.requires_login()
@@ -250,8 +273,13 @@ def view_comparisons_index():
 	csv=True,
 	args=request.args[:1],
 	user_signature=False,
-	details=True, create=False,
+	details=False, create=False,
 	editable=False, deletable=False,
+	links = [
+	    dict(header=T('Details'), body = lambda r:
+		 A(T('View'), _class='btn',
+		   _href=URL('ranking', 'view_comparison', args=['c', r.id]))),
+	    ]
 	)
     title = T('Comparisons for venue ' + c.name)
     return dict(title=title, grid=grid)

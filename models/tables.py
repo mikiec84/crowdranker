@@ -85,6 +85,12 @@ db.define_table('venue',
 def represent_venue_name(v, r):
     return A(v, _href=URL('view_venue', args=[r.id]))
 
+def represent_venue_id(v, r):
+    venue = db.venue(v)
+    if venue is None:
+	return 'None'
+    return A(venue.name, _href=URL('view_venue', args=[venue.id]))
+
 db.venue.created_by.readable = db.venue.created_by.writable = False
 db.venue.name.represent = represent_venue_name
 db.venue.name.required = True
@@ -174,6 +180,8 @@ db.submission.date_created.writable = False
 db.submission.date_updated.writable = False
 db.submission.original_filename.readable = db.submission.original_filename.writable = False
 db.submission.venue_id.readable = db.submission.venue_id.writable = False
+db.submission.venue_id.label = T('Venue')
+db.submission.venue_id.represent = represent_venue_id
 db.submission.identifier.writable = False
 db.submission.quality.readable = db.submission.quality.writable = False
 db.submission.error.readable = db.submission.error.writable = False
@@ -209,6 +217,8 @@ db.define_table('user_accuracy',
 
 db.user_accuracy.accuracy.represent = represent_double3
 db.user_accuracy.reputation.represent = represent_double3
+db.user_accuracy.venue_id.represent = represent_venue_id
+db.user_accuracy.venue_id.label = T('Venue')
 
 def represent_grades(v, r, breaker=BR()):
     if v is None:
@@ -239,6 +249,8 @@ db.define_table('comparison', # An ordering of submissions, from Best to Worst.
     )
 
 db.comparison.grades.represent = represent_grades_compact
+db.comparison.venue_id.represent = represent_venue_id
+db.comparison.venue_id.label = T('Venue')
 
 def represent_ordering(v, r):
     if v is None:
@@ -280,6 +292,8 @@ db.task.rejected.label = T('Review declined')
 db.task.is_bogus.readable = db.task.is_bogus.writable = False
 db.task.why_bogus.readable = db.task.why_bogus.writable = False
 db.task.is_bogus.label = T('This review is bogus')
+db.task.venue_id.label = T('Venue')
+db.task.venue_id.represent = represent_venue_id
 
 
 db.define_table('grades',
@@ -291,4 +305,5 @@ db.define_table('grades',
 
 db.grades.user.writable = False
 db.grades.grade.represent = represent_double3
-
+db.grades.venue_id.represent = represent_venue_id
+db.grades.venue_id.label = T('Venue')
