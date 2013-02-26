@@ -335,6 +335,74 @@ def compute_final_grades_helper(list_of_users, user_to_subm_grade,
     return user_to_perc, user_to_final_grade
     # Writes the final grades to the DB.
 
+def read_db_for_rep_sys(db, venue_id, last_compar_param):
+    # Containers to fill.
+    # Lists have l suffix, dictionaries user -> val have d suffix.
+    user_l = [] # This list contains submitters and reviewers.
+    subm_l = []
+    subm_d = {}
+    ordering_l = []
+    ordering_d = {}
+    # Reading submission table.
+    rows = db(db.submission.venue_id == venue_id).select()
+    for r in rows:
+        subm_l.append(r.id)
+        subm_d[r.user] = r.id
+        user_l.append(r.user)
+    # Reading comparisons table.
+    rows = db(db.comparison.venue_id == venue_id).select(orderby=db.comparison.date)
+    for r in rows:
+        # Check if comparison is valid.
+        if r.is_valid is None or r.is_valid == True:
+            # Reverses the ordering.
+            sorted_items = util.get_list(r.ordering)[::-1]
+            if len(sorted_items) < 2:
+                continue
+            ordering_d[comp.user] = sorted_items
+            # Initializing reviewers reputation and accuracy.
+            ordering_l.append((sorted_items, r.user))
+    # Adding reviewers to user_l.
+    for user in ordering_l.iterkeys():
+        if user not in user_l:
+            user_l.append(user)
+    # If we want to use only last comparisons.
+    if not last_compar_param is None:
+        ordering_l = [(ordering, user) for user, ordering in ordering_d.iteritems()]
+    return user_l, subm_l, ordering_l, subm_d, ordering_d
+
+def write_to_db_for_rep_sys(db, venue_id, rankobj_result, subm_l,
+                            ordering_d, accuracy_d, rep_d, perc_final_d,
+                            final_grade_d):
+    # Writting to submission table.
+    for x in subm_l:
+        perc, avrg, stdev = rankobj_result[x]
+        db((db.submission.id == x) &
+           (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev, percentile=perc)
+    # Writting to user accuracy table.
+    for user in accuracy_d:
+        db.user_accuracy.update_or_insert((db.user_accuracy.venue_id == venue_id) &
+                                  (db.user_accuracy.user == user),
+                                   venue_id = venue_id,
+                                   user = user,
+                                   accuracy = accuracy_d[user],
+                                   reputation = rep_d[user],
+                                   n_ratings = len(ordering_d[user]) )
+    # Updating final grades.
+    db(db.grades.venue_id == venue_id).delete()
+    for u in user_l:
+	db.grades.insert(venue_id = venue_id,
+			 user = u,
+			 grade = final_grade_d[u],
+			 percentile = perc_final_d[u]
+			 )
+    # Saving evaluation date.
+    t = datetime.utcnow()
+    # TODO(michael): think about of substituting these fields by one field.
+    db(db.venue.id == venue_id).update(latest_reviewers_evaluation_date = t,
+                                       latest_rank_update_date = t,
+                                       latest_final_grades_evaluation_date = t)
+    db.commit()
+
 def run_reputation_system(db, venue_id, alpha_annealing=0.5,
                           num_of_iterations=4, last_compar_param=10):
     """ Function calculates submission qualities, user's reputation, reviewer's
@@ -346,111 +414,64 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
         number of iterations.
     """
     # Reading the DB to get submission and user information.
-    items = []
-    user_to_subm = {}
-    list_of_users = []
-    qdistr_param_default = [] # Default quality distr for initializing rankobj.
-    rows = db(db.submission.venue_id == venue_id).select()
-    for r in rows:
-        items.append(r.id)
-        user_to_subm[r.user] = r.id
-        list_of_users.append(r.user)
+    # Lists have l suffix, dictionaries user -> val have d suffix.
+    user_l, subm_l, ordering_l, subm_d, ordering_d = read_db_for_rep_sys(db, venue_id, last_compar_param)
+    # Initializing the rest of containers.
+    qdistr_param_default = []
+    for subm in subm_l:
         qdistr_param_default.append(AVRG)
         qdistr_param_default.append(STDEV)
-    # Getting comparisons information.
-    rows = db(db.comparison.venue_id == venue_id).select(orderby=db.comparison.date)
-    user_to_rep, user_to_accuracy, user_to_ordering = {}, {}, {}
-    # Ordering list is a list of tuples (ordering, user of the orderingj).
-    ordering_list = []
-    # Initializing these dictionaries and ordering_list.
-    for r in rows:
-        # Check if comparison is valid.
-        if r.is_valid is None or r.is_valid == True:
-            if r.user not in list_of_users:
-                list_of_users.append(r.user)
-            # Reverses the list.
-            sorted_items = util.get_list(r.ordering)[::-1]
-            if len(sorted_items) < 2:
-                continue
-            user_to_ordering[comp.user] = sorted_items
-            # Initializing reviewers reputation and accuracy.
-            user_to_rep[comp.user] = alpha_annealing
-            user_to_accuracy[comp.user] = -1
-            ordering_list.append((sorted_items, r.user))
-    # If we want to use only last comparisons.
-    if not last_compar_param is None:
-        ordering_list = [(ordering, user) for user, ordering in
-                                                    user_to_ordering.iteritems()]
+    rep_d = {user: alpha_annealing for user in ordering_d.iterkeys()}
+    accuracy_d = {user: -1 for user in ordering_d.iterkeys()}
+
     # Okay, now we are ready to run main iterations.
     result = None
     for it in xrange(num_of_iterations):
         # In the beginning of iteration initialize rankobj with default
         # items qualities.
-        rankobj = Rank.from_qdistr_param(items, qdistr_param_default,
+        rankobj = Rank.from_qdistr_param(subm_l, qdistr_param_default,
                                          alpha=alpha_annealing)
         # Okay, now we update quality distributions with comparisons
         # using reputation of users as annealing coefficient.
         if last_compar_param is None:
-            for ordering, user in ordering_list:
-                alpha = user_to_rep[user]
+            # Using all comparisons in chronological order.
+            for ordering, user in ordering_l:
+                alpha = rep_d[user]
                 result = rankobj.update(ordering, alpha_annealing=alpha)
         else:
-            # Iterate many times with small alpha.
+            # Using only last comparisons and iterating many times with small alpha.
             for i in xrange(last_compar_param):
                 # Genarating random permutation.
-                idxs = range(len(ordering_list))
+                idxs = range(len(ordering_l))
                 random.shuffle(idxs)
                 for idx in idxs:
-                    ordering, user = ordering_list[idx]
-                    alpha = user_to_rep[user]
+                    ordering, user = ordering_l[idx]
+                    alpha = rep_d[user]
                     alpha = 1 - (1 - alpha) ** (1.0/(4*last_compar_param))
                     #alpha = alpha / float(2*last_compar_param)
                     result = rankobj.update(ordering, alpha_annealing=alpha)
         if result is None:
             return
         # Computing reputation.
-        for user in user_to_rep:
-            if user_to_subm.has_key(user):
-                perc, avrg, stdev = result[user_to_subm[user]]
+        for user in rep_d:
+            if subm_d.has_key(user):
+                perc, avrg, stdev = result[subm_d[user]]
                 rank = perc / 100.0
             else:
                 rank = 1 # TODO(michael): Should we trust unknown reviewer?
-            ordering = user_to_ordering[user]
+            ordering = ordering_d[user]
             accuracy = rankobj.evaluate_ordering_using_dirichlet(ordering)
-            user_to_accuracy[user] = accuracy
+            accuracy_d[user] = accuracy
             # Computer user's reputation.
-            user_to_rep[user] = (rank * accuracy) ** 0.5
-
+            rep_d[user] = (rank * accuracy) ** 0.5
 
     # Updating the DB with submission ranking, users' accuracy and reputation.
-    user_to_subm_grade = {}
+    subm_grade_d = {}
     for x in items:
         perc, avrg, stdev = result[x]
-        user_to_subm_grade[user_to_subm[x]] = perc / 100.0
-        db((db.submission.id == x) &
-           (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev, percentile=perc)
-    for user_id in user_to_accuracy:
-        db.user_accuracy.update_or_insert((db.user_accuracy.venue_id == venue_id) &
-                                  (db.user_accuracy.user == user),
-                                   venue_id = venue_id,
-                                   user = user,
-                                   accuracy = user_to_accuracy[user],
-                                   reputation = user_to_rep[user],
-                                   n_ratings = len(user_to_ordering[user]) )
-    # Saving evaluation date.
-    t = datetime.utcnow()
-    db(db.venue.id == venue_id).update(latest_reviewers_evaluation_date = t,
-                                       latest_rank_update_date = t)
+        subm_grade_d[subm_d[x]] = perc / 100.0
     # Computing final grades.
-    user_to_perc, user_to_final_grade = compute_final_grades_helper(list_of_users, user_to_subm_grade, user_to_rep):
-    # Updating the DB with final grades and percentile of final grades.
-    db(db.grades.venue_id == venue_id).delete()
-    for u in list_of_users:
-	db.grades.insert(venue_id = venue_id,
-			 user = u,
-			 grade = user_to_final_grade[u],
-			 percentile = user_to_perc[u]
-			 )
-    # Saving the latest date when final grades were evaluated.
-    db(db.venue.id == venue_id).update(latest_final_grades_evaluation_date = datetime.utcnow())
-    db.commit()
+    perc_final_d, final_grade_d = compute_final_grades_helper(user_l, subm_grade_d, rep_d)
+    # Writing to the BD.
+    write_to_db_for_rep_sys(db, venue_id, result, subm_l, ordering_d,
+                            accuracy_d, rep_d, perc_final_d, final_grade_d)
