@@ -36,10 +36,7 @@ def view_venue():
     if can_manage:
         link_list.append(A(T('Edit'), _href=URL('managed_index', vars=dict(cid=c.id))))
 	link_list.append(A(T('Add submission'), _href=URL('submission', 'manager_submit', args=[c.id])))
-        link_list.append(A(T('Recompute submission ranking'), _href=URL('rating', 'recompute_ranks', args=[c.id])))
         link_list.append(A(T('Run reputation system'), _href=URL('rating', 'run_rep_system', args=[c.id])))
-        link_list.append(A(T('Evaluate reviewers'), _href=URL('rating', 'evaluate_reviewers', args=[c.id])))
-        link_list.append(A(T('Compute final grades'), _href=URL('rating', 'compute_final_grades', args=[c.id])))
     if can_observe or can_manage:
 	link_list.append(A(T('View reviewing tasks'), _href=URL('ranking', 'view_tasks', args=[c.id])))
 	link_list.append(A(T('View comparisons'), _href=URL('ranking', 'view_comparisons_index', args=[c.id])))

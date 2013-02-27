@@ -256,7 +256,9 @@ def rerun_processing_comparisons(db, venue_id, alpha_annealing=0.5, run_twice=Fa
         db((db.submission.id == x) &
            (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev, percentile=perc)
     # Saving the latest rank update date.
-    db(db.venue.id == venue_id).update(latest_rank_update_date = datetime.utcnow())
+    ranking_algo_description = "No rep sys. Processing all compar in chronological order"
+    db(db.venue.id == venue_id).update(latest_rank_update_date = datetime.utcnow(),
+                                    ranking_algo_description = ranking_algo_description)
 
 
 def get_or_0(d, k):
@@ -266,6 +268,15 @@ def get_or_0(d, k):
     else:
 	return r
 
+def rank_without_rep_sys(db, venue_id, alpha_annealing=0.5):
+    """ Computes rank without usin reputation system.
+    It also evaluates reviewers and computes final grades.
+
+    Note, that this function is equivalent to running rep system with only one iteration
+    and using all comparisons in chronological order.
+    """
+    run_reputation_system(db, venue_id, alpha_annealing=0.5,
+                          num_of_iterations=1, last_compar_param=None)
 
 def compute_final_grades(db, venue_id):
     """This function computes the final grades.  We assume that every user has only one submission."""
@@ -333,7 +344,6 @@ def compute_final_grades_helper(list_of_users, user_to_subm_grade,
     for i, el in enumerate(sorted_l):
 	user_to_perc[el[0]] = 100.0 * (n_users - float(i)) / n_users
     return user_to_perc, user_to_final_grade
-    # Writes the final grades to the DB.
 
 def read_db_for_rep_sys(db, venue_id, last_compar_param):
     # Containers to fill.
@@ -372,7 +382,7 @@ def read_db_for_rep_sys(db, venue_id, last_compar_param):
 
 def write_to_db_for_rep_sys(db, venue_id, rankobj_result, subm_l, user_l,
                             ordering_d, accuracy_d, rep_d, perc_final_d,
-                            final_grade_d):
+                            final_grade_d, ranking_algo_description):
     # Writting to submission table.
     for x in subm_l:
         perc, avrg, stdev = rankobj_result[x]
@@ -404,7 +414,8 @@ def write_to_db_for_rep_sys(db, venue_id, rankobj_result, subm_l, user_l,
     # TODO(michael): think about of substituting these fields by one field.
     db(db.venue.id == venue_id).update(latest_reviewers_evaluation_date = t,
                                        latest_rank_update_date = t,
-                                       latest_final_grades_evaluation_date = t)
+                                       latest_final_grades_evaluation_date = t,
+                                       ranking_algo_description = ranking_algo_description)
     db.commit()
 
 def run_reputation_system(db, venue_id, alpha_annealing=0.5,
@@ -479,6 +490,15 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
         subm_grade_d[subm] = perc / 100.0
     # Computing final grades.
     perc_final_d, final_grade_d = compute_final_grades_helper(user_l, subm_grade_d, rep_d)
+    if last_compar_param is None:
+        description = "Rep sys using all comparisons in chronological order"
+        if num_of_iterations == 1:
+            description = "No rep sys. Processing all compar in chronological order"
+    else:
+        description = "Rep sys using last comparisons + small alpha"
+        if num_of_iterations == 1:
+            description = "No rep sys and small alpha ?!"
     # Writing to the BD.
     write_to_db_for_rep_sys(db, venue_id, result, subm_l, user_l, ordering_d,
-                            accuracy_d, rep_d, perc_final_d, final_grade_d)
+                            accuracy_d, rep_d, perc_final_d, final_grade_d,
+                            ranking_algo_description=description)

@@ -605,6 +605,23 @@ def recompute_ranks():
         redirect(URL('venues', 'view_venue', args=[c.id]))
     return dict(venue_form=venue_form, confirmation_form=confirmation_form)
 
+@auth.requires_login()
+def rank_without_rep_sys():
+    # Gets the information on the venue.
+    c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
+    check_manager_eligibility(c.id, auth.user.email, 'Not authorized.')
+    # This venue_form is used to display the venue.
+    venue_form = SQLFORM(db.venue, record=c, readonly=True)
+    confirmation_form = FORM.confirm(T('Rank'),
+        {T('Cancel'): URL('venues', 'view_venue', args=[c.id])})
+    if confirmation_form.accepted:
+        # Rerun ranking algorithm.
+        ranker.rank_without_rep_sys(db, c.id, alpha_annealing=0.5)
+        db.commit()
+        session.flash = T('The computation of reviewer contribution, submission quality, and final grade is complete.')
+        redirect(URL('venues', 'view_venue', args=[c.id]))
+    return dict(venue_form=venue_form, confirmation_form=confirmation_form)
+
 
 @auth.requires_login()
 def evaluate_reviewers():
