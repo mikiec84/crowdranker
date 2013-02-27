@@ -100,10 +100,19 @@ def view_feedback():
     if access.can_observe(c, props):
 	db.task.user.readable = True
 	db.task.completed_date.readable = True
+	links = [
+	    dict(header=T('Review'), body= lambda r:
+		 A(T('View'), _class='btn', _href=URL('ranking', 'view_comparison', args=[r.id]))),
+	    ]
+	details = False
+    else:
+	links = []
+	details = True
     q = (db.task.submission_id == subm.id)
     grid = SQLFORM.grid(q,
-	details=True, 
+	details = details,
         csv=False, create=False, editable=True, deletable=False, searchable=False,
+	links=links,
 	user_signature=False,
         args=request.args[:1],
         )
