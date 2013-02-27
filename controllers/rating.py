@@ -421,16 +421,16 @@ def edit_reviews():
         str_grades = simplejson.loads(last_comparison_r.grades)
         current_grades = {long(key):float(value) for (key, value) in str_grades.iteritems()}
     submissions = {}
-    for sub_id in current_ordering:
+    for subm_id in current_ordering:
         # Finds the task.
-        st = db((db.task.submission_id == sub_id) &
+        st = db((db.task.submission_id == subm_id) &
                 (db.task.user == auth.user.email)).select().first()
-        subm = db.submission(sub_id)
-        line = SPAN(A(st.submission_name, _href=URL('submission', 'view_submission', args=[sub_id])),
+        subm = db.submission(subm_id)
+        line = SPAN(A(st.submission_name, _href=URL('submission', 'view_submission', args=[st.id])),
             " (Comments: ", util.shorten(st.comments), ") ",
             A(T('Download'), _class='btn',
             _href=URL('submission', 'download_reviewer', args=[st.id, subm.content])))
-        submissions[sub_id] = line
+        submissions[subm_id] = line
     expired =  (datetime.utcnow() < c.rate_open_date or
                 datetime.utcnow() > c.rate_close_date)
     # Link for editing ordering.
