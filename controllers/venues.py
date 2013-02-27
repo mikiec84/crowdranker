@@ -151,7 +151,7 @@ def link_feedback(venue):
 
 @auth.requires_login()
 def observed_index():
-    props = db(db.user_properties.user == auth.user.email).select(db.user_properties.venues_can_observe).first()
+    props = db(db.user_properties.user == auth.user.email).select().first()    
     if props == None: 
         l = []
     else:

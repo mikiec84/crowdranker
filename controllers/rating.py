@@ -392,7 +392,7 @@ def my_reviews():
     # TODO(michael): link to View/edit reviews is disabled for now.
 	links=[
 	    dict(header=T('Venue'),
-		 body = lambda r: A(r.name, _href=URL('venue', 'view_venue', args=[r.id]))),
+		 body = lambda r: A(r.name, _href=URL('venues', 'view_venue', args=[r.id]))),
 	    dict(header=T('My reviews'),
 		 #body = lambda r: A(T('View/edit reviews'), _href=URL('rating', 'edit_reviews', args=[r.id]))),
 		 body = lambda r: T('View/edit reviews')),
