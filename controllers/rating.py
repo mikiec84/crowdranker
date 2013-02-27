@@ -407,7 +407,7 @@ def edit_reviews():
     c = db.venue(request.args[0]) or redirect(URL('default', 'index'))
     # Building ordering.
     last_comparison_r = db((db.comparison.venue_id == c.id) &
-                           (db.comparison.user == auth.user) &
+                           (db.comparison.user == auth.user.email) &
                            (db.comparison.is_valid == True)
                           ).select(orderby=~db.comparison.date).first()
     if last_comparison_r is None:
@@ -442,7 +442,8 @@ def edit_reviews():
                                args=[c.id, compar_id]))
     # View/Editing comments.
     q = ((db.task.venue_id == c.id) &
-         (db.task.user == auth.user.email))
+         (db.task.user == auth.user.email) &
+         (db.task.completed_date < datetime.utcnow()))
     db.task.assigned_date.writable = False
     db.task.completed_date.writable = False
     db.task.rejection_comment.writable = False
