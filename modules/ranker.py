@@ -256,9 +256,9 @@ def rerun_processing_comparisons(db, venue_id, alpha_annealing=0.5, run_twice=Fa
         db((db.submission.id == x) &
            (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev, percentile=perc)
     # Saving the latest rank update date.
-    ranking_algo_description = "No rep sys. Processing all compar in chronological order"
+    description = "Ranking without reputation system. All comparisons are used in chronological order"
     db(db.venue.id == venue_id).update(latest_rank_update_date = datetime.utcnow(),
-                                    ranking_algo_description = ranking_algo_description)
+                                    ranking_algo_description = description)
 
 
 def get_or_0(d, k):
@@ -491,13 +491,13 @@ def run_reputation_system(db, venue_id, alpha_annealing=0.5,
     # Computing final grades.
     perc_final_d, final_grade_d = compute_final_grades_helper(user_l, subm_grade_d, rep_d)
     if last_compar_param is None:
-        description = "Rep sys using all comparisons in chronological order"
+        description = "Reputation system on all comparisons in chronological order"
         if num_of_iterations == 1:
-            description = "No rep sys. Processing all compar in chronological order"
+            description = "Ranking without reputation system. All comparisons are used in chronological order"
     else:
-        description = "Rep sys using last comparisons + small alpha"
+        description = "Reputation system with small alpha and only last comparisons"
         if num_of_iterations == 1:
-            description = "No rep sys and small alpha ?!"
+            description = "No reputation system and small alpha !?!?"
     # Writing to the BD.
     write_to_db_for_rep_sys(db, venue_id, result, subm_l, user_l, ordering_d,
                             accuracy_d, rep_d, perc_final_d, final_grade_d,

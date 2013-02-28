@@ -606,21 +606,44 @@ def recompute_ranks():
     return dict(venue_form=venue_form, confirmation_form=confirmation_form)
 
 @auth.requires_login()
-def rank_without_rep_sys():
+def run_rep_sys_research():
     # Gets the information on the venue.
     c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
+    rep_sys_type = int(request.args(1)) or redirect(URL('default', 'index'))
     check_manager_eligibility(c.id, auth.user.email, 'Not authorized.')
     # This venue_form is used to display the venue.
     venue_form = SQLFORM(db.venue, record=c, readonly=True)
-    confirmation_form = FORM.confirm(T('Rank'),
+    confirmation_form = FORM.confirm(T('Run'),
         {T('Cancel'): URL('venues', 'view_venue', args=[c.id])})
     if confirmation_form.accepted:
-        # Rerun ranking algorithm.
-        ranker.rank_without_rep_sys(db, c.id, alpha_annealing=0.5)
+        if rep_sys_type == 1:
+            # Run without reputation system
+            ranker.rank_without_rep_sys(db, c.id, alpha_annealing=0.5)
+        elif rep_sys_type == 2:
+            # Run reputation system on all comparisons in chronological
+            # order one time.
+            ranker.run_reputation_system(db, c.id, alpha_annealing=0.5,
+                                         last_compar_param=None)
+        elif rep_sys_type == 3:
+            # Run reputation system with small alpha on latest comparisons.
+            ranker.run_reputation_system(db, c.id, num_of_iterations=4)
+        else:
+            # Run the latest reputation system.
+            ranker.run_reputation_system(db, c.id, num_of_iterations=4)
         db.commit()
         session.flash = T('The computation of reviewer contribution, submission quality, and final grade is complete.')
-        redirect(URL('venues', 'view_venue', args=[c.id]))
-    return dict(venue_form=venue_form, confirmation_form=confirmation_form)
+        redirect(URL('venues', 'view_venue_research', args=[c.id]))
+    # Description of reputation system.
+    if rep_sys_type == 1:
+        description = T("Ranking without reputation system. All comparisons are used in chronological order.")
+    elif rep_sys_type == 2:
+        description = T("Reputation system on all comparisons in chronological order.")
+    elif rep_sys_type == 3:
+        description = T("Reputation system with small alpha and only last comparisons.")
+    else:
+        description = T("Reputation system with small alpha and only last comparisons.")
+    return dict(venue_form=venue_form, confirmation_form=confirmation_form,
+                rep_sys_description=description)
 
 
 @auth.requires_login()
