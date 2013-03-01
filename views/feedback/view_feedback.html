@@ -25,9 +25,13 @@
     {{pass}}
   </div></td><td></td></tr>
 {{pass}}
-{{ if review_accuracy:}}
+{{if review_accuracy:}}
   <tr><td style="font-weight:bold">Review accuracy</td><td>:</td>
   <td><div>{{=review_accuracy}}</div></td><td></td></tr>
+{{pass}}
+{{if user_reputation:}}
+  <tr><td style="font-weight:bold">Reputation</td><td>:</td>
+  <td><div>{{=user_reputation}}</div></td><td></td></tr>
 {{pass}}
 {{if final_grade:}}
   <tr><td style="font-weight:bold">Overall grade</td><td>:</td>

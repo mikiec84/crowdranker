@@ -82,10 +82,12 @@ def view_feedback():
 	if fg != None:
 	    final_grade = represent_percentage(fg.grade * 100.0, None)
     review_accuracy = None
+    hidden_user_reputation = None
     if c.latest_reviewers_evaluation_date is not None and c.latest_reviewers_evaluation_date < datetime.utcnow():
 	ra = db((db.user_accuracy.user == subm.user) & (db.user_accuracy.venue_id == c.id)).select().first()
 	if ra != None:
-	    review_accuracy = represent_percentage(ra.reputation * 100.0, None)
+	    review_accuracy = represent_percentage(ra.accuracy * 100.0, None)
+	    hidden_user_reputation = represent_percentage(ra.reputation * 100.0, None)
     # Makes a grid of comments.
     db.task.submission_name.readable = False
     db.task.assigned_date.readable = False
@@ -98,6 +100,7 @@ def view_feedback():
     db.task.comments.writable = False
     db.task.rejection_comment.writable = False
     if access.can_observe(c, props):
+	user_reputation = hidden_user_reputation
 	db.task.user.readable = True
 	db.task.completed_date.readable = True
 	links = [
@@ -106,7 +109,9 @@ def view_feedback():
 	    ]
 	details = False
 	ranking_link = A(T('details'), _href=URL('ranking', 'view_comparisons_given_submission', args=[subm.id]))
+	
     else:
+	user_reputation = None
 	links = []
 	details = True
 	ranking_link = None
@@ -120,4 +125,5 @@ def view_feedback():
         )
     return dict(subm=subm, download_link=download_link, subm_link=subm_link,
 		percentile=percentile, final_grade=final_grade, review_accuracy=review_accuracy,
-		venue_link=venue_link, grid=grid, ranking_link=ranking_link)
+		venue_link=venue_link, grid=grid, ranking_link=ranking_link,
+	        user_reputation=user_reputation)
