@@ -442,7 +442,7 @@ def edit_reviews():
         st = db((db.task.submission_id == subm_id) &
                 (db.task.user == auth.user.email)).select().first()
         subm = db.submission(subm_id)
-        line = SPAN(A(st.submission_name, _href=URL('submission', 'view_submission', args=[st.id])),
+        line = SPAN(A(st.submission_name, _href=URL('submission', 'view_submission', args=[subm_id])),
             " (Comments: ", util.shorten(st.comments), ") ",
             A(T('Download'), _class='btn',
             _href=URL('submission', 'download_reviewer', args=[st.id, subm.content])))
