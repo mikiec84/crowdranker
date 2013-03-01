@@ -53,7 +53,7 @@ def view_venue():
 	       _href=URL('submission', 'download_viewer', args=[r.id, r.content])))]
     if access.can_view_feedback(c, props):
 	links.append(dict(header=T('Feedback'), body = lambda r:
-			  A(T('Read comments'), 
+			  A(T('Feedback'), 
 			    _href=URL('feedback', 'view_feedback', args=[r.id]))))
     grid = SQLFORM.grid(q,
 	field_id=db.submission.id,

@@ -389,11 +389,13 @@ def write_to_db_for_rep_sys(db, venue_id, rankobj_result, subm_l, user_l,
         db((db.submission.id == x) &
            (db.submission.venue_id == venue_id)).update(quality=avrg, error=stdev, percentile=perc)
     # Writting to user accuracy table.
+    # print "accuracy_d_length: ", len(accuracy_d.keys()), " accuracy_d: ", str(accuracy_d) # debug
     for user in accuracy_d:
         if ordering_d.has_key(user):
             n_ratings = len(ordering_d[user])
         else:
             n_ratings = 0
+	# print "Inserting accuracy for venue_id: ", venue_id, " and user: ", user # debug
         db.user_accuracy.update_or_insert((db.user_accuracy.venue_id == venue_id) &
                                   (db.user_accuracy.user == user),
                                    venue_id = venue_id,

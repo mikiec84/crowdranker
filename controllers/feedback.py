@@ -80,7 +80,7 @@ def view_feedback():
     if c.latest_final_grades_evaluation_date is not None and c.latest_final_grades_evaluation_date < datetime.utcnow():
 	fg = db((db.grades.user == subm.user) & (db.grades.venue_id == c.id)).select(db.grades.grade).first()
 	if fg != None:
-	    final_grade = represent_percentage(fg.grade, None)
+	    final_grade = represent_percentage(fg.grade * 100.0, None)
     review_accuracy = None
     if c.latest_reviewers_evaluation_date is not None and c.latest_reviewers_evaluation_date < datetime.utcnow():
 	ra = db((db.user_accuracy.user == subm.user) & (db.user_accuracy.venue_id == c.id)).select().first()
