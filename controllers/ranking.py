@@ -287,6 +287,9 @@ def view_comparisons_given_submission():
     q = ((db.comparison.venue_id == c.id) &
          (db.comparison.user.belongs(reviewers)))
     db.comparison.ordering.represent = represent_ordering
+    db.comparison.user.represent = lambda v, r: A(v, _href=URL('view_comparisons_given_user',
+							       args=[v, c.id]))
+        
     grid = SQLFORM.grid(q,
 	field_id=db.comparison.id,
 	fields=[db.comparison.user, db.comparison.submission_nicknames,
