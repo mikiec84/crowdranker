@@ -300,3 +300,32 @@ def view_comparisons_given_submission():
 	)
     return dict(subm=subm, venue=c, grid=grid)
 
+
+@auth.requires_login()
+def view_comparisons_given_user():
+    """This function displays comparisons for a user in a given venue.
+    The arguments are user, venue_id."""
+    props = db(db.user_properties.user == auth.user.email).select().first()
+    user = request.args(0) or redirect(URL('default', 'index'))
+    venue_id = request.args(1) or redirect(URL('default', 'index'))
+    c = db.venue(venue_id) or redirect(URL('default', 'index'))
+    if not access.can_observe(c, props):
+	session.flash = T('Not authorized')
+	redirect(URL('default', 'index'))
+    # Create query.
+    q = ((db.comparison.venue_id == venue_id) &
+         (db.comparison.user == user))
+    db.comparison.ordering.represent = represent_ordering
+    grid = SQLFORM.grid(q,
+	field_id=db.comparison.id,
+	fields=[db.comparison.user, db.comparison.submission_nicknames,
+		db.comparison.ordering, db.comparison.grades,
+		db.comparison.is_valid, db.comparison.date],
+	csv=True,
+	args=request.args[:2],
+	user_signature=False,
+	details=False, create=False,
+	editable=False, deletable=False,
+	)
+    return dict(user=user, venue=c, grid=grid)
+

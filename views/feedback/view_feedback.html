@@ -27,7 +27,11 @@
 {{pass}}
 {{if review_accuracy:}}
   <tr><td style="font-weight:bold">Review accuracy</td><td>:</td>
-  <td><div>{{=review_accuracy}}</div></td><td></td></tr>
+  <td><div>{{=review_accuracy}}
+    {{if reviews_link:}}
+    ({{=reviews_link}})
+    {{pass}}
+</div></td><td></td></tr>
 {{pass}}
 {{if user_reputation:}}
   <tr><td style="font-weight:bold">Reputation</td><td>:</td>
