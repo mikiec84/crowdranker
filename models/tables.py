@@ -225,18 +225,19 @@ def represent_grades(v, r, breaker=BR()):
 	return 'None'
     try:
 	d = simplejson.loads(v)
+	id_to_nicks = simplejson.loads(r.submission_nicknames)
 	l = []
 	sorted_sub = []
 	for k, w in d.iteritems():
 	    sorted_sub.append((int(k), float(w)))
 	sorted_sub = sorted(sorted_sub, key = lambda el : el[1], reverse = True)
 	for k, w, in sorted_sub:
-	    l.append(SPAN(A(str(k), _href=URL('feedback', 'view_feedback', args=[k])),
+	    nick = id_to_nicks.get(str(k), '???')
+	    l.append(SPAN(A(nick, _href=URL('feedback', 'view_feedback', args=[k])),
 			  SPAN(':  '), '{:5.2f}'.format(w), breaker))
 	attributes = {}
 	return SPAN(*l, **attributes)
     except Exception, e:
-	return str(e)
 	return '-- data error --'
 
 def represent_grades_compact(v, r):
@@ -249,6 +250,7 @@ db.define_table('comparison', # An ordering of submissions, from Best to Worst.
     Field('venue_id', db.venue),
     Field('ordering', 'list:reference submission'),
     Field('grades'), # This is a json dictionary of submission_id: grade
+    Field('submission_nicknames'), # This is a json dictionary mapping submission ids into strings for visualization
     Field('new_item', 'reference submission'),
     Field('is_valid', 'boolean', default=True),
     )
@@ -256,14 +258,20 @@ db.define_table('comparison', # An ordering of submissions, from Best to Worst.
 db.comparison.grades.represent = represent_grades_compact
 db.comparison.venue_id.represent = represent_venue_id
 db.comparison.venue_id.label = T('Venue')
+db.comparison.submission_nicknames.readable = db.comparison.submission_nicknames.writable = False
 
 def represent_ordering(v, r):
     if v is None:
 	return ''
-    urls = [SPAN(A(str(el), _href=URL('feedback', 'view_feedback', args=[el])), ' ')
-	    for el in v]
-    attributes = {}
-    return SPAN(*urls, **attributes)
+    try:
+	id_to_nicks = simplejson.loads(r.submission_nicknames)
+	urls = [SPAN(A(str(id_to_nicks.get(str(el), '')),
+			   _href=URL('feedback', 'view_feedback', args=[el])), ' ')
+		for el in v]
+	attributes = {}
+	return SPAN(*urls, **attributes)
+    except Exception, e:
+	return '-- data error --'
 
 db.comparison.new_item.label = T('New submission')
 db.comparison.ordering.represent = represent_ordering

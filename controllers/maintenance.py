@@ -1,6 +1,8 @@
 # coding: utf8
 
 from datetime import datetime
+import gluon.contrib.simplejson as simplejson
+import util
 
 @auth.requires_login()
 def port_comments():
@@ -42,6 +44,22 @@ def mark_completed_tasks():
 	    t.update_record(is_completed = True)
 	else:
 	    t.update_record(is_completed = False)
+    db.commit()
+    session.flash = T('done')
+    
+@auth.requires_login()
+def create_comparison_nicks():
+    if auth.user.email != 'luca@ucsc.edu':
+        session.flash = T('Not authorized')
+        redirect(URL('default', 'index'))
+    comps = db().select(db.comparison.ALL)
+    for comp in comps:
+	nicks = {}
+	for subm_id in comp.ordering:
+	    s = db.submission(subm_id)
+	    if s is not None:
+		nicks[subm_id] = util.produce_submission_nickname(s)
+	comp.update_record(submission_nicknames = simplejson.dumps(nicks))
     db.commit()
     session.flash = T('done')
     

@@ -259,12 +259,12 @@ def view_comparisons_index():
     grid = SQLFORM.grid(q,
 	field_id=db.comparison.id,
 	fields=[db.comparison.user, 
-		db.comparison.ordering, db.comparison.grades,
+		db.comparison.ordering, db.comparison.grades, db.comparison.submission_nicknames,
 		db.comparison.is_valid, db.comparison.date,],
 	csv=True,
 	args=request.args[:1],
 	user_signature=False,
-	details=False, create=False,
+	details=True, create=False,
 	editable=False, deletable=False,
 	)
     title = T('Comparisons for venue ' + c.name)
@@ -289,7 +289,7 @@ def view_comparisons_given_submission():
     db.comparison.ordering.represent = represent_ordering
     grid = SQLFORM.grid(q,
 	field_id=db.comparison.id,
-	fields=[db.comparison.user,
+	fields=[db.comparison.user, db.comparison.submission_nicknames,
 		db.comparison.ordering, db.comparison.grades,
 		db.comparison.is_valid, db.comparison.date],
 	csv=True,
@@ -298,7 +298,5 @@ def view_comparisons_given_submission():
 	details=False, create=False,
 	editable=False, deletable=False,
 	)
-    title_words = T('Comparisons including submission ')
-    title_links = A(str(subm.id), _href=URL('feedback', 'view_feedback', args=[subm.id]))
-    return dict(title_words=title_words, title_links=title_links, grid=grid)
+    return dict(subm=subm, venue=c, grid=grid)
 

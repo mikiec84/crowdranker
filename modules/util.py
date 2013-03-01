@@ -110,11 +110,20 @@ def get_random_id(n_sections=6, section_length=6):
         sections.append(s)
     return '_'.join(sections)
 
-def shorten(s, max_length=32):
-    max_length = max(10, max_length)
+def shorten(s, max_length=32, dotdot=True):
+    max_length = max(2, max_length)
     if s is None:
 	return ""
     if len(s) <= max_length:
 	return s
     else:
-	return s[:max_length - 3] + "..."
+	if dotdot:
+	    return s[:max_length - 3] + "..."
+	else:
+	    return s[:max_length]
+
+def produce_submission_nickname(subm):
+    if subm != None:
+	return shorten(subm.user, max_length=3, dotdot=False)
+    else:
+	return '???'

@@ -206,8 +206,15 @@ def review():
         & (db.comparison.venue_id == t.venue_id)).select(orderby=~db.comparison.date).first()
     if last_comparison == None:
         last_ordering = []
+	subm_id_to_nickname = {}
     else:
         last_ordering = util.get_list(last_comparison.ordering)
+	try:
+	    subm_id_to_nickname = simplejson.loads(last_comparison.submission_nicknames)
+	except Exception, e:
+	    logger.warning("Failed to decode submission_nicknames: " +
+			   str(last_comparison.submission_nicknames))
+	    subm_id_to_nickname = {}
     current_list = last_ordering
     if t.submission_id not in last_ordering:
 	current_list.append(t.submission_id)
@@ -271,12 +278,21 @@ def review():
         # Creates a new comparison in the db.
 	ordering = form.vars.order
 	grades = form.vars.grades
+
+	# Updates the submission id to nicknames mapping.
+	subm = db.submission(t.submission_id)
+	subm_id_to_nickname[subm.id] = util.produce_submission_nickname(subm)
+	for subm_id in ordering:
+	    if subm_id not in subm_id_to_nickname:
+		# We need the author of the submission.
+		subm_id_to_nickname[subm_id] = util.produce_submission_nickname(db.submission(subm_id))
+	subm_id_to_nickname_str = simplejson.dumps(subm_id_to_nickname)
         comparison_id = db.comparison.insert(
-	    venue_id=t.venue_id, ordering=ordering, grades=grades, new_item=new_comparison_item) 
+	    venue_id=t.venue_id, ordering=ordering, grades=grades, new_item=new_comparison_item,
+	    submission_nicknames=subm_id_to_nickname_str) 
         # Marks the task as done.
         t.update_record(completed_date=datetime.utcnow(), is_completed=True, comments=form.vars.comments)
 	# Increments the number of reviews this submission has received.
-	subm = db.submission(t.submission_id)
 	if subm != None and subm.n_completed_reviews != None:
 	    n = subm.n_completed_reviews
 	    subm.n_completed_reviews = n + 1
@@ -462,7 +478,7 @@ def edit_ordering():
     """ Edit last ordering."""
     # Gets the information on the venue and comparison.
     venue = db.venue(request.args(0)) or redirect(URL('default', 'index'))
-    last_comparison = db.comparison(request.args[1]) or redirect(URL('default', 'index'))
+    last_comparison = db.comparison(request.args(1)) or redirect(URL('default', 'index'))
     if last_comparison.user != auth.user.email:
         session.flash = T('Invalid request.')
         redirect(URL('default', 'index'))
@@ -479,8 +495,10 @@ def edit_ordering():
     # Gets the last reviewing task done for the same venue.
     if last_comparison == None:
         last_ordering = []
+	subm_id_to_nickname_str = None
     else:
         last_ordering = util.get_list(last_comparison.ordering)
+	subm_id_to_nickname_str = last_ordering.subm_id_to_nickname_str
 
     # Finds the grades that were given for the submissions previously reviewed.
     if last_comparison == None or last_comparison.grades == None:
@@ -527,16 +545,16 @@ def edit_ordering():
         decoded_grades = simplejson.loads(new_grades)
         grades_subm = {long(key):float(value) for (key, value) in decoded_grades.iteritems()}
         # Check whether new ordering is different from old one.
-        coinside_ordering = (len(new_ordering) == len(last_ordering) and
+        coincide_ordering = (len(new_ordering) == len(last_ordering) and
                          all(x==y for x, y in zip(new_ordering, last_ordering)))
         # Check whether new grades are different from old ones.
-        coinside_grades = False
-        if coinside_ordering:
-            coinside_grades = True
+        coincide_grades = False
+        if coincide_ordering:
+            coincide_grades = True
             for subm_id in new_ordering:
                 if abs(grades_subm[subm_id] - grades[subm_id]) > 0.00001:
-                    coinside_grades = False
-        if coinside_ordering and coinside_grades:
+                    coincide_grades = False
+        if coincide_ordering and coincide_grades:
             session.flash = T('The review has not been changed.')
             redirect(URL('rating', 'edit_reviews', args=[venue.id]))
         # Okay, we have new review.
@@ -544,7 +562,8 @@ def edit_ordering():
         last_comparison.update_record(is_valid=False)
         new_comparison_id = db.comparison.insert(
             venue_id=venue.id, ordering=new_ordering, grades=new_grades,
-            new_item=last_comparison.new_item)
+            submission_nicknames=subm_id_to_nickname_str,
+	    new_item=last_comparison.new_item)
         # Mark that user has revised the comparison.
         props = db(db.user_properties.user == auth.user.email).select(db.user_properties.id, db.user_properties.venues_has_re_reviewed).first()
         if props == None:

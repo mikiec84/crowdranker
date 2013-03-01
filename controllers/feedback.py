@@ -105,9 +105,11 @@ def view_feedback():
 		 A(T('View'), _class='btn', _href=URL('ranking', 'view_comparison', args=[r.id]))),
 	    ]
 	details = False
+	ranking_link = A(T('details'), _href=URL('ranking', 'view_comparisons_given_submission', args=[subm.id]))
     else:
 	links = []
 	details = True
+	ranking_link = None
     q = (db.task.submission_id == subm.id)
     grid = SQLFORM.grid(q,
 	details = details,
@@ -118,4 +120,4 @@ def view_feedback():
         )
     return dict(subm=subm, download_link=download_link, subm_link=subm_link,
 		percentile=percentile, final_grade=final_grade, review_accuracy=review_accuracy,
-		venue_link=venue_link, grid=grid)
+		venue_link=venue_link, grid=grid, ranking_link=ranking_link)

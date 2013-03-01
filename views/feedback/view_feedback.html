@@ -19,7 +19,11 @@
   <td><div>{{=subm.quality}} &plusmn {{=subm.error}}</div></td><td></td></tr>
 {{if percentile:}}
   <tr><td style="font-weight:bold">Submission quality</td><td>:</td>
-  <td><div>{{=percentile}}</div></td><td></td></tr>
+  <td><div>{{=percentile}}
+    {{if ranking_link:}}
+    ({{=ranking_link}})
+    {{pass}}
+  </div></td><td></td></tr>
 {{pass}}
 {{ if review_accuracy:}}
   <tr><td style="font-weight:bold">Review accuracy</td><td>:</td>
