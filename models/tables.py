@@ -79,6 +79,7 @@ db.define_table('venue',
     Field('latest_rank_update_date', 'datetime'),
     Field('latest_reviewers_evaluation_date', 'datetime'),
     Field('latest_final_grades_evaluation_date', 'datetime'),
+    Field('ranking_algo_description'),
     format = '%(name)s',
     )
 
@@ -115,6 +116,8 @@ db.venue.max_number_outstanding_reviews.readable = db.venue.max_number_outstandi
 db.venue.latest_rank_update_date.writable = False
 db.venue.latest_reviewers_evaluation_date.writable = False
 db.venue.latest_final_grades_evaluation_date.writable = False
+db.venue.ranking_algo_description.writable = False
+db.venue.ranking_algo_description.readable = False
 db.venue.number_of_submissions_per_reviewer.writable = False
 db.venue.submissions_are_anonymized.readable = db.venue.submissions_are_anonymized.writable = False
 db.venue.allow_multiple_submissions.readable = db.venue.allow_multiple_submissions.writable = False

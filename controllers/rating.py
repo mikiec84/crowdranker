@@ -408,7 +408,7 @@ def my_reviews():
     # TODO(michael): link to View/edit reviews is disabled for now.
 	links=[
 	    dict(header=T('Venue'),
-		 body = lambda r: A(r.name, _href=URL('venue', 'view_venue', args=[r.id]))),
+		 body = lambda r: A(r.name, _href=URL('venues', 'view_venue', args=[r.id]))),
 	    dict(header=T('My reviews'),
 		 #body = lambda r: A(T('View/edit reviews'), _href=URL('rating', 'edit_reviews', args=[r.id]))),
 		 body = lambda r: T('View/edit reviews')),
@@ -423,7 +423,7 @@ def edit_reviews():
     c = db.venue(request.args[0]) or redirect(URL('default', 'index'))
     # Building ordering.
     last_comparison_r = db((db.comparison.venue_id == c.id) &
-                           (db.comparison.user == auth.user) &
+                           (db.comparison.user == auth.user.email) &
                            (db.comparison.is_valid == True)
                           ).select(orderby=~db.comparison.date).first()
     if last_comparison_r is None:
@@ -437,16 +437,16 @@ def edit_reviews():
         str_grades = simplejson.loads(last_comparison_r.grades)
         current_grades = {long(key):float(value) for (key, value) in str_grades.iteritems()}
     submissions = {}
-    for sub_id in current_ordering:
+    for subm_id in current_ordering:
         # Finds the task.
-        st = db((db.task.submission_id == sub_id) &
+        st = db((db.task.submission_id == subm_id) &
                 (db.task.user == auth.user.email)).select().first()
-        subm = db.submission(sub_id)
-        line = SPAN(A(st.submission_name, _href=URL('submission', 'view_submission', args=[sub_id])),
+        subm = db.submission(subm_id)
+        line = SPAN(A(st.submission_name, _href=URL('submission', 'view_submission', args=[st.id])),
             " (Comments: ", util.shorten(st.comments), ") ",
             A(T('Download'), _class='btn',
             _href=URL('submission', 'download_reviewer', args=[st.id, subm.content])))
-        submissions[sub_id] = line
+        submissions[subm_id] = line
     expired =  (datetime.utcnow() < c.rate_open_date or
                 datetime.utcnow() > c.rate_close_date)
     # Link for editing ordering.
@@ -458,7 +458,8 @@ def edit_reviews():
                                args=[c.id, compar_id]))
     # View/Editing comments.
     q = ((db.task.venue_id == c.id) &
-         (db.task.user == auth.user.email))
+         (db.task.user == auth.user.email) &
+         (db.task.completed_date < datetime.utcnow()))
     db.task.assigned_date.writable = False
     db.task.completed_date.writable = False
     db.task.rejection_comment.writable = False
@@ -622,6 +623,46 @@ def recompute_ranks():
         session.flash = T('The submission ranking has been recomputed.')
         redirect(URL('venues', 'view_venue', args=[c.id]))
     return dict(venue_form=venue_form, confirmation_form=confirmation_form)
+
+@auth.requires_login()
+def run_rep_sys_research():
+    # Gets the information on the venue.
+    c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
+    rep_sys_type = int(request.args(1)) or redirect(URL('default', 'index'))
+    check_manager_eligibility(c.id, auth.user.email, 'Not authorized.')
+    # This venue_form is used to display the venue.
+    venue_form = SQLFORM(db.venue, record=c, readonly=True)
+    confirmation_form = FORM.confirm(T('Run'),
+        {T('Cancel'): URL('venues', 'view_venue', args=[c.id])})
+    if confirmation_form.accepted:
+        if rep_sys_type == 1:
+            # Run without reputation system
+            ranker.rank_without_rep_sys(db, c.id, alpha_annealing=0.5)
+        elif rep_sys_type == 2:
+            # Run reputation system on all comparisons in chronological
+            # order one time.
+            ranker.run_reputation_system(db, c.id, alpha_annealing=0.5,
+                                         last_compar_param=None)
+        elif rep_sys_type == 3:
+            # Run reputation system with small alpha on latest comparisons.
+            ranker.run_reputation_system(db, c.id, num_of_iterations=4)
+        else:
+            # Run the latest reputation system.
+            ranker.run_reputation_system(db, c.id, num_of_iterations=4)
+        db.commit()
+        session.flash = T('The computation of reviewer contribution, submission quality, and final grade is complete.')
+        redirect(URL('venues', 'view_venue_research', args=[c.id]))
+    # Description of reputation system.
+    if rep_sys_type == 1:
+        description = T("Ranking without reputation system. All comparisons are used in chronological order.")
+    elif rep_sys_type == 2:
+        description = T("Reputation system on all comparisons in chronological order.")
+    elif rep_sys_type == 3:
+        description = T("Reputation system with small alpha and only last comparisons.")
+    else:
+        description = T("Reputation system with small alpha and only last comparisons.")
+    return dict(venue_form=venue_form, confirmation_form=confirmation_form,
+                rep_sys_description=description)
 
 
 @auth.requires_login()

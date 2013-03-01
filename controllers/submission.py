@@ -31,7 +31,7 @@ def submit():
     sub = db((db.submission.user == auth.user.email) & (db.submission.venue_id == c.id)).select().first()
     if sub != None and not c.allow_multiple_submissions:
         session.flash = T('You have already submitted to this venue.')
-        redirect(URL('my_submissions_index', args=[c.id]))
+        redirect(URL('venues', 'view_venue', args=[c.id]))
     # The author can access the title.
     db.submission.title.readable = db.submission.title.writable = True
     # Check whether link submission is allowed.

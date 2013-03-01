@@ -36,10 +36,7 @@ def view_venue():
     if can_manage:
         link_list.append(A(T('Edit'), _href=URL('managed_index', vars=dict(cid=c.id))))
 	link_list.append(A(T('Add submission'), _href=URL('submission', 'manager_submit', args=[c.id])))
-        link_list.append(A(T('Recompute submission ranking'), _href=URL('rating', 'recompute_ranks', args=[c.id])))
         link_list.append(A(T('Run reputation system'), _href=URL('rating', 'run_rep_system', args=[c.id])))
-        link_list.append(A(T('Evaluate reviewers'), _href=URL('rating', 'evaluate_reviewers', args=[c.id])))
-        link_list.append(A(T('Compute final grades'), _href=URL('rating', 'compute_final_grades', args=[c.id])))
     if can_observe or can_manage:
 	link_list.append(A(T('View reviewing tasks'), _href=URL('ranking', 'view_tasks', args=[c.id])))
 	link_list.append(A(T('View comparisons'), _href=URL('ranking', 'view_comparisons_index', args=[c.id])))
@@ -51,6 +48,55 @@ def view_venue():
         link_list.append(A(T('View final grades'), _href=URL('ranking', 'view_final_grades', args=[c.id])))
     return dict(form=venue_form, link_list=link_list, venue=c, has_rated=has_rated)
         
+
+@auth.requires_login()
+def view_venue_research():
+    c = db.venue(request.args(0)) or redirect(URL('default', 'index'))
+    props = db(db.user_properties.user == auth.user.email).select().first()
+    if props == None: 
+        can_submit = False
+        can_rate = False
+        has_submitted = False
+        has_rated = False
+        can_manage = False
+	can_observe = False
+        can_view_ratings = False
+    else:
+        can_submit = c.id in util.get_list(props.venues_can_submit) or util.is_none(c.submit_constraint)
+        can_rate = c.id in util.get_list(props.venues_can_rate) or util.is_none(c.rate_constraint)
+        has_submitted = c.id in util.get_list(props.venues_has_submitted)
+        has_rated = c.id in util.get_list(props.venues_has_rated)
+        can_manage = c.id in util.get_list(props.venues_can_manage)
+        can_observe = c.id in util.get_list(props.venues_can_observe)
+	# MAYDO(luca): Add option to allow only raters, or only submitters, to view
+	# all ratings.
+	can_view_ratings = access.can_view_ratings(c, props)
+    db.venue.ranking_algo_description.readable = True
+    venue_form = SQLFORM(db.venue, record=c, readonly=True)
+    link_list = []
+    if can_submit:
+        link_list.append(A(T('Submit to this venue'), _href=URL('submission', 'submit', args=[c.id])))
+    if can_rate:
+        link_list.append(A(T('Review a submission'), _href=URL('rating', 'accept_review', args=[c.id])))
+    if has_submitted:
+        link_list.append(A(T('View my submissions'), _href=URL('feedback', 'index', args=[c.id])))
+    if can_manage:
+        link_list.append(A(T('Edit'), _href=URL('managed_index', vars=dict(cid=c.id))))
+	link_list.append(A(T('Add submission'), _href=URL('submission', 'manager_submit', args=[c.id])))
+        link_list.append(A(T('Rep sys - small alpha'), _href=URL('rating', 'run_rep_sys_research', args=[c.id, 3])))
+        link_list.append(A(T('Rep sys - all compar'), _href=URL('rating', 'run_rep_sys_research', args=[c.id, 2])))
+        link_list.append(A(T('Ranking without rep sys'), _href=URL('rating', 'run_rep_sys_research', args=[c.id, 1])))
+    if can_observe or can_manage:
+	link_list.append(A(T('View reviewing tasks'), _href=URL('ranking', 'view_tasks', args=[c.id])))
+	link_list.append(A(T('View comparisons'), _href=URL('ranking', 'view_comparisons_index', args=[c.id])))
+    if can_view_ratings or access.can_view_submissions(c, props):
+        link_list.append(A(T('View submissions'), _href=URL('ranking', 'view_venue', args=[c.id])))
+    if access.can_view_rating_contributions(c, props):
+        link_list.append(A(T('View reviewer contribution'), _href=URL('ranking', 'view_raters', args=[c.id])))
+    if can_view_ratings:
+        link_list.append(A(T('View final grades'), _href=URL('ranking', 'view_final_grades', args=[c.id])))
+    return dict(form=venue_form, link_list=link_list, venue=c, has_rated=has_rated)
+
 
 @auth.requires_login()
 def subopen_index():
@@ -151,7 +197,7 @@ def link_feedback(venue):
 
 @auth.requires_login()
 def observed_index():
-    props = db(db.user_properties.user == auth.user.email).select(db.user_properties.venues_can_observe).first()
+    props = db(db.user_properties.user == auth.user.email).select().first()    
     if props == None: 
         l = []
     else:
